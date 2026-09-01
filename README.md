@@ -16,6 +16,26 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Prisma and SQL Server
+
+This project uses Prisma with a database-first SQL Server workflow. SQL Server is the source of truth, and Prisma introspection is limited to the `driver`, `fleet`, and `person` database schemas.
+
+For local Windows Authentication, configure the ignored `.env` file:
+
+```dotenv
+DATABASE_URL="sqlserver://localhost:1433;database=FleetManagementDB_05;schema=dbo;integratedSecurity=true;encrypt=true;trustServerCertificate=true;"
+```
+
+Use the repository scripts to validate, introspect, and generate the client:
+
+```bash
+npm run prisma:validate
+npm run prisma:pull
+npm run prisma:generate
+```
+
+Do not use Prisma Migrate or `prisma db push` for the existing database. Database structure changes must be made through the approved SQL Server database process, followed by `npm run prisma:pull`.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlserver"
+  schemas  = ["driver", "fleet", "person"]
+}
+
+model Accident {
+  AccidentId              BigInt                   @id(map: "PK_Accident") @default(autoincrement())
+  VehicleAssignmentId     Int?
+  AccidentDateTime        DateTime
+  Location                String?                  @db.NVarChar(300)
+  Description             String?
+  DamageAmount            Decimal?                 @db.Decimal(18, 2)
+  DriverFaultPercent      Decimal?                 @db.Decimal(5, 2)
+  PoliceReportNo          String?                  @db.NVarChar(100)
+  HasInjury               Boolean                  @default(false, map: "DF_Accident_HasInjury")
+  VehicleDriverAssignment VehicleDriverAssignment? @relation(fields: [VehicleAssignmentId], references: [AssignmentId], onDelete: NoAction, onUpdate: NoAction, map: "FK_Accident_VehicleDriverAssignment")
+
+  @@schema("driver")
+}
+
+model Driver {
+  DriverId                Int                       @id(map: "PK_Driver") @default(autoincrement())
+  PersonId                Int                       @unique(map: "UQ_Driver_PersonId")
+  People                  People                    @relation(fields: [PersonId], references: [PersonId], onUpdate: NoAction, map: "FK_Driver_person")
+  DriverLicense           DriverLicense[]
+  VehicleDriverAssignment VehicleDriverAssignment[]
+
+  @@schema("driver")
+}
+
+model DriverLicense {
+  DriverLicenseId Int       @id(map: "PK_DriverLicense") @default(autoincrement())
+  DriverId        Int
+  LicenseType     String    @db.NVarChar(100)
+  LicenseNo       String    @db.NVarChar(50)
+  IssueDate       DateTime? @db.Date
+  ExpireDate      DateTime? @db.Date
+  IsActive        Boolean   @default(true, map: "DF_DriverLicense_IsActive")
+  Driver          Driver    @relation(fields: [DriverId], references: [DriverId], onUpdate: NoAction, map: "FK_DriverLicense_Driver")
+
+  @@schema("driver")
+}
+
+model FuelType {
+  FuelTypeId   Int            @id(map: "PK_FuelType") @default(autoincrement())
+  FuelTypeName String         @db.NVarChar(50)
+  IsActive     Boolean        @default(true, map: "DF_FuelType_IsActive")
+  VehicleModel VehicleModel[]
+
+  @@schema("fleet")
+}
+
+model People {
+  PersonnelNo    String?   @db.NVarChar(50)
+  FirstName      String    @db.NVarChar(100)
+  LastName       String    @db.NVarChar(100)
+  NationalCode   String?   @db.NVarChar(20)
+  CardNo         String?   @db.NVarChar(8)
+  Mobile         String?   @db.NVarChar(20)
+  EmploymentDate DateTime? @db.Date
+  IsActive       Boolean   @default(true, map: "DF_person_IsActive")
+  CreatedAt      DateTime  @default(dbgenerated("sysdatetime()"), map: "DF_person_CreatedAt")
+  PersonId       Int       @id(map: "PK_person") @default(autoincrement())
+  Driver         Driver?
+
+  @@schema("person")
+}
+
+model Vehicle {
+  VehicleId               Int                       @id(map: "PK_Vehicle") @default(autoincrement())
+  VehicleCode             String                    @db.NVarChar(50)
+  PlateNoLeftSide         String                    @db.NVarChar(2)
+  PlateNoCenterChar       String?                   @db.NVarChar(3)
+  PlateNoRightSide        String?                   @db.NVarChar(3)
+  PlateNoIranNo           String?                   @db.NVarChar(2)
+  InternationalPlateNo    String?                   @db.NVarChar(10)
+  VIN                     String?                   @db.NVarChar(50)
+  EngineNo                String?                   @db.NVarChar(50)
+  ChassisNo               String?                   @db.NVarChar(50)
+  ModelId                 Int
+  ModelYear               Int?                      @db.SmallInt
+  VehicleStatusId         Int
+  PurchaseDate            DateTime?                 @db.Date
+  PurchasePrice           Decimal?                  @db.Decimal(18, 2)
+  CurrentOdometer         Decimal?                  @db.Decimal(18, 2)
+  CurrentEngineHour       Decimal?                  @db.Decimal(18, 2)
+  IsActive                Boolean                   @default(true, map: "DF_Vehicle_IsActive")
+  CreatedAt               DateTime                  @default(dbgenerated("sysdatetime()"), map: "DF_Vehicle_CreatedAt")
+  VehicleModel            VehicleModel              @relation(fields: [ModelId], references: [ModelId], onUpdate: NoAction, map: "FK_Vehicle_VehicleModel")
+  VehicleStatus           VehicleStatus             @relation(fields: [VehicleStatusId], references: [VehicleStatusId], onUpdate: NoAction, map: "FK_Vehicle_VehicleStatus")
+  VehicleDriverAssignment VehicleDriverAssignment[]
+  VehicleInsurance        VehicleInsurance[]
+  VehicleMeterReading     VehicleMeterReading[]
+
+  @@schema("fleet")
+}
+
+model VehicleBrand {
+  BrandId      Int            @id(map: "PK_VehicleBrand") @default(autoincrement())
+  BrandName    String         @db.NVarChar(100)
+  IsActive     Boolean        @default(true, map: "DF_VehicleBrand_IsActive")
+  VehicleModel VehicleModel[]
+
+  @@schema("fleet")
+}
+
+model VehicleDriverAssignment {
+  AssignmentId     Int                @id(map: "PK_VehicleDriverAssignment") @default(autoincrement())
+  DriverId         Int
+  VehicleId        Int
+  FromDateTime     DateTime
+  ToDateTime       DateTime?
+  StartOdometer    Decimal?           @db.Decimal(18, 2)
+  EndOdometer      Decimal?           @db.Decimal(18, 2)
+  Description      String?            @db.NVarChar(500)
+  Accident         Accident[]
+  Driver           Driver             @relation(fields: [DriverId], references: [DriverId], onUpdate: NoAction, map: "FK_VehicleDriverAssignment_Driver")
+  Vehicle          Vehicle            @relation(fields: [VehicleId], references: [VehicleId], onUpdate: NoAction, map: "FK_VehicleDriverAssignment_Vehicle")
+  VehicleViolation VehicleViolation[]
+
+  @@schema("driver")
+}
+
+model VehicleInsurance {
+  VehicleInsuranceId BigInt   @id(map: "PK_VehicleInsurance") @default(autoincrement())
+  VehicleId          Int
+  InsuranceType      String   @db.NVarChar(100)
+  InsuranceCompany   String?  @db.NVarChar(150)
+  PolicyNo           String?  @db.NVarChar(100)
+  StartDate          DateTime @db.Date
+  ExpireDate         DateTime @db.Date
+  PremiumAmount      Decimal? @db.Decimal(18, 2)
+  CoverageAmount     Decimal? @db.Decimal(18, 2)
+  IsActive           Boolean  @default(true, map: "DF_VehicleInsurance_IsActive")
+  Vehicle            Vehicle  @relation(fields: [VehicleId], references: [VehicleId], onUpdate: NoAction, map: "FK_VehicleInsurance_Vehicle")
+
+  @@schema("fleet")
+}
+
+model VehicleMeterReading {
+  MeterReadingId Int      @id(map: "PK_VehicleMeterReading") @default(autoincrement())
+  VehicleId      Int
+  ReadingDate    DateTime
+  Odometer       Decimal? @db.Decimal(18, 2)
+  EngineHour     Decimal? @db.Decimal(18, 2)
+  Description    String?  @db.NVarChar(500)
+  Vehicle        Vehicle  @relation(fields: [VehicleId], references: [VehicleId], onUpdate: NoAction, map: "FK_VehicleMeterReading_Vehicle")
+
+  @@schema("fleet")
+}
+
+model VehicleModel {
+  ModelId       Int          @id(map: "PK_VehicleModel") @default(autoincrement())
+  BrandId       Int
+  VehicleTypeId Int?
+  ModelName     String       @db.NVarChar(100)
+  FuelTypeId    Int?
+  IsActive      Boolean      @default(true, map: "DF_VehicleModel_IsActive")
+  Vehicle       Vehicle[]
+  FuelType      FuelType?    @relation(fields: [FuelTypeId], references: [FuelTypeId], onDelete: NoAction, onUpdate: NoAction, map: "FK_VehicleModel_FuelType")
+  VehicleBrand  VehicleBrand @relation(fields: [BrandId], references: [BrandId], onUpdate: NoAction, map: "FK_VehicleModel_VehicleBrand")
+  VehicleType   VehicleType? @relation(fields: [VehicleTypeId], references: [VehicleTypeId], onDelete: NoAction, onUpdate: NoAction, map: "FK_VehicleModel_VehicleType")
+
+  @@schema("fleet")
+}
+
+model VehicleStatus {
+  VehicleStatusId Int       @id(map: "PK_VehicleStatus") @default(autoincrement())
+  StatusName      String    @db.NVarChar(50)
+  Vehicle         Vehicle[]
+
+  @@schema("fleet")
+}
+
+model VehicleType {
+  VehicleTypeId Int            @id(map: "PK_VehicleType") @default(autoincrement())
+  TypeName      String         @db.NVarChar(100)
+  IsActive      Boolean        @default(true, map: "DF_VehicleType_IsActive")
+  VehicleModel  VehicleModel[]
+
+  @@schema("fleet")
+}
+
+model VehicleViolation {
+  ViolationId             BigInt                   @id(map: "PK_VehicleViolation") @default(autoincrement())
+  VehicleAssignmentId     Int?
+  ViolationDateTime       DateTime
+  ViolationType           String                   @db.NVarChar(150)
+  Location                String?                  @db.NVarChar(300)
+  Amount                  Decimal                  @db.Decimal(18, 2)
+  ReferenceNo             String?                  @db.NVarChar(100)
+  Status                  String                   @default("N'Unpaid'", map: "DF_VehicleViolation_Status") @db.NVarChar(50)
+  PaidDate                DateTime?                @db.Date
+  Description             String?
+  VehicleDriverAssignment VehicleDriverAssignment? @relation(fields: [VehicleAssignmentId], references: [AssignmentId], onDelete: NoAction, onUpdate: NoAction, map: "FK_VehicleViolation_VehicleDriverAssignment")
+
+  @@schema("driver")
+}
