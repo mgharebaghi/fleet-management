@@ -1,0 +1,468 @@
+.page {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: clamp(var(--space-6), 5vw, var(--space-12)) var(--space-5);
+  background:
+    radial-gradient(
+      circle at 88% 0%,
+      rgb(32 198 183 / 14%) 0,
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 8% 100%,
+      rgb(17 58 109 / 8%) 0,
+      transparent 34%
+    ),
+    linear-gradient(135deg, var(--app-canvas), var(--color-neutral-50));
+  color: var(--app-text);
+  font-family: var(--app-font-family);
+}
+
+.card {
+  position: relative;
+  width: min(100%, 960px);
+  overflow: hidden;
+  padding: clamp(28px, 4vw, 44px);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-card);
+  background: var(--app-surface);
+  box-shadow: var(--app-card-shadow);
+}
+
+.card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--app-primary),
+    var(--app-accent),
+    var(--color-aqua-400)
+  );
+  content: "";
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.headerContent {
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-2);
+  color: var(--app-accent-strong);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.header h1 {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: clamp(26px, 4vw, var(--font-size-2xl));
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: -0.025em;
+}
+
+.description {
+  max-width: 620px;
+  margin: var(--space-2) 0 0;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.9;
+}
+
+.brandArea {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface-subtle);
+}
+
+.logoFrame {
+  display: grid;
+  width: 64px;
+  height: 48px;
+  place-items: center;
+  overflow: hidden;
+  flex: 0 0 auto;
+  border-radius: var(--radius-sm);
+  background: var(--app-surface);
+}
+
+.logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.brandCopy {
+  display: grid;
+  gap: 2px;
+}
+
+.brandCopy strong {
+  color: var(--app-heading);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.brandCopy span {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.7;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.formHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+.formHeader h2 {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.formHeader p {
+  margin: var(--space-1) 0 0;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.8;
+}
+
+.formHeader .requiredHint {
+  flex: 0 0 auto;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.requiredHint span {
+  color: var(--app-danger);
+}
+
+.fieldLabel {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.fieldLabel span {
+  color: var(--app-danger);
+  font-weight: 700;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6) var(--space-5);
+}
+
+.field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field label,
+.dateField legend,
+.datePart span {
+  color: var(--app-label);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.field input,
+.datePart input,
+.datePart select {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--app-control-border);
+  border-radius: var(--app-radius-control);
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  line-height: 1.5;
+  outline: none;
+  color-scheme: light;
+  box-shadow: var(--app-shadow-control);
+  transition:
+    background-color var(--app-motion-fast),
+    border-color var(--app-motion-fast),
+    box-shadow var(--app-motion-fast);
+}
+
+.field input {
+  padding: 10px var(--space-3);
+}
+
+.field input[dir="ltr"] {
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.025em;
+}
+
+.field input:focus-visible,
+.datePart input:focus-visible,
+.datePart select:focus-visible {
+  border-color: var(--app-focus);
+  box-shadow: 0 0 0 3px var(--app-focus-ring);
+}
+
+@media (hover: hover) {
+  .field input:hover:not(:disabled),
+  .datePart input:hover:not(:disabled),
+  .datePart select:hover:not(:disabled) {
+    border-color: var(--app-control-hover-border);
+  }
+}
+
+.field input[aria-invalid="true"],
+.datePart input[aria-invalid="true"],
+.datePart select[aria-invalid="true"] {
+  border-color: var(--app-danger-border);
+}
+
+.field input[aria-invalid="true"]:focus-visible,
+.datePart input[aria-invalid="true"]:focus-visible,
+.datePart select[aria-invalid="true"]:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-danger) 14%, transparent);
+}
+
+.field input:disabled,
+.datePart input:disabled,
+.datePart select:disabled {
+  background: var(--app-control-disabled);
+  color: var(--app-text-muted);
+  cursor: not-allowed;
+  opacity: var(--app-disabled-opacity);
+}
+
+.dateField {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface-subtle);
+}
+
+.dateField legend {
+  padding: 0 6px;
+}
+
+.dateControls {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr 1fr;
+  gap: var(--space-3);
+}
+
+.datePart {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+  text-align: right;
+}
+
+.datePart input,
+.datePart select {
+  padding: 9px 10px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.fieldErrors {
+  display: grid;
+  gap: 2px;
+  margin-top: 1px;
+  color: var(--app-danger);
+  font-size: var(--font-size-xs);
+  line-height: 1.7;
+}
+
+.fieldErrors p {
+  margin: 0;
+}
+
+.fieldErrors p::before {
+  content: "•";
+  margin-inline-end: 6px;
+}
+
+.feedback {
+  min-height: 0;
+}
+
+.feedback:empty {
+  display: none;
+}
+
+.successMessage,
+.formError {
+  margin: 0;
+  padding: 11px var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--app-radius-message);
+  font-size: var(--font-size-sm);
+  line-height: 1.8;
+}
+
+.successMessage {
+  border-color: color-mix(in srgb, var(--app-success-text) 18%, transparent);
+  background: var(--app-success-background);
+  color: var(--app-success-text);
+}
+
+.formError {
+  border-color: color-mix(in srgb, var(--app-danger-text) 18%, transparent);
+  background: var(--app-danger-background);
+  color: var(--app-danger-text);
+}
+
+.submitButton {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 150px;
+  min-height: 46px;
+  padding: 10px var(--space-6);
+  border: 0;
+  border-radius: var(--app-radius-control);
+  background: var(--app-primary);
+  color: var(--app-on-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background var(--app-motion-fast),
+    box-shadow var(--app-motion-fast),
+    transform var(--app-motion-fast);
+}
+
+.submitButton:hover:not(:disabled) {
+  background: var(--app-primary-hover);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--app-primary) 22%, transparent);
+  transform: translateY(-1px);
+}
+
+.submitButton:active:not(:disabled) {
+  background: var(--app-primary-active);
+  box-shadow: none;
+  transform: translateY(0);
+}
+
+.submitButton:focus-visible {
+  outline: 3px solid var(--app-focus-outline);
+  outline-offset: 3px;
+}
+
+.submitButton:disabled {
+  cursor: wait;
+  opacity: var(--app-disabled-opacity);
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid color-mix(in srgb, var(--app-on-primary) 45%, transparent);
+  border-top-color: var(--app-on-primary);
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 680px) {
+  .page {
+    padding: var(--space-5) var(--space-3);
+    place-items: start center;
+  }
+
+  .card {
+    padding: var(--space-6) var(--space-5);
+    border-radius: var(--radius-lg);
+  }
+
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+    padding-bottom: var(--space-5);
+  }
+
+  .brandArea {
+    width: 100%;
+  }
+
+  .formHeader {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .dateControls {
+    grid-template-columns: 1fr;
+  }
+
+  .submitButton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .brandCopy span {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field input,
+  .datePart input,
+  .datePart select,
+  .submitButton {
+    transition: none;
+  }
+
+  .spinner {
+    animation-duration: 1.4s;
+  }
+}
