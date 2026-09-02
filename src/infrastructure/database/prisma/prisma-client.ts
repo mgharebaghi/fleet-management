@@ -1,20 +1,17 @@
 import { PrismaMssql } from "@prisma/adapter-mssql";
 
 import { PrismaClient } from "@/generated/prisma/client";
+import { createMssqlConfigFromEnvironment } from "@/infrastructure/database/prisma/mssql-config";
 
 const globalForPrisma = globalThis as typeof globalThis & {
   fleetManagementPrismaClient?: PrismaClient;
 };
 
 function createPrismaClient(): PrismaClient {
-  const databaseUrl = process.env.DATABASE_URL;
-
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is required to initialize Prisma Client.");
-  }
+  const mssqlConfig = createMssqlConfigFromEnvironment("DATABASE");
 
   return new PrismaClient({
-    adapter: new PrismaMssql(databaseUrl),
+    adapter: new PrismaMssql(mssqlConfig),
   });
 }
 

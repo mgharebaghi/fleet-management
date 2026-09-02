@@ -20,11 +20,25 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 This project uses Prisma with a database-first SQL Server workflow. SQL Server is the source of truth, and Prisma introspection is limited to the `driver`, `fleet`, and `person` database schemas.
 
-For local Windows Authentication, configure the ignored `.env` file:
+Prisma CLI reads `DATABASE_URL`. Prisma Client runtime builds the official
+`mssql` config object from separate environment variables, so credentials are
+not hard-coded in application code. Configure the ignored `.env` file:
 
 ```dotenv
-DATABASE_URL="sqlserver://localhost:1433;database=FleetManagementDB_05;schema=dbo;integratedSecurity=true;encrypt=true;trustServerCertificate=true;"
+DATABASE_URL="sqlserver://localhost:1433;database=FleetManagementDB_05;schema=dbo;user=YOUR_USER;password=YOUR_PASSWORD;encrypt=true;trustServerCertificate=true;"
+DATABASE_SERVER="localhost"
+DATABASE_PORT="1433"
+DATABASE_NAME="FleetManagementDB_05"
+DATABASE_USER="YOUR_USER"
+DATABASE_PASSWORD="YOUR_PASSWORD"
+DATABASE_ENCRYPT="true"
+DATABASE_TRUST_SERVER_CERTIFICATE="true"
 ```
+
+Integration tests use the same suffixes with the `TEST_DATABASE_` prefix in
+`.env.test.local`. E2E tests use the `E2E_DATABASE_` prefix in
+`.env.e2e.local`. This allows each environment to provide its own SQL Server
+credentials and database identity.
 
 Use the repository scripts to validate, introspect, and generate the client:
 
