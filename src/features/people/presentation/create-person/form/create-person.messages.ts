@@ -51,17 +51,12 @@ export function getCreatePersonFieldErrorMessages(
 
 export function getCreatePersonStatusMessage(
   actionState: CreatePersonActionState,
-): { type: "error" | "success"; text: string } | null {
+): { type: "error"; text: string } | null {
   switch (actionState.status) {
     case "invalid_form":
       return {
         type: "error",
         text: "داده‌های فرم قابل پردازش نیست. لطفاً مقادیر را بررسی و دوباره تلاش کنید.",
-      };
-    case "success":
-      return {
-        type: "success",
-        text: "اطلاعات شخص با موفقیت ثبت شد.",
       };
     default:
       return null;

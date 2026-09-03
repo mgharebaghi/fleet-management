@@ -325,7 +325,6 @@
   display: none;
 }
 
-.successMessage,
 .formError {
   margin: 0;
   padding: 11px var(--space-4);
@@ -333,18 +332,15 @@
   border-radius: var(--app-radius-message);
   font-size: var(--font-size-sm);
   line-height: 1.8;
-}
-
-.successMessage {
-  border-color: color-mix(in srgb, var(--app-success-text) 18%, transparent);
-  background: var(--app-success-background);
-  color: var(--app-success-text);
-}
-
-.formError {
   border-color: color-mix(in srgb, var(--app-danger-text) 18%, transparent);
   background: var(--app-danger-background);
   color: var(--app-danger-text);
+}
+
+.formActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
 }
 
 .submitButton {
@@ -389,6 +385,24 @@
 .submitButton:disabled {
   cursor: wait;
   opacity: var(--app-disabled-opacity);
+}
+
+.cancelLink {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  text-decoration: none;
+  transition: color var(--app-motion-fast);
+}
+
+.cancelLink:hover {
+  color: var(--app-text);
+  text-decoration: underline;
+}
+
+.cancelLink:focus-visible {
+  outline: 3px solid var(--app-focus-outline);
+  outline-offset: 3px;
 }
 
 .spinner {
@@ -443,8 +457,18 @@
     grid-template-columns: 1fr;
   }
 
+  .formActions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
   .submitButton {
     width: 100%;
+  }
+
+  .cancelLink {
+    text-align: center;
   }
 }
 

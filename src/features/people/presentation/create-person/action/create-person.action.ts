@@ -1,5 +1,8 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
 import { makeCreatePerson } from "../../../composition/create-person.factory";
 import type { CreatePersonActionState } from "./create-person.action-state";
 import { parseCreatePersonFormData } from "./create-person.form-data";
@@ -20,10 +23,8 @@ export async function createPersonAction(
   );
 
   if (createPersonResult.success) {
-    return {
-      status: "success",
-      personId: createPersonResult.person.personId,
-    };
+    revalidatePath("/people");
+    redirect("/people");
   }
 
   switch (createPersonResult.error.type) {

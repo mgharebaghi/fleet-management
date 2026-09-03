@@ -53,16 +53,10 @@ describe("Create Person presentation messages", () => {
     },
   );
 
-  it("maps form failure and success to Persian status messages", () => {
+  it("maps an invalid form submission to a Persian status message", () => {
     expect(getCreatePersonStatusMessage({ status: "invalid_form" })).toEqual({
       type: "error",
       text: "داده‌های فرم قابل پردازش نیست. لطفاً مقادیر را بررسی و دوباره تلاش کنید.",
-    });
-    expect(
-      getCreatePersonStatusMessage({ status: "success", personId: 1 }),
-    ).toEqual({
-      type: "success",
-      text: "اطلاعات شخص با موفقیت ثبت شد.",
     });
   });
 });

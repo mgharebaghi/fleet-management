@@ -1,57 +1,17 @@
-import { randomInt, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
-import { PrismaMssql } from "@prisma/adapter-mssql";
 import { expect, test } from "@playwright/test";
 
-import { createMssqlConfigFromEnvironment } from "../src/infrastructure/database/prisma/mssql-config";
+import type { E2EDatabaseAdapter } from "./support/e2e-database";
+import { connectToE2EDatabase } from "./support/e2e-database";
+import { createValidIranianNationalCode } from "./support/person-fixtures";
 
-let e2eDatabaseAdapter: Awaited<ReturnType<PrismaMssql["connect"]>>;
+let e2eDatabaseAdapter: E2EDatabaseAdapter;
 const createdNationalCodes = new Set<string>();
-
-function createValidIranianNationalCode(): string {
-  let firstNineDigits = randomInt(0, 1_000_000_000)
-    .toString()
-    .padStart(9, "0");
-
-  while (/^(\d)\1{8}$/.test(firstNineDigits)) {
-    firstNineDigits = randomInt(0, 1_000_000_000)
-      .toString()
-      .padStart(9, "0");
-  }
-
-  const weightedSum = firstNineDigits
-    .split("")
-    .reduce(
-      (sum, digit, index) => sum + Number(digit) * (10 - index),
-      0,
-    );
-  const remainder = weightedSum % 11;
-  const checkDigit = remainder < 2 ? remainder : 11 - remainder;
-
-  return `${firstNineDigits}${checkDigit}`;
-}
 
 test.describe.serial("Create Person", () => {
   test.beforeAll(async () => {
-    const e2eMssqlConfig =
-      createMssqlConfigFromEnvironment("E2E_DATABASE");
-    e2eDatabaseAdapter = await new PrismaMssql(e2eMssqlConfig).connect();
-    const databaseIdentity = await e2eDatabaseAdapter
-      .underlyingDriver()
-      .request()
-      .query<{ DatabaseName: string; PeopleTableId: number | null }>(
-        "SELECT DB_NAME() AS DatabaseName, OBJECT_ID(N'person.People') AS PeopleTableId",
-      );
-    const [database] = databaseIdentity.recordset;
-
-    if (
-      !database ||
-      database.DatabaseName.toLowerCase() !==
-        "FleetManagementDB_E2ETest".toLowerCase() ||
-      database.PeopleTableId === null
-    ) {
-      throw new Error("The configured E2E database identity is invalid.");
-    }
+    e2eDatabaseAdapter = await connectToE2EDatabase();
   });
 
   test.afterEach(async () => {
@@ -120,9 +80,7 @@ test.describe.serial("Create Person", () => {
     await page.getByRole("button", { name: "ثبت شخص", exact: true }).click();
 
     await expect(page.getByText("در حال ثبت اطلاعات…")).toBeVisible();
-    await expect(
-      page.getByText("اطلاعات شخص با موفقیت ثبت شد.", { exact: true }),
-    ).toBeVisible();
+    await expect(page).toHaveURL(/\/people$/, { timeout: 10_000 });
 
     const persistedPeople = await e2eDatabaseAdapter
       .underlyingDriver()

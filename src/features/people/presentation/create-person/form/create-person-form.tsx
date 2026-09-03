@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import type { ChangeEvent } from "react";
 import { useActionState, useMemo, useState } from "react";
 
@@ -401,23 +402,21 @@ export function CreatePersonForm() {
           <div className={styles.feedback}>
             {isPending && <LoadingIndicator label="در حال ثبت اطلاعات…" />}
             {statusMessage && (
-              <p
-                className={
-                  statusMessage.type === "success"
-                    ? styles.successMessage
-                    : styles.formError
-                }
-                role={statusMessage.type === "error" ? "alert" : "status"}
-              >
+              <p className={styles.formError} role="alert">
                 {statusMessage.text}
               </p>
             )}
           </div>
 
-          <button className={styles.submitButton} type="submit" disabled={isPending}>
-            {isPending && <span className={styles.spinner} aria-hidden="true" />}
-            <span>{isPending ? "در حال ثبت…" : "ثبت شخص"}</span>
-          </button>
+          <div className={styles.formActions}>
+            <button className={styles.submitButton} type="submit" disabled={isPending}>
+              {isPending && <span className={styles.spinner} aria-hidden="true" />}
+              <span>{isPending ? "در حال ثبت…" : "ثبت شخص"}</span>
+            </button>
+            <Link href="/people" className={styles.cancelLink}>
+              انصراف
+            </Link>
+          </div>
         </form>
       </section>
     </main>
