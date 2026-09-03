@@ -1,7 +1,7 @@
 import type {
   CreatePersonInput,
   CreatePersonValidationErrorCode,
-} from "../../../application/person/create-person/create-person.contract";
+} from "../../../application/create-person/create-person.contract";
 
 export type CreatePersonActionState =
   | { status: "idle" }

@@ -6,7 +6,7 @@ import type {
 import {
   normalizeCreatePersonInput,
   validateCreatePersonInput,
-} from "./create-person-validation";
+} from "./create-person.validation";
 
 export class CreatePerson {
   constructor(private readonly personRepository: PersonRepository) {}

@@ -1,8 +1,8 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { People as PrismaPeople } from "@/generated/prisma/client";
 
-import type { NewPerson, Person } from "../../application/person/person";
-import type { PersonRepository } from "../../application/person/ports/person-repository";
+import type { NewPerson, Person } from "../../application/person";
+import type { PersonRepository } from "../../application/ports/person-repository";
 
 type PeoplePrismaClient = Pick<PrismaClient, "people">;
 

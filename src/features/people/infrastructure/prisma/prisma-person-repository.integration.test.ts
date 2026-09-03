@@ -15,7 +15,7 @@ import {
 import { PrismaClient } from "../../../../generated/prisma/client";
 import { createMssqlConfigFromEnvironment } from "../../../../infrastructure/database/prisma/mssql-config";
 
-import type { NewPerson } from "../../application/person/person";
+import type { NewPerson } from "../../application/person";
 import { PrismaPersonRepository } from "./prisma-person-repository";
 
 config({
