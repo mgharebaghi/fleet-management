@@ -1,0 +1,103 @@
+.card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface-subtle);
+}
+
+.header h2 {
+  color: var(--app-heading);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+.header p {
+  margin-top: var(--space-1);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.counts {
+  display: grid;
+  gap: 2px;
+}
+
+.count {
+  color: var(--app-heading);
+  font-weight: 700;
+}
+
+.inactiveCount {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.errorState {
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--app-danger) 28%, transparent);
+  border-radius: var(--app-radius-control);
+  background: var(--app-danger-background);
+  color: var(--app-danger-text);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--app-border-subtle);
+}
+
+.addButton {
+  min-height: 40px;
+  padding: 8px var(--space-4);
+  border: 1px solid var(--app-primary);
+  border-radius: var(--app-radius-control);
+  background: var(--app-primary);
+  color: var(--app-on-primary);
+  font-weight: 700;
+  font-size: var(--font-size-xs);
+  transition:
+    background-color var(--app-motion-fast),
+    border-color var(--app-motion-fast);
+}
+
+.addButton:hover {
+  border-color: var(--app-primary-hover);
+  background: var(--app-primary-hover);
+}
+
+.viewAllButton {
+  min-height: 40px;
+  padding: 8px var(--space-4);
+  border: 1px solid var(--app-control-border);
+  border-radius: var(--app-radius-control);
+  background: var(--app-surface);
+  color: var(--app-primary);
+  font-weight: 700;
+  font-size: var(--font-size-xs);
+  transition:
+    background-color var(--app-motion-fast),
+    border-color var(--app-motion-fast);
+}
+
+.viewAllButton:hover {
+  border-color: var(--app-primary);
+  background: var(--app-info-background);
+}
+
+.addButton:focus-visible,
+.viewAllButton:focus-visible {
+  outline: 3px solid var(--app-focus-outline);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .addButton,
+  .viewAllButton {
+    transition: none;
+  }
+}
