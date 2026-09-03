@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   normalizeCreatePersonInput,
   validateCreatePersonInput,
-} from "./create-person-validation";
+} from "./create-person.validation";
 import type { CreatePersonInput } from "./create-person.contract";
 
 const validCreatePersonInput: CreatePersonInput = {

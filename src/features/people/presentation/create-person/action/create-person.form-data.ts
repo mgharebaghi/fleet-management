@@ -1,4 +1,4 @@
-import type { CreatePersonInput } from "../../../application/person/create-person/create-person.contract";
+import type { CreatePersonInput } from "../../../application/create-person/create-person.contract";
 
 export type ParseCreatePersonFormDataResult =
   | { success: true; input: CreatePersonInput }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { CreatePersonValidationErrorCode } from "../../../application/person/create-person/create-person.contract";
+import type { CreatePersonValidationErrorCode } from "../../../application/create-person/create-person.contract";
 import {
   getCreatePersonFieldErrorMessages,
   getCreatePersonStatusMessage,

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { CreatePersonResult } from "../../../application/person/create-person/create-person.contract";
-import type { Person } from "../../../application/person/person";
+import type { CreatePersonResult } from "../../../application/create-person/create-person.contract";
+import type { Person } from "../../../application/person";
 import { createPersonAction } from "./create-person.action";
 import { initialCreatePersonActionState } from "./create-person.action-state";
 
