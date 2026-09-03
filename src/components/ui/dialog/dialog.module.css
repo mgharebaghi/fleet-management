@@ -1,0 +1,113 @@
+.dialog {
+  width: min(92vw, 480px);
+  max-height: min(88dvh, 640px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-group);
+  background: transparent;
+  color: var(--app-text);
+  overflow: hidden;
+}
+
+/* Native <dialog> is `display: none` while closed; only lay it out as a
+   flex column once the `open` attribute is present, so the closed dialog
+   never occupies layout space or intercepts pointer events. */
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog.list {
+  width: min(92vw, 640px);
+}
+
+.dialog::backdrop {
+  background: rgb(13 27 42 / 45%);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--app-surface);
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.header h2 {
+  color: var(--app-heading);
+  font-size: var(--font-size-md);
+  font-weight: 700;
+}
+
+.closeButton {
+  display: inline-flex;
+  min-width: 32px;
+  min-height: 32px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--app-radius-control);
+  background: transparent;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  transition:
+    border-color var(--app-motion-fast),
+    background-color var(--app-motion-fast),
+    color var(--app-motion-fast);
+}
+
+.closeButton:hover {
+  border-color: var(--app-control-border);
+  background: var(--app-surface-subtle);
+  color: var(--app-primary);
+}
+
+.closeButton:focus-visible {
+  outline: 3px solid var(--app-focus-outline);
+  outline-offset: 3px;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--space-5);
+  overflow-y: auto;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .dialog,
+  .dialog.list {
+    width: min(96vw, 480px);
+    max-height: 90dvh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .closeButton {
+    transition: none;
+  }
+}

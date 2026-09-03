@@ -1,0 +1,27 @@
+.list {
+  display: grid;
+  gap: var(--space-1);
+  list-style: none;
+}
+
+.entryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 8px var(--space-3);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-control);
+  background: var(--app-surface-subtle);
+  color: var(--app-heading);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+}
+
+.emptyState {
+  padding: var(--space-4);
+  border: 1px dashed var(--app-control-border);
+  border-radius: var(--app-radius-control);
+  color: var(--app-text-muted);
+  text-align: center;
+}
