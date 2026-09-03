@@ -25,6 +25,14 @@ describe("CreatePersonForm", () => {
     expect(markup).toContain("ثبت شخص");
   });
 
+  it("renders a cancel link back to the people list", () => {
+    const markup = renderToStaticMarkup(<CreatePersonForm />);
+
+    expect(markup).toMatch(
+      /<a(?=[^>]*href="\/people")[^>]*>انصراف<\/a>/,
+    );
+  });
+
   it("renders technical text controls from left to right", () => {
     const markup = renderToStaticMarkup(<CreatePersonForm />);
 

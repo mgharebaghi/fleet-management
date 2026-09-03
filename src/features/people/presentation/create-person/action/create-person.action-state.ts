@@ -14,8 +14,7 @@ export type CreatePersonActionState =
     }
   | { status: "national_code_already_exists" }
   | { status: "personnel_no_already_exists" }
-  | { status: "card_no_already_exists" }
-  | { status: "success"; personId: number };
+  | { status: "card_no_already_exists" };
 
 export const initialCreatePersonActionState: CreatePersonActionState = {
   status: "idle",
