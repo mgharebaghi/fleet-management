@@ -10,8 +10,9 @@ export type DialogProps = {
   onClose: () => void;
   titleId: string;
   title: string;
+  description?: string;
   children: ReactNode;
-  size?: "form" | "list";
+  size?: "form" | "list" | "wide";
 };
 
 export function Dialog({
@@ -19,6 +20,7 @@ export function Dialog({
   onClose,
   titleId,
   title,
+  description,
   children,
   size = "form",
 }: DialogProps) {
@@ -65,15 +67,21 @@ export function Dialog({
     <dialog
       ref={dialogRef}
       className={
-        size === "list" ? `${styles.dialog} ${styles.list}` : styles.dialog
+        size === "form"
+          ? styles.dialog
+          : `${styles.dialog} ${styles[size]}`
       }
       aria-labelledby={titleId}
+      aria-describedby={description ? `${titleId}-description` : undefined}
       onClick={handleBackdropClick}
       onClose={onClose}
     >
       <div className={styles.panel}>
         <header className={styles.header}>
-          <h2 id={titleId}>{title}</h2>
+          <div className={styles.headerCopy}>
+            <h2 id={titleId}>{title}</h2>
+            {description && <p id={`${titleId}-description`}>{description}</p>}
+          </div>
           <button type="button" className={styles.closeButton} onClick={onClose}>
             <span aria-hidden="true">×</span>
             <span className={styles.visuallyHidden}>بستن</span>

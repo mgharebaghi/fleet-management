@@ -1,10 +1,15 @@
-.form {
+.form,
+.field,
+.referenceGrid {
   display: grid;
+}
+
+.form {
   gap: var(--space-4);
 }
 
 .field {
-  display: grid;
+  align-content: start;
   gap: var(--space-2);
 }
 
@@ -14,14 +19,15 @@
   font-weight: 700;
 }
 
-.field input {
+.field input,
+.field select {
+  width: 100%;
   min-height: 46px;
   padding: 10px var(--space-3);
   border: 1px solid var(--app-control-border);
   border-radius: var(--app-radius-control);
   background: var(--app-surface);
   color: var(--app-text);
-  font: inherit;
   outline: none;
   box-shadow: var(--app-shadow-control);
   transition:
@@ -29,24 +35,37 @@
     box-shadow var(--app-motion-fast);
 }
 
-.field input:hover:not(:disabled) {
+.field input:hover:not(:disabled),
+.field select:hover:not(:disabled) {
   border-color: var(--app-control-hover-border);
 }
 
-.field input:focus-visible {
+.field input:focus-visible,
+.field select:focus-visible {
   border-color: var(--app-focus);
   box-shadow: 0 0 0 3px var(--app-focus-ring);
 }
 
-.field input[aria-invalid="true"] {
+.field input[aria-invalid="true"],
+.field select[aria-invalid="true"] {
   border-color: var(--app-danger-border);
 }
 
-.field input:disabled {
+.field input:disabled,
+.field select:disabled {
   background: var(--app-control-disabled);
   color: var(--app-text-muted);
   cursor: not-allowed;
   opacity: var(--app-disabled-opacity);
+}
+
+.referenceGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.referenceGrid .field:first-child {
+  grid-column: 1 / -1;
 }
 
 .fieldErrors {
@@ -56,18 +75,26 @@
   font-size: var(--font-size-xs);
 }
 
-.fieldErrors p {
-  margin: 0;
-}
-
+.referenceError,
+.referenceNotice,
 .formError {
   margin: 0;
   padding: 10px var(--space-4);
-  border: 1px solid color-mix(in srgb, var(--app-danger-text) 18%, transparent);
   border-radius: var(--app-radius-message);
+  font-size: var(--font-size-sm);
+}
+
+.referenceError,
+.formError {
+  border: 1px solid color-mix(in srgb, var(--app-danger-text) 18%, transparent);
   background: var(--app-danger-background);
   color: var(--app-danger-text);
-  font-size: var(--font-size-sm);
+}
+
+.referenceNotice {
+  border: 1px solid color-mix(in srgb, var(--app-info-text) 18%, transparent);
+  background: var(--app-info-background);
+  color: var(--app-info-text);
 }
 
 .actions {
@@ -79,15 +106,24 @@
   border-top: 1px solid var(--app-border-subtle);
 }
 
-.cancelButton {
-  min-height: 40px;
-  padding: 8px var(--space-4);
-  border: 1px solid var(--app-control-border);
+.cancelButton,
+.submitButton {
+  min-height: 44px;
+  padding: 9px var(--space-5);
   border-radius: var(--app-radius-control);
+  font-weight: 700;
+}
+
+.cancelButton {
+  border: 1px solid var(--app-control-border);
   background: var(--app-surface);
   color: var(--app-text-muted);
-  font-weight: 700;
-  font-size: var(--font-size-xs);
+}
+
+.submitButton {
+  border: 1px solid var(--app-primary);
+  background: var(--app-primary);
+  color: var(--app-on-primary);
 }
 
 .cancelButton:hover:not(:disabled) {
@@ -95,38 +131,32 @@
   color: var(--app-text);
 }
 
-.submitButton {
-  min-height: 40px;
-  padding: 8px var(--space-4);
-  border: 1px solid var(--app-primary);
-  border-radius: var(--app-radius-control);
-  background: var(--app-primary);
-  color: var(--app-on-primary);
-  font-weight: 700;
-  font-size: var(--font-size-xs);
-  transition:
-    background-color var(--app-motion-fast),
-    border-color var(--app-motion-fast);
-}
-
 .submitButton:hover:not(:disabled) {
   border-color: var(--app-primary-hover);
   background: var(--app-primary-hover);
 }
 
-.submitButton:disabled,
-.cancelButton:disabled {
-  opacity: var(--app-disabled-opacity);
-  cursor: not-allowed;
-}
-
-.submitButton:focus-visible,
-.cancelButton:focus-visible {
+.cancelButton:focus-visible,
+.submitButton:focus-visible {
   outline: 3px solid var(--app-focus-outline);
   outline-offset: 3px;
 }
 
-@media (max-width: 760px) {
+.cancelButton:disabled,
+.submitButton:disabled {
+  cursor: not-allowed;
+  opacity: var(--app-disabled-opacity);
+}
+
+@media (max-width: 600px) {
+  .referenceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .referenceGrid .field:first-child {
+    grid-column: auto;
+  }
+
   .actions {
     flex-direction: column;
   }
@@ -134,5 +164,12 @@
   .cancelButton,
   .submitButton {
     width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field input,
+  .field select {
+    transition: none;
   }
 }

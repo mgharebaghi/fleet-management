@@ -13,16 +13,31 @@ export async function connectToE2EDatabase(): Promise<E2EDatabaseAdapter> {
   const databaseIdentity = await adapter
     .underlyingDriver()
     .request()
-    .query<{ DatabaseName: string; PeopleTableId: number | null }>(
-      "SELECT DB_NAME() AS DatabaseName, OBJECT_ID(N'person.People') AS PeopleTableId",
-    );
+    .query<{
+      DatabaseName: string;
+      PeopleTableId: number | null;
+      VehicleModelTableId: number | null;
+      VehicleBrandTableId: number | null;
+      VehicleTypeTableId: number | null;
+      FuelTypeTableId: number | null;
+    }>(`SELECT
+      DB_NAME() AS DatabaseName,
+      OBJECT_ID(N'person.People') AS PeopleTableId,
+      OBJECT_ID(N'fleet.VehicleModel') AS VehicleModelTableId,
+      OBJECT_ID(N'fleet.VehicleBrand') AS VehicleBrandTableId,
+      OBJECT_ID(N'fleet.VehicleType') AS VehicleTypeTableId,
+      OBJECT_ID(N'fleet.FuelType') AS FuelTypeTableId`);
   const [database] = databaseIdentity.recordset;
 
   if (
     !database ||
     database.DatabaseName.toLowerCase() !==
       EXPECTED_E2E_DATABASE_NAME.toLowerCase() ||
-    database.PeopleTableId === null
+    database.PeopleTableId === null ||
+    database.VehicleModelTableId === null ||
+    database.VehicleBrandTableId === null ||
+    database.VehicleTypeTableId === null ||
+    database.FuelTypeTableId === null
   ) {
     await adapter.dispose();
     throw new Error("The configured E2E database identity is invalid.");

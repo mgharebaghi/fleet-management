@@ -1,0 +1,213 @@
+.card {
+  display: grid;
+  grid-column: span 2;
+  align-content: start;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border: 1px solid color-mix(in srgb, var(--app-accent) 28%, var(--app-border));
+  border-radius: var(--app-radius-group);
+  background:
+    linear-gradient(135deg, rgb(15 163 163 / 7%), transparent 48%),
+    var(--app-surface-subtle);
+}
+
+.header {
+  display: grid;
+  gap: 2px;
+}
+
+.header h2 {
+  color: var(--app-heading);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+.header p {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-6);
+}
+
+.info {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-4);
+}
+
+.count {
+  color: var(--app-heading);
+  font-weight: 700;
+}
+
+.inactiveCount {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.preview {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  padding-inline-start: var(--space-5);
+  border-inline-start: 1px solid var(--app-border-subtle);
+}
+
+.previewLabel {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.previewList {
+  display: grid;
+  gap: var(--space-1);
+  list-style: none;
+}
+
+.previewItem {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 3px var(--space-2);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-message);
+  background: var(--app-surface);
+}
+
+.previewModelName {
+  flex: 0 0 auto;
+  color: var(--app-heading);
+  font-weight: 700;
+  font-size: var(--font-size-xs);
+}
+
+.previewMeta {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.emptyState,
+.errorState {
+  padding: var(--space-4);
+  border: 1px dashed var(--app-control-border);
+  border-radius: var(--app-radius-control);
+  background: var(--app-surface);
+  color: var(--app-text-muted);
+  text-align: center;
+}
+
+.errorState {
+  border-color: color-mix(in srgb, var(--app-danger) 28%, transparent);
+  background: var(--app-danger-background);
+  color: var(--app-danger-text);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.primaryButton,
+.secondaryButton {
+  min-height: 40px;
+  padding: 8px var(--space-4);
+  border-radius: var(--app-radius-control);
+  font-weight: 700;
+  font-size: var(--font-size-xs);
+  transition:
+    background-color var(--app-motion-fast),
+    border-color var(--app-motion-fast);
+}
+
+.primaryButton {
+  border: 1px solid var(--app-primary);
+  background: var(--app-primary);
+  color: var(--app-on-primary);
+}
+
+.secondaryButton {
+  border: 1px solid var(--app-control-border);
+  background: var(--app-surface);
+  color: var(--app-primary);
+}
+
+.primaryButton:hover {
+  border-color: var(--app-primary-hover);
+  background: var(--app-primary-hover);
+}
+
+.secondaryButton:hover {
+  border-color: var(--app-primary);
+  background: var(--app-info-background);
+}
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible {
+  outline: 3px solid var(--app-focus-outline);
+  outline-offset: 3px;
+}
+
+@media (max-width: 1023px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+
+  .preview {
+    padding-inline-start: 0;
+    border-inline-start: none;
+  }
+
+  .previewItem {
+    flex-wrap: wrap;
+  }
+
+  .previewMeta {
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 760px) {
+  .card {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .actions {
+    display: grid;
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primaryButton,
+  .secondaryButton {
+    transition: none;
+  }
+}

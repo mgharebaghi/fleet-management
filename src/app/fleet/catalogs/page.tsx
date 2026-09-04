@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "اطلاعات پایه ناوگان",
-  description: "مدیریت برند خودرو، نوع خودرو، نوع سوخت و وضعیت خودرو",
+  description:
+    "مدیریت برند، نوع، سوخت، وضعیت و مدل‌های خودرو در اطلاعات پایه ناوگان",
 };
 
 export default function FleetCatalogsRoutePage() {
