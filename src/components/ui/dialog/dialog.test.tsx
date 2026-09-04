@@ -36,4 +36,23 @@ describe("Dialog", () => {
 
     expect(markup).toMatch(/class="[^"]*list[^"]*"/);
   });
+
+  it("supports a wide size for relation-rich tables", () => {
+    const markup = renderToStaticMarkup(
+      <Dialog
+        open={false}
+        onClose={noop}
+        titleId="wide-title"
+        title="نمونه"
+        description="توضیح نمونه"
+        size="wide"
+      >
+        <p>محتوا</p>
+      </Dialog>,
+    );
+
+    expect(markup).toMatch(/class="[^"]*wide[^"]*"/);
+    expect(markup).toContain('aria-describedby="wide-title-description"');
+    expect(markup).toContain("توضیح نمونه");
+  });
 });

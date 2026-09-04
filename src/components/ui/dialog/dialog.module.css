@@ -22,6 +22,10 @@
   width: min(92vw, 640px);
 }
 
+.dialog.wide {
+  width: min(96vw, 920px);
+}
+
 .dialog::backdrop {
   background: rgb(13 27 42 / 45%);
 }
@@ -49,6 +53,16 @@
   color: var(--app-heading);
   font-size: var(--font-size-md);
   font-weight: 700;
+}
+
+.headerCopy {
+  display: grid;
+  gap: 2px;
+}
+
+.headerCopy p {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
 }
 
 .closeButton {
@@ -100,7 +114,8 @@
 
 @media (max-width: 760px) {
   .dialog,
-  .dialog.list {
+  .dialog.list,
+  .dialog.wide {
     width: min(96vw, 480px);
     max-height: 90dvh;
   }

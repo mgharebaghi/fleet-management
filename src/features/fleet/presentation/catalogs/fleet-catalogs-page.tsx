@@ -2,12 +2,15 @@ import { createFuelTypeAction } from "./fuel-type/action/create-fuel-type.action
 import { createVehicleBrandAction } from "./vehicle-brand/action/create-vehicle-brand.action";
 import { createVehicleStatusAction } from "./vehicle-status/action/create-vehicle-status.action";
 import { createVehicleTypeAction } from "./vehicle-type/action/create-vehicle-type.action";
+import { createVehicleModelAction } from "./vehicle-model/action/create-vehicle-model.action";
 import { makeListFuelTypes } from "../../composition/catalogs/fuel-type.factory";
 import { makeListVehicleBrands } from "../../composition/catalogs/vehicle-brand.factory";
 import { makeListVehicleStatuses } from "../../composition/catalogs/vehicle-status.factory";
 import { makeListVehicleTypes } from "../../composition/catalogs/vehicle-type.factory";
+import { makeListVehicleModels } from "../../composition/catalogs/vehicle-model.factory";
 import type { CatalogEntryView } from "./components/catalog-entry-view";
 import { CatalogSummaryCard } from "./components/catalog-summary-card";
+import { VehicleModelSummaryCard } from "./vehicle-model/vehicle-model-summary-card";
 import styles from "./fleet-catalogs-page.module.css";
 
 async function loadEntries<TEntry>(
@@ -21,12 +24,13 @@ async function loadEntries<TEntry>(
 }
 
 export async function FleetCatalogsPage() {
-  const [vehicleBrands, vehicleTypes, fuelTypes, vehicleStatuses] =
+  const [vehicleBrands, vehicleTypes, fuelTypes, vehicleStatuses, vehicleModels] =
     await Promise.all([
       loadEntries(() => makeListVehicleBrands().execute()),
       loadEntries(() => makeListVehicleTypes().execute()),
       loadEntries(() => makeListFuelTypes().execute()),
       loadEntries(() => makeListVehicleStatuses().execute()),
+      loadEntries(() => makeListVehicleModels().execute()),
     ]);
 
   const vehicleBrandEntries: CatalogEntryView[] = vehicleBrands.entries.map(
@@ -49,7 +53,7 @@ export async function FleetCatalogsPage() {
           <p className={styles.eyebrow}>مدیریت ناوگان</p>
           <h1>اطلاعات پایه ناوگان</h1>
           <p className={styles.description}>
-            برند خودرو، نوع خودرو، نوع سوخت و وضعیت خودرو را مشاهده و رکورد
+            برند، نوع، سوخت، وضعیت و مدل‌های خودرو را مشاهده و اطلاعات پایه
             جدید ثبت کنید.
           </p>
         </header>
@@ -109,6 +113,20 @@ export async function FleetCatalogsPage() {
             entries={vehicleStatusEntries}
             hasLoadError={vehicleStatuses.hasLoadError}
             action={createVehicleStatusAction}
+          />
+
+          <VehicleModelSummaryCard
+            vehicleModels={vehicleModels.entries}
+            brands={vehicleBrandEntries}
+            vehicleTypes={vehicleTypeEntries}
+            fuelTypes={fuelTypeEntries}
+            hasLoadError={vehicleModels.hasLoadError}
+            hasReferenceLoadError={
+              vehicleBrands.hasLoadError ||
+              vehicleTypes.hasLoadError ||
+              fuelTypes.hasLoadError
+            }
+            action={createVehicleModelAction}
           />
         </div>
       </section>

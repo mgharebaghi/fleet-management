@@ -5,6 +5,7 @@ import type { FuelType } from "../../application/catalogs/fuel-type";
 import type { VehicleBrand } from "../../application/catalogs/vehicle-brand";
 import type { VehicleStatusEntry } from "../../application/catalogs/vehicle-status";
 import type { VehicleType } from "../../application/catalogs/vehicle-type";
+import type { VehicleModel } from "../../application/catalogs/vehicle-model";
 import { FleetCatalogsPage } from "./fleet-catalogs-page";
 
 const {
@@ -20,6 +21,9 @@ const {
   executeListVehicleStatuses,
   makeListVehicleStatuses,
   makeCreateVehicleStatus,
+  executeListVehicleModels,
+  makeListVehicleModels,
+  makeCreateVehicleModel,
   revalidatePath,
 } = vi.hoisted(() => ({
   executeListVehicleBrands: vi.fn(),
@@ -34,6 +38,9 @@ const {
   executeListVehicleStatuses: vi.fn(),
   makeListVehicleStatuses: vi.fn(),
   makeCreateVehicleStatus: vi.fn(),
+  executeListVehicleModels: vi.fn(),
+  makeListVehicleModels: vi.fn(),
+  makeCreateVehicleModel: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 
@@ -53,12 +60,26 @@ vi.mock("../../composition/catalogs/vehicle-status.factory", () => ({
   makeListVehicleStatuses,
   makeCreateVehicleStatus,
 }));
+vi.mock("../../composition/catalogs/vehicle-model.factory", () => ({
+  makeListVehicleModels,
+  makeCreateVehicleModel,
+}));
 vi.mock("next/cache", () => ({ revalidatePath }));
 
 const vehicleBrands: VehicleBrand[] = [{ id: 1, name: "Volvo", isActive: true }];
 const vehicleTypes: VehicleType[] = [{ id: 1, name: "کامیون", isActive: true }];
 const fuelTypes: FuelType[] = [{ id: 1, name: "بنزین", isActive: false }];
 const vehicleStatuses: VehicleStatusEntry[] = [{ id: 1, name: "در سرویس" }];
+const vehicleModels: VehicleModel[] = [
+  {
+    id: 1,
+    name: "FH",
+    isActive: true,
+    brand: { id: 1, name: "Volvo" },
+    vehicleType: { id: 1, name: "کامیون" },
+    fuelType: null,
+  },
+];
 
 async function renderPage() {
   return renderToStaticMarkup(await FleetCatalogsPage());
@@ -70,6 +91,7 @@ describe("FleetCatalogsPage", () => {
     executeListVehicleTypes.mockReset().mockResolvedValue(vehicleTypes);
     executeListFuelTypes.mockReset().mockResolvedValue(fuelTypes);
     executeListVehicleStatuses.mockReset().mockResolvedValue(vehicleStatuses);
+    executeListVehicleModels.mockReset().mockResolvedValue(vehicleModels);
     makeListVehicleBrands.mockReset().mockReturnValue({
       execute: executeListVehicleBrands,
     });
@@ -82,9 +104,12 @@ describe("FleetCatalogsPage", () => {
     makeListVehicleStatuses.mockReset().mockReturnValue({
       execute: executeListVehicleStatuses,
     });
+    makeListVehicleModels.mockReset().mockReturnValue({
+      execute: executeListVehicleModels,
+    });
   });
 
-  it("renders the four catalog summary cards with their entries and totals", async () => {
+  it("renders the simple catalogs and the dedicated vehicle-model summary", async () => {
     const markup = await renderPage();
 
     expect(markup).toContain('lang="fa"');
@@ -98,21 +123,27 @@ describe("FleetCatalogsPage", () => {
     expect(markup).toContain("وضعیت خودرو");
     expect(markup).toContain("در سرویس");
     expect(markup.match(/۱ مورد ثبت‌شده/g)).toHaveLength(4);
+    expect(markup).toContain("مدل خودرو");
+    expect(markup).toContain("FH");
+    expect(markup).toContain("۱ مدل ثبت‌شده");
   });
 
   it("does not show a redundant active badge, but shows an inactive badge and count for the fuel-type catalog", async () => {
     const markup = await renderPage();
+    const simpleCatalogMarkup = markup.split(
+      'aria-labelledby="vehicle-model-title"',
+    )[0];
 
-    expect(markup).not.toMatch(/>فعال</);
-    expect(markup).toContain("غیرفعال");
-    expect(markup).toContain("۱ مورد غیرفعال");
+    expect(simpleCatalogMarkup).not.toMatch(/>فعال</);
+    expect(simpleCatalogMarkup).toContain("غیرفعال");
+    expect(simpleCatalogMarkup).toContain("۱ مورد غیرفعال");
   });
 
   it("keeps every catalog's create and view-all dialogs closed by default", async () => {
     const markup = await renderPage();
 
     const dialogTags = markup.match(/<dialog[^>]*>/g) ?? [];
-    expect(dialogTags).toHaveLength(8);
+    expect(dialogTags).toHaveLength(10);
     for (const dialogTag of dialogTags) {
       expect(dialogTag).not.toMatch(/\sopen[\s>]/);
     }
@@ -145,5 +176,16 @@ describe("FleetCatalogsPage", () => {
     expect(markup).not.toContain("SQL connection failed");
     expect(markup).toContain("Volvo");
     expect(markup).toContain("در سرویس");
+    expect(markup).toContain("FH");
+  });
+
+  it("isolates a vehicle-model load failure from the simple catalogs", async () => {
+    executeListVehicleModels.mockRejectedValue(new Error("SQL connection failed"));
+
+    const markup = await renderPage();
+
+    expect(markup).toContain("دریافت فهرست مدل‌های خودرو امکان‌پذیر نبود");
+    expect(markup).not.toContain("SQL connection failed");
+    expect(markup).toContain("Volvo");
   });
 });

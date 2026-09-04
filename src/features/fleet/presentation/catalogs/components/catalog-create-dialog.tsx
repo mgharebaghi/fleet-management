@@ -109,19 +109,19 @@ export function CatalogCreateDialog({
 
         <div className={styles.actions}>
           <button
+            type="submit"
+            className={styles.submitButton}
+            disabled={isPending}
+          >
+            {isPending ? submitPendingLabel : submitLabel}
+          </button>
+          <button
             type="button"
             className={styles.cancelButton}
             onClick={onClose}
             disabled={isPending}
           >
             انصراف
-          </button>
-          <button
-            type="submit"
-            className={styles.submitButton}
-            disabled={isPending}
-          >
-            {isPending ? submitPendingLabel : submitLabel}
           </button>
         </div>
       </form>
