@@ -38,10 +38,34 @@ export function useListFilters<TValues extends ListFilterValues>({
   const [draftState, setDraftState] = useState({
     source: values,
     draft: values,
+    // Every search value this controller has navigated to and not yet seen
+    // arrive. Several navigations can be in flight at once, so remembering only
+    // the latest would let an earlier one arrive unrecognised and replace the
+    // draft the user has already typed past.
+    navigatedSearches: [] as readonly string[],
   });
   const cancelPendingSearch = useRef<(() => void) | null>(null);
 
-  const synchronized = synchronizeListFilterDraft(draftState, values);
+  const arrivedNavigation = draftState.navigatedSearches.indexOf(
+    values[searchName],
+  );
+  const synchronizedDraft = synchronizeListFilterDraft(
+    draftState,
+    values,
+    arrivedNavigation === -1 ? [] : [searchName],
+  );
+  const synchronized =
+    synchronizedDraft === draftState
+      ? draftState
+      : {
+          ...synchronizedDraft,
+          // Navigations older than the one that arrived can no longer describe
+          // the listing, and values changed elsewhere discard all of them.
+          navigatedSearches:
+            arrivedNavigation === -1
+              ? []
+              : draftState.navigatedSearches.slice(arrivedNavigation + 1),
+        };
 
   if (synchronized !== draftState) {
     setDraftState(synchronized);
@@ -60,7 +84,13 @@ export function useListFilters<TValues extends ListFilterValues>({
       pathname,
       searchParams: new URLSearchParams(currentQuery),
       updates: { [searchName]: search },
-      navigate: (href) => router.replace(href, { scroll: false }),
+      navigate: (href) => {
+        setDraftState((current) => ({
+          ...current,
+          navigatedSearches: [...current.navigatedSearches, search],
+        }));
+        router.replace(href, { scroll: false });
+      },
     });
     cancelPendingSearch.current = cancel;
 
@@ -86,6 +116,7 @@ export function useListFilters<TValues extends ListFilterValues>({
       setDraftState((current) => ({
         ...current,
         draft: { ...current.draft, [name]: value },
+        navigatedSearches: [...current.navigatedSearches, draft[searchName]],
       }));
       router.replace(
         buildListFilterHref({

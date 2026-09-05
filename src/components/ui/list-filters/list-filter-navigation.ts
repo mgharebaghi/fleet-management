@@ -62,16 +62,28 @@ export function scheduleListFilterNavigation({
 
 /**
  * Keeps a local draft while the listing still reflects the values it was built
- * from, and adopts the new values once the URL changes from elsewhere.
+ * from, and adopts the new values once the URL changes from elsewhere. A field
+ * may be preserved when the arriving values belong to an earlier navigation
+ * started by this controller and the user has edited it again in the meantime.
  */
 export function synchronizeListFilterDraft<TValues extends ListFilterValues>(
   state: ListFilterDraft<TValues>,
   source: TValues,
+  preserveDraftNames: readonly (keyof TValues & string)[] = [],
 ): ListFilterDraft<TValues> {
   const sourceNames = Object.keys(source);
   const isUnchanged =
     sourceNames.length === Object.keys(state.source).length &&
     sourceNames.every((name) => state.source[name] === source[name]);
 
-  return isUnchanged ? state : { source, draft: source };
+  if (isUnchanged) {
+    return state;
+  }
+
+  const draft = { ...source };
+  for (const name of preserveDraftNames) {
+    draft[name] = state.draft[name];
+  }
+
+  return { source, draft };
 }

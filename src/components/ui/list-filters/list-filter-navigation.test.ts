@@ -107,4 +107,20 @@ describe("synchronizeListFilterDraft", () => {
       draft: { search: "Maryam", status: "inactive" },
     });
   });
+
+  it("keeps a newer draft when an earlier navigation from this controller arrives", () => {
+    expect(
+      synchronizeListFilterDraft(
+        {
+          source: { search: "", status: "active" },
+          draft: { search: "Ali Reza", status: "active" },
+        },
+        { search: "Ali", status: "active" },
+        ["search"],
+      ),
+    ).toEqual({
+      source: { search: "Ali", status: "active" },
+      draft: { search: "Ali Reza", status: "active" },
+    });
+  });
 });
