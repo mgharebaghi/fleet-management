@@ -1,58 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FleetManagement
 
-## Getting Started
+FleetManagement is a fleet-management application with a Persian, RTL user
+interface: vehicles, their catalogs (brand, model, type, fuel, status) and
+personnel are tracked against an existing SQL Server database.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Next.js (App Router) + React + TypeScript
+- SQL Server, accessed through Prisma ORM
+- Vitest (unit/integration) and Playwright (E2E)
+
+## Architecture
+
+The codebase follows Feature-based, Layered and Vertical Slice principles.
+Each feature under `src/features/<domain>` is organised into:
+
+- **Application** — use cases, validation and Ports; independent of Prisma,
+  SQL Server and Next.js.
+- **Infrastructure** — Prisma repositories implementing those Ports.
+- **Composition** — explicit factories wiring a Port to its Prisma
+  implementation.
+- **Presentation** — pages, Server Actions and forms; UI and transport
+  concerns only, no business rules.
+
+The full set of engineering rules (scope, database safety, layer boundaries,
+Presentation conventions, testing, git workflow) is defined in
+[AGENTS.md](./AGENTS.md) and is the reference for any change to this
+repository.
+
+## Database-first with SQL Server
+
+SQL Server is the source of truth for the data model. Prisma is a consumer of
+the database, not its designer. The only supported flow is:
+
+```
+SQL Server → prisma db pull → schema.prisma → Prisma Client
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`prisma migrate dev` and `prisma db push` must never be run against this
+project's databases, and `schema.prisma` must never be hand-edited to change
+structure. Any real schema change goes through the approved SQL Server
+process first, followed by `npm run prisma:pull`.
 
-## Prisma and SQL Server
+Prisma CLI commands (`validate`, `pull`) read `DATABASE_URL`. Prisma Client at
+runtime instead builds the `mssql` adapter config from the separate
+`DATABASE_*` variables below, so no connection string or credential is
+hard-coded in application code.
 
-This project uses Prisma with a database-first SQL Server workflow. SQL Server is the source of truth, and Prisma introspection is limited to the `driver`, `fleet`, and `person` database schemas.
-
-Prisma CLI reads `DATABASE_URL`. Prisma Client runtime builds the official
-`mssql` config object from separate environment variables, so credentials are
-not hard-coded in application code. Configure the ignored `.env` file:
-
-```dotenv
-DATABASE_URL="sqlserver://localhost:1433;database=FleetManagementDB_05;schema=dbo;user=YOUR_USER;password=YOUR_PASSWORD;encrypt=true;trustServerCertificate=true;"
-DATABASE_SERVER="localhost"
-DATABASE_PORT="1433"
-DATABASE_NAME="FleetManagementDB_05"
-DATABASE_USER="YOUR_USER"
-DATABASE_PASSWORD="YOUR_PASSWORD"
-DATABASE_ENCRYPT="true"
-DATABASE_TRUST_SERVER_CERTIFICATE="true"
-```
-
-Integration tests use the same suffixes with the `TEST_DATABASE_` prefix in
-`.env.test.local`. E2E tests use the `E2E_DATABASE_` prefix in
-`.env.e2e.local`. This allows each environment to provide its own SQL Server
-credentials and database identity.
-
-Use the repository scripts to validate, introspect, and generate the client:
+## Getting started
 
 ```bash
-npm run prisma:validate
-npm run prisma:pull
+npm install
+cp .env.example .env        # then fill in real development credentials
 npm run prisma:generate
+npm run dev
 ```
 
-Do not use Prisma Migrate or `prisma db push` for the existing database. Database structure changes must be made through the approved SQL Server database process, followed by `npm run prisma:pull`.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy [.env.example](./.env.example) — it lists every variable with
+non-sensitive placeholder values and is safe to commit. Never commit the
+filled-in `.env`, `.env.test.local` or `.env.e2e.local` files.
+
+- `.env` — development database (`DATABASE_URL`, `DATABASE_*`).
+- `.env.test.local` — integration test database (`TEST_DATABASE_*`), used
+  only by `npm run test:integration`.
+- `.env.e2e.local` — E2E test database (`E2E_DATABASE_*`), used only by
+  `npm run test:e2e`.
+
+Each environment is a distinct SQL Server database. Test configuration fails
+fast (and integration/E2E runs refuse to start) if the required variables are
+missing or if a test database resolves to the same server/port/name as
+development.
+
+## Testing strategy
+
+- **Unit** (`*.test.ts`, `*.test.tsx`) — Application and Presentation logic,
+  no database. Run with `npm run test:unit`.
+- **Integration** (`*.integration.test.ts`) — Prisma repositories against the
+  isolated `FleetManagementDB_Integrationtest`
+  database, configured through `TEST_DATABASE_*`. Run with
+  `npm run test:integration`; never falls back to the development database.
+- **E2E** (`e2e/*.e2e.ts`) — full UI-to-database flows against
+  `FleetManagementDB_E2ETest`, configured through `E2E_DATABASE_*`. Run with
+  `npm run test:e2e`.
+- `npm test` runs the full Vitest suite (unit + integration) locally when a
+  reachable integration database is configured.
+
+Automated tests never run against production, and tests never provision or
+change database structure — they verify database identity before writing and
+clean up only their own fixtures.
+
+## Commands
+
+```bash
+npm run dev               # start the dev server
+npm run build             # production build
+npm run lint               # ESLint
+npx tsc --noEmit           # TypeScript check
+
+npm run prisma:validate    # validate schema.prisma
+npm run prisma:pull        # introspect SQL Server into schema.prisma
+npm run prisma:generate    # generate Prisma Client
+
+npm run test:unit          # unit tests, no database required
+npm run test:integration   # integration tests, requires TEST_DATABASE_*
+npm run test:e2e           # Playwright E2E, requires E2E_DATABASE_*
+```
 
 ## Vehicles
 
@@ -60,12 +116,12 @@ Vehicles are managed at `/fleet/vehicles`, with creation at
 `/fleet/vehicles/create`. The list defaults to active records, twenty per page,
 ordered by VehicleId descending. The URL is the source of truth for `search`,
 `status`, `active` and `page`. Search covers everything the list shows: the
-vehicle code, each plate part, the international plate, VIN, engine and chassis
-identifiers, and the related brand, model, vehicle type, fuel type and status
-names. Plate parts are matched individually; they are never concatenated.
-ModelYear is a smallint, so it is matched exactly rather than by substring.
-Search text is normalised for Persian digits and the Arabic letter forms before
-it reaches the query.
+vehicle code, each plate part, the international plate, VIN, engine and
+chassis identifiers, and the related brand, model, vehicle type, fuel type and
+status names. Plate parts are matched individually; they are never
+concatenated. ModelYear is a smallint, so it is matched exactly rather than by
+substring. Search text is normalised for Persian digits and the Arabic letter
+forms before it reaches the query.
 
 New vehicles require a complete Iranian plate. Identifier uniqueness is checked
 in Application across all records, including inactive ones: vehicle code, the
@@ -159,18 +215,3 @@ The SQL Server driver decodes Decimal results through JavaScript numbers, so
 the persistence tests read decimals using SQL `CONVERT(varchar(40), ...)` to
 verify exact stored digits. The production list does not select decimal fields.
 Any future decimal read behavior must preserve that precision as well.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

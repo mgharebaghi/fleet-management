@@ -1,0 +1,58 @@
+name: CI
+
+# Quality checks that need no SQL Server: TypeScript, lint, unit tests and a
+# production build. Integration and E2E tests need an isolated SQL Server
+# database and run outside this workflow.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The Prisma Client is generated from the already-approved schema.prisma
+      # (no migration, db push or db pull) and is required for the app to
+      # type-check and build. DATABASE_URL only needs a valid connection
+      # string shape here; generate never connects to a database.
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: "sqlserver://localhost:1433;database=ci;schema=dbo;user=ci;password=ci;encrypt=true;trustServerCertificate=true;"
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      # next build evaluates src/infrastructure/database/prisma/prisma-client.ts
+      # at module load time, which validates these runtime DATABASE_*
+      # variables (see mssql-config.ts). No SQL Server connection is made by
+      # this validation; the values only need to satisfy the required-field
+      # and type checks.
+      - name: Build
+        run: npm run build
+        env:
+          DATABASE_URL: "sqlserver://localhost:1433;database=ci;schema=dbo;user=ci;password=ci;encrypt=true;trustServerCertificate=true;"
+          DATABASE_SERVER: "localhost"
+          DATABASE_PORT: "1433"
+          DATABASE_NAME: "ci"
+          DATABASE_USER: "ci"
+          DATABASE_PASSWORD: "ci"
+          DATABASE_ENCRYPT: "true"
+          DATABASE_TRUST_SERVER_CERTIFICATE: "true"
