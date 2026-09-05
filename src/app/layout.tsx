@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import type { ReactNode } from "react";
 import "./globals.css";
 
 const iranSansXFaNum = localFont({
@@ -28,7 +29,9 @@ export const metadata: Metadata = {
   description: "سامانه مدیریت ناوگان و اطلاعات پایه",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="fa" dir="rtl" className={iranSansXFaNum.variable}>
       <body>{children}</body>
