@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
+    "test:unit": "vitest run --exclude \"**/*.integration.test.ts\"",
+    "test:integration": "vitest run integration.test",
     "test:e2e": "playwright test",
     "lint": "eslint",
     "prisma:pull": "prisma db pull",
