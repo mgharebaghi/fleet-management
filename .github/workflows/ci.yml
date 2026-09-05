@@ -40,7 +40,19 @@ jobs:
       - name: Unit tests
         run: npm run test:unit
 
+      # next build evaluates src/infrastructure/database/prisma/prisma-client.ts
+      # at module load time, which validates these runtime DATABASE_*
+      # variables (see mssql-config.ts). No SQL Server connection is made by
+      # this validation; the values only need to satisfy the required-field
+      # and type checks.
       - name: Build
         run: npm run build
         env:
           DATABASE_URL: "sqlserver://localhost:1433;database=ci;schema=dbo;user=ci;password=ci;encrypt=true;trustServerCertificate=true;"
+          DATABASE_SERVER: "localhost"
+          DATABASE_PORT: "1433"
+          DATABASE_NAME: "ci"
+          DATABASE_USER: "ci"
+          DATABASE_PASSWORD: "ci"
+          DATABASE_ENCRYPT: "true"
+          DATABASE_TRUST_SERVER_CERTIFICATE: "true"
