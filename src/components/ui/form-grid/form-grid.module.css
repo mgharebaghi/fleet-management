@@ -1,0 +1,40 @@
+.grid {
+  --form-grid-column-gap: var(--space-4);
+  display: grid;
+  grid-template-columns: repeat(var(--form-grid-columns), minmax(0, 1fr));
+  gap: var(--space-5) var(--form-grid-column-gap);
+}
+
+.grid[data-columns="2"] {
+  --form-grid-columns: 2;
+}
+
+.grid[data-columns="12"] {
+  --form-grid-columns: 12;
+}
+
+/* A field left alone on the final row keeps one column's width and sits in the
+   middle of the row, instead of hugging one side or stretching across both. */
+.grid[data-columns="2"] > :last-child:nth-child(odd) {
+  width: calc((100% - var(--form-grid-column-gap)) / 2);
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
+@media (max-width: 900px) {
+  .grid[data-columns="12"] > * {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .grid[data-columns="2"] {
+    --form-grid-columns: 1;
+  }
+
+  .grid[data-columns="2"] > :last-child:nth-child(odd) {
+    width: auto;
+    grid-column: auto;
+    justify-self: stretch;
+  }
+}

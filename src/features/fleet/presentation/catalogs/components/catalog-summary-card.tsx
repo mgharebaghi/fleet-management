@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { ActionButton } from "../../../../../components/ui/action-button/action-button";
+import { InlineNotice } from "../../../../../components/ui/inline-notice/inline-notice";
 import { CatalogCreateDialog } from "./catalog-create-dialog";
 import { CatalogListDialog } from "./catalog-list-dialog";
 import type { CatalogEntryView } from "./catalog-entry-view";
@@ -63,9 +65,9 @@ export function CatalogSummaryCard({
       </header>
 
       {hasLoadError ? (
-        <div className={styles.errorState} role="alert">
-          <p>دریافت فهرست امکان‌پذیر نبود. لطفاً دوباره تلاش کنید.</p>
-        </div>
+        <InlineNotice tone="danger" role="alert">
+          دریافت فهرست امکان‌پذیر نبود. لطفاً دوباره تلاش کنید.
+        </InlineNotice>
       ) : (
         <>
           <div className={styles.counts}>
@@ -80,21 +82,17 @@ export function CatalogSummaryCard({
           </div>
 
           <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.addButton}
-              onClick={() => setOpenDialog("create")}
-            >
+            <ActionButton size="sm" onClick={() => setOpenDialog("create")}>
               + افزودن
-            </button>
+            </ActionButton>
             {totalCount > 0 && (
-              <button
-                type="button"
-                className={styles.viewAllButton}
+              <ActionButton
+                variant="secondary"
+                size="sm"
                 onClick={() => setOpenDialog("list")}
               >
                 مشاهده همه
-              </button>
+              </ActionButton>
             )}
           </div>
 

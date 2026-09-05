@@ -1,0 +1,98 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border-radius: var(--app-radius-control);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color var(--app-motion-fast),
+    border-color var(--app-motion-fast),
+    box-shadow var(--app-motion-fast);
+}
+
+.sm {
+  min-height: 40px;
+  padding: 8px var(--space-4);
+  font-size: var(--font-size-xs);
+}
+
+.md {
+  min-width: 150px;
+  min-height: 46px;
+  padding: 10px var(--space-6);
+}
+
+.primary {
+  border: 1px solid var(--app-primary);
+  background: var(--app-primary);
+  color: var(--app-on-primary);
+}
+
+.primary:hover:not(:disabled) {
+  border-color: var(--app-primary-hover);
+  background: var(--app-primary-hover);
+}
+
+.primary:active:not(:disabled) {
+  border-color: var(--app-primary-active);
+  background: var(--app-primary-active);
+}
+
+.secondary {
+  border: 1px solid var(--app-control-border);
+  background: var(--app-surface);
+  color: var(--app-primary);
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: var(--app-primary);
+  background: var(--app-info-background);
+}
+
+.button:focus-visible {
+  outline: 3px solid var(--app-focus-outline);
+  outline-offset: 3px;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: var(--app-disabled-opacity);
+}
+
+.button:disabled:has(.spinner) {
+  cursor: wait;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid color-mix(in srgb, currentcolor 40%, transparent);
+  border-top-color: currentcolor;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 760px) {
+  .button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+
+  .spinner {
+    animation-duration: 1.4s;
+  }
+}

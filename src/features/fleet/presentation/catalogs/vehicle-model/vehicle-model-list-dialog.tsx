@@ -1,4 +1,13 @@
+import { DataTable } from "../../../../../components/ui/data-table/data-table";
 import { Dialog } from "../../../../../components/ui/dialog/dialog";
+import { InlineNotice } from "../../../../../components/ui/inline-notice/inline-notice";
+import {
+  RecordCard,
+  RecordCardDetail,
+  RecordCardDetails,
+  RecordCardHeader,
+  RecordCardList,
+} from "../../../../../components/ui/record-cards/record-cards";
 import { StatusBadge } from "../../../../../components/ui/status-badge/status-badge";
 import type { VehicleModel } from "../../../application/catalogs/vehicle-model";
 import styles from "./vehicle-model-list-dialog.module.css";
@@ -33,65 +42,57 @@ export function VehicleModelListDialog({
       size="wide"
     >
       {vehicleModels.length === 0 ? (
-        <p className={styles.emptyState}>
-          هنوز مدل خودرویی ثبت نشده است.
-        </p>
+        <InlineNotice tone="empty">هنوز مدل خودرویی ثبت نشده است.</InlineNotice>
       ) : (
         <>
-          <div className={styles.tableFrame}>
-            <table className={styles.table}>
-              <caption className={styles.visuallyHidden}>
-                فهرست مدل‌های خودرو
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">نام مدل</th>
-                  <th scope="col">برند</th>
-                  <th scope="col">نوع خودرو</th>
-                  <th scope="col">نوع سوخت</th>
-                  <th scope="col">وضعیت</th>
+          <DataTable caption="فهرست مدل‌های خودرو" minWidth={560}>
+            <thead>
+              <tr>
+                <th scope="col">نام مدل</th>
+                <th scope="col">برند</th>
+                <th scope="col">نوع خودرو</th>
+                <th scope="col">نوع سوخت</th>
+                <th scope="col">وضعیت</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vehicleModels.map((vehicleModel) => (
+                <tr key={vehicleModel.id}>
+                  <td className={styles.modelName}>{vehicleModel.name}</td>
+                  <td>{vehicleModel.brand.name}</td>
+                  <td>{vehicleModel.vehicleType?.name ?? "—"}</td>
+                  <td>{vehicleModel.fuelType?.name ?? "—"}</td>
+                  <td>
+                    <VehicleModelStatus isActive={vehicleModel.isActive} />
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {vehicleModels.map((vehicleModel) => (
-                  <tr key={vehicleModel.id}>
-                    <td className={styles.modelName}>{vehicleModel.name}</td>
-                    <td>{vehicleModel.brand.name}</td>
-                    <td>{vehicleModel.vehicleType?.name ?? "—"}</td>
-                    <td>{vehicleModel.fuelType?.name ?? "—"}</td>
-                    <td>
-                      <VehicleModelStatus isActive={vehicleModel.isActive} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </DataTable>
 
-          <ul className={styles.mobileCards}>
+          <RecordCardList>
             {vehicleModels.map((vehicleModel) => (
-              <li key={vehicleModel.id} className={styles.mobileCard}>
-                <div className={styles.mobileCardHeader}>
-                  <p>{vehicleModel.name}</p>
-                  <VehicleModelStatus isActive={vehicleModel.isActive} />
-                </div>
-                <dl className={styles.details}>
-                  <div>
-                    <dt>برند</dt>
-                    <dd>{vehicleModel.brand.name}</dd>
-                  </div>
-                  <div>
-                    <dt>نوع خودرو</dt>
-                    <dd>{vehicleModel.vehicleType?.name ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt>نوع سوخت</dt>
-                    <dd>{vehicleModel.fuelType?.name ?? "—"}</dd>
-                  </div>
-                </dl>
-              </li>
+              <RecordCard key={vehicleModel.id}>
+                <RecordCardHeader
+                  title={vehicleModel.name}
+                  badge={
+                    <VehicleModelStatus isActive={vehicleModel.isActive} />
+                  }
+                />
+                <RecordCardDetails>
+                  <RecordCardDetail label="برند">
+                    {vehicleModel.brand.name}
+                  </RecordCardDetail>
+                  <RecordCardDetail label="نوع خودرو">
+                    {vehicleModel.vehicleType?.name ?? "—"}
+                  </RecordCardDetail>
+                  <RecordCardDetail label="نوع سوخت">
+                    {vehicleModel.fuelType?.name ?? "—"}
+                  </RecordCardDetail>
+                </RecordCardDetails>
+              </RecordCard>
             ))}
-          </ul>
+          </RecordCardList>
         </>
       )}
     </Dialog>

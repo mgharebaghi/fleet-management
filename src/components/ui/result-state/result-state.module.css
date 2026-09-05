@@ -1,0 +1,32 @@
+.emptyState,
+.errorState {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: clamp(var(--space-8), 6vw, 64px) var(--space-5);
+  border: 1px dashed var(--app-control-border);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface-subtle);
+  text-align: center;
+}
+
+.emptyState h2,
+.errorState h2 {
+  color: var(--app-heading);
+  font-size: var(--font-size-lg);
+}
+
+.emptyState p,
+.errorState p {
+  max-width: 560px;
+  color: var(--app-text-muted);
+}
+
+.errorState {
+  border-color: color-mix(in srgb, var(--app-danger) 28%, transparent);
+  background: var(--app-danger-background);
+}
+
+.errorState h2 {
+  color: var(--app-danger-text);
+}

@@ -152,7 +152,7 @@ describe.sequential("PrismaPersonSearchRepository integration", () => {
     await testPrismaClient.$disconnect();
   });
 
-  it("searches four supported fields with OR and contains behavior", async () => {
+  it("searches every displayed field with OR and contains behavior", async () => {
     const nationalCode = createValidIranianNationalCode();
     const search = nationalCode.slice(2, 8);
     const firstNameMatch = await createTestPerson({

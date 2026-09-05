@@ -104,67 +104,11 @@
   text-overflow: ellipsis;
 }
 
-.emptyState,
-.errorState {
-  padding: var(--space-4);
-  border: 1px dashed var(--app-control-border);
-  border-radius: var(--app-radius-control);
-  background: var(--app-surface);
-  color: var(--app-text-muted);
-  text-align: center;
-}
-
-.errorState {
-  border-color: color-mix(in srgb, var(--app-danger) 28%, transparent);
-  background: var(--app-danger-background);
-  color: var(--app-danger-text);
-}
-
 .actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-1);
-}
-
-.primaryButton,
-.secondaryButton {
-  min-height: 40px;
-  padding: 8px var(--space-4);
-  border-radius: var(--app-radius-control);
-  font-weight: 700;
-  font-size: var(--font-size-xs);
-  transition:
-    background-color var(--app-motion-fast),
-    border-color var(--app-motion-fast);
-}
-
-.primaryButton {
-  border: 1px solid var(--app-primary);
-  background: var(--app-primary);
-  color: var(--app-on-primary);
-}
-
-.secondaryButton {
-  border: 1px solid var(--app-control-border);
-  background: var(--app-surface);
-  color: var(--app-primary);
-}
-
-.primaryButton:hover {
-  border-color: var(--app-primary-hover);
-  background: var(--app-primary-hover);
-}
-
-.secondaryButton:hover {
-  border-color: var(--app-primary);
-  background: var(--app-info-background);
-}
-
-.primaryButton:focus-visible,
-.secondaryButton:focus-visible {
-  outline: 3px solid var(--app-focus-outline);
-  outline-offset: 3px;
 }
 
 @media (max-width: 1023px) {
@@ -197,17 +141,5 @@
 @media (max-width: 600px) {
   .actions {
     display: grid;
-  }
-
-  .primaryButton,
-  .secondaryButton {
-    width: 100%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .primaryButton,
-  .secondaryButton {
-    transition: none;
   }
 }

@@ -1,6 +1,8 @@
+/* Fills the workspace it is given rather than the viewport, so it still
+   centres correctly once pages sit inside an app shell. */
 .page {
-  min-height: 100svh;
   display: grid;
+  flex: 1;
   place-items: center;
   padding: var(--space-6);
   background:

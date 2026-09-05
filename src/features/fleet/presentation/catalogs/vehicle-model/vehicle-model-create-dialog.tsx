@@ -2,7 +2,17 @@
 
 import { useActionState, useEffect, useRef } from "react";
 
+import { ActionButton } from "../../../../../components/ui/action-button/action-button";
 import { Dialog } from "../../../../../components/ui/dialog/dialog";
+import {
+  FieldErrors,
+  FieldLabel,
+  FormActions,
+  FormField,
+  formControlClassName,
+} from "../../../../../components/ui/form-field/form-field";
+import { FormGrid } from "../../../../../components/ui/form-grid/form-grid";
+import { InlineNotice } from "../../../../../components/ui/inline-notice/inline-notice";
 import { LoadingIndicator } from "../../../../../components/ui/loading-indicator/loading-indicator";
 import type { CatalogEntryView } from "../components/catalog-entry-view";
 import type { CreateVehicleModelActionState } from "./create-vehicle-model.action-state";
@@ -50,9 +60,10 @@ function ReferenceSelect({
   const errorId = `${id}-error`;
 
   return (
-    <div className={styles.field}>
-      <label htmlFor={id}>{label}</label>
+    <FormField>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <select
+        className={formControlClassName}
         id={id}
         name={name}
         defaultValue=""
@@ -69,14 +80,8 @@ function ReferenceSelect({
           </option>
         ))}
       </select>
-      {errors.length > 0 && (
-        <div id={errorId} className={styles.fieldErrors} role="alert">
-          {errors.map((message) => (
-            <p key={message}>{message}</p>
-          ))}
-        </div>
-      )}
-    </div>
+      <FieldErrors id={errorId} messages={errors} />
+    </FormField>
   );
 }
 
@@ -131,19 +136,20 @@ export function VehicleModelCreateDialog({
         noValidate
       >
         {hasReferenceLoadError && (
-          <p className={styles.referenceError} role="alert">
+          <InlineNotice tone="danger" role="alert">
             دریافت گزینه‌های فرم امکان‌پذیر نبود. لطفاً دوباره تلاش کنید.
-          </p>
+          </InlineNotice>
         )}
         {hasNoBrands && (
-          <p className={styles.referenceNotice} role="status">
+          <InlineNotice tone="info" role="status">
             برای ایجاد مدل خودرو، ابتدا یک برند ثبت کنید.
-          </p>
+          </InlineNotice>
         )}
 
-        <div className={styles.field}>
-          <label htmlFor="vehicle-model-name">نام مدل</label>
+        <FormField>
+          <FieldLabel htmlFor="vehicle-model-name">نام مدل</FieldLabel>
           <input
+            className={formControlClassName}
             id="vehicle-model-name"
             name="name"
             type="text"
@@ -155,20 +161,10 @@ export function VehicleModelCreateDialog({
               fieldErrors.name.length > 0 ? nameErrorId : undefined
             }
           />
-          {fieldErrors.name.length > 0 && (
-            <div
-              id={nameErrorId}
-              className={styles.fieldErrors}
-              role="alert"
-            >
-              {fieldErrors.name.map((message) => (
-                <p key={message}>{message}</p>
-              ))}
-            </div>
-          )}
-        </div>
+          <FieldErrors id={nameErrorId} messages={fieldErrors.name} />
+        </FormField>
 
-        <div className={styles.referenceGrid}>
+        <FormGrid>
           <ReferenceSelect
             id="vehicle-model-brand"
             name="brandId"
@@ -196,32 +192,33 @@ export function VehicleModelCreateDialog({
             disabled={submissionDisabled}
             errors={fieldErrors.fuelTypeId}
           />
-        </div>
+        </FormGrid>
 
         {isPending && <LoadingIndicator label="در حال ایجاد مدل…" />}
         {statusMessage && (
-          <p className={styles.formError} role="alert">
+          <InlineNotice tone="danger" role="alert">
             {statusMessage}
-          </p>
+          </InlineNotice>
         )}
 
-        <div className={styles.actions}>
-          <button
+        <FormActions separated>
+          <ActionButton
             type="submit"
-            className={styles.submitButton}
+            size="sm"
             disabled={submissionDisabled}
+            pending={isPending}
           >
             {isPending ? "در حال ایجاد…" : "ایجاد مدل"}
-          </button>
-          <button
-            type="button"
-            className={styles.cancelButton}
+          </ActionButton>
+          <ActionButton
+            variant="secondary"
+            size="sm"
             onClick={onClose}
             disabled={isPending}
           >
             انصراف
-          </button>
-        </div>
+          </ActionButton>
+        </FormActions>
       </form>
     </Dialog>
   );

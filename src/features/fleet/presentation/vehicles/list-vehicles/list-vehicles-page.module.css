@@ -1,0 +1,45 @@
+.resultSummary {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-3);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.primaryValue,
+.plainValue,
+.secondaryValue {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.primaryValue {
+  color: var(--app-heading);
+  font-weight: 700;
+}
+
+.secondaryValue {
+  margin-top: 2px;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* Neutral on purpose: an operational status carries no positive or negative
+   meaning, unlike an active or inactive record. */
+.operationalStatus {
+  display: inline-flex;
+  padding: 3px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: var(--app-surface-subtle);
+  color: var(--app-text);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.vehicleCardModel {
+  color: var(--app-text);
+  overflow-wrap: anywhere;
+}

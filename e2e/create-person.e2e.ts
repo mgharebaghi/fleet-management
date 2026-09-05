@@ -5,6 +5,7 @@ import { expect, test } from "@playwright/test";
 import type { E2EDatabaseAdapter } from "./support/e2e-database";
 import { connectToE2EDatabase } from "./support/e2e-database";
 import { createValidIranianNationalCode } from "./support/person-fixtures";
+import { selectJalaliDate } from "./support/jalali-calendar";
 
 let e2eDatabaseAdapter: E2EDatabaseAdapter;
 const createdNationalCodes = new Set<string>();
@@ -38,6 +39,7 @@ test.describe.serial("Create Person", () => {
     page,
   }) => {
     await page.goto("/people/create");
+    await expect(page.getByAltText("نشان سامانه مدیریت ناوگان")).toBeVisible();
     await page.getByRole("button", { name: "ثبت شخص", exact: true }).click();
 
     await expect(
@@ -69,13 +71,22 @@ test.describe.serial("Create Person", () => {
     await page.getByLabel("کد ملی", { exact: true }).fill(nationalCode);
     await page.getByLabel("شماره کارت", { exact: true }).fill(cardNo);
     await page.getByLabel("شماره موبایل", { exact: true }).fill("09120000000");
-    await page.getByLabel("سال", { exact: true }).fill("۱۴۰۳");
-    await page.locator("#jalali-month").selectOption("1");
-    await page.locator("#jalali-day").selectOption("1");
+    // The date is only ever chosen from the calendar panel.
+    await page
+      .getByRole("button", { name: "تاریخ استخدام (شمسی)" })
+      .click();
+    const employmentCalendar = page.getByRole("dialog", {
+      name: "انتخاب تاریخ استخدام (شمسی)",
+    });
+    await expect(employmentCalendar).toBeVisible();
+    await selectJalaliDate(employmentCalendar, 1403, "فروردین", "۱");
 
     await expect(page.locator('input[name="employmentDate"]')).toHaveValue(
       "2024-03-20",
     );
+    await expect(
+      page.getByRole("button", { name: "تاریخ استخدام (شمسی)" }),
+    ).toContainText("۱۴۰۳/۰۱/۰۱");
 
     await page.getByRole("button", { name: "ثبت شخص", exact: true }).click();
 

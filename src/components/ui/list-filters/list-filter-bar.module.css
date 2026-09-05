@@ -1,0 +1,44 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface-subtle);
+}
+
+.searchField,
+.selectField {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+}
+
+.searchField {
+  flex: 2 1 240px;
+}
+
+.selectField {
+  flex: 1 1 160px;
+  max-width: 220px;
+}
+
+.bar > :last-child:not(.searchField):not(.selectField) {
+  margin-inline-start: auto;
+}
+
+@media (max-width: 760px) {
+  .searchField,
+  .selectField {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .bar > :last-child:not(.searchField):not(.selectField) {
+    margin-inline-start: 0;
+    justify-self: center;
+  }
+}
