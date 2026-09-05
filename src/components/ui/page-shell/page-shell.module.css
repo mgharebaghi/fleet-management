@@ -1,0 +1,66 @@
+/* The shell fills whatever workspace its parent gives it — today the body,
+   tomorrow an AppShell's main region — instead of measuring the viewport. */
+.page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: clamp(var(--space-6), 5vw, var(--space-12)) var(--space-5);
+  background:
+    radial-gradient(
+      circle at 88% 0%,
+      rgb(32 198 183 / 14%) 0,
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 8% 100%,
+      rgb(17 58 109 / 8%) 0,
+      transparent 34%
+    ),
+    linear-gradient(135deg, var(--app-canvas), var(--color-neutral-50));
+  color: var(--app-text);
+  font-family: var(--app-font-family);
+}
+
+/* Auto margins centre the card in the free space and collapse to zero when
+   there is none, so tall pages keep their top reachable and scroll normally. */
+.card,
+.narrowCard {
+  position: relative;
+  margin: auto;
+  padding: clamp(28px, 4vw, 44px);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-card);
+  /* The accent bar is a background so the card's radius clips it. Using
+     overflow:hidden here would also clip an open calendar panel. */
+  background:
+    linear-gradient(
+        90deg,
+        var(--app-primary),
+        var(--app-accent),
+        var(--color-aqua-400)
+      )
+      top center / 100% 4px no-repeat,
+    var(--app-surface);
+  box-shadow: var(--app-card-shadow);
+}
+
+.card {
+  width: min(100%, 1120px);
+}
+
+.narrowCard {
+  width: min(100%, 960px);
+}
+
+
+@media (max-width: 760px) {
+  .page {
+    padding: var(--space-5) var(--space-3);
+  }
+
+  .card,
+  .narrowCard {
+    padding: var(--space-6) var(--space-4);
+    border-radius: var(--radius-lg);
+  }
+}

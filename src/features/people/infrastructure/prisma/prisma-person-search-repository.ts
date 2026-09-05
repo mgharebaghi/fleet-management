@@ -27,6 +27,9 @@ function buildWhere(criteria: PersonSearchCriteria): Prisma.PeopleWhereInput {
     ...(criteria.search === null
       ? {}
       : {
+          // Every value the people list shows is searchable. Mobile is
+          // deliberately excluded: it is not shown, and it is not free-text
+          // searchable data.
           OR: [
             { FirstName: { contains: criteria.search } },
             { LastName: { contains: criteria.search } },

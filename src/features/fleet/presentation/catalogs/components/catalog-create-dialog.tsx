@@ -2,7 +2,16 @@
 
 import { useActionState, useEffect, useRef } from "react";
 
+import { ActionButton } from "../../../../../components/ui/action-button/action-button";
 import { Dialog } from "../../../../../components/ui/dialog/dialog";
+import {
+  FieldErrors,
+  FieldLabel,
+  FormActions,
+  FormField,
+  formControlClassName,
+} from "../../../../../components/ui/form-field/form-field";
+import { InlineNotice } from "../../../../../components/ui/inline-notice/inline-notice";
 import { LoadingIndicator } from "../../../../../components/ui/loading-indicator/loading-indicator";
 import type { CreateCatalogEntryActionState } from "../create-catalog-entry/create-catalog-entry.action-state";
 import { initialCreateCatalogEntryActionState } from "../create-catalog-entry/create-catalog-entry.action-state";
@@ -79,9 +88,10 @@ export function CatalogCreateDialog({
         aria-busy={isPending}
         noValidate
       >
-        <div className={styles.field}>
-          <label htmlFor={fieldId}>{nameLabel}</label>
+        <FormField>
+          <FieldLabel htmlFor={fieldId}>{nameLabel}</FieldLabel>
           <input
+            className={formControlClassName}
             id={fieldId}
             name="name"
             type="text"
@@ -91,39 +101,34 @@ export function CatalogCreateDialog({
             aria-invalid={fieldErrors.length > 0}
             aria-describedby={fieldErrors.length > 0 ? errorId : undefined}
           />
-          {fieldErrors.length > 0 && (
-            <div id={errorId} className={styles.fieldErrors} role="alert">
-              {fieldErrors.map((message) => (
-                <p key={message}>{message}</p>
-              ))}
-            </div>
-          )}
-        </div>
+          <FieldErrors id={errorId} messages={fieldErrors} />
+        </FormField>
 
         {isPending && <LoadingIndicator label="در حال ثبت…" />}
         {statusMessage && (
-          <p className={styles.formError} role="alert">
+          <InlineNotice tone="danger" role="alert">
             {statusMessage.text}
-          </p>
+          </InlineNotice>
         )}
 
-        <div className={styles.actions}>
-          <button
+        <FormActions separated>
+          <ActionButton
             type="submit"
-            className={styles.submitButton}
+            size="sm"
             disabled={isPending}
+            pending={isPending}
           >
             {isPending ? submitPendingLabel : submitLabel}
-          </button>
-          <button
-            type="button"
-            className={styles.cancelButton}
+          </ActionButton>
+          <ActionButton
+            variant="secondary"
+            size="sm"
             onClick={onClose}
             disabled={isPending}
           >
             انصراف
-          </button>
-        </div>
+          </ActionButton>
+        </FormActions>
       </form>
     </Dialog>
   );

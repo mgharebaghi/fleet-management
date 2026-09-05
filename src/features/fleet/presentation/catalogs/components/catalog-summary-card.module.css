@@ -35,67 +35,8 @@
   font-size: var(--font-size-xs);
 }
 
-.errorState {
-  padding: var(--space-4);
-  border: 1px solid color-mix(in srgb, var(--app-danger) 28%, transparent);
-  border-radius: var(--app-radius-control);
-  background: var(--app-danger-background);
-  color: var(--app-danger-text);
-}
-
 .actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-}
-
-.addButton {
-  min-height: 40px;
-  padding: 8px var(--space-4);
-  border: 1px solid var(--app-primary);
-  border-radius: var(--app-radius-control);
-  background: var(--app-primary);
-  color: var(--app-on-primary);
-  font-weight: 700;
-  font-size: var(--font-size-xs);
-  transition:
-    background-color var(--app-motion-fast),
-    border-color var(--app-motion-fast);
-}
-
-.addButton:hover {
-  border-color: var(--app-primary-hover);
-  background: var(--app-primary-hover);
-}
-
-.viewAllButton {
-  min-height: 40px;
-  padding: 8px var(--space-4);
-  border: 1px solid var(--app-control-border);
-  border-radius: var(--app-radius-control);
-  background: var(--app-surface);
-  color: var(--app-primary);
-  font-weight: 700;
-  font-size: var(--font-size-xs);
-  transition:
-    background-color var(--app-motion-fast),
-    border-color var(--app-motion-fast);
-}
-
-.viewAllButton:hover {
-  border-color: var(--app-primary);
-  background: var(--app-info-background);
-}
-
-.addButton:focus-visible,
-.viewAllButton:focus-visible {
-  outline: 3px solid var(--app-focus-outline);
-  outline-offset: 3px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .addButton,
-  .viewAllButton {
-    transition: none;
-  }
 }

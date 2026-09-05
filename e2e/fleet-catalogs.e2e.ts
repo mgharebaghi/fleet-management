@@ -125,8 +125,6 @@ test.describe.serial("Fleet Catalogs", () => {
     await page.setViewportSize({ width: 1280, height: 500 });
     await page.goto("/fleet/catalogs");
 
-    const scrollYBeforeOpen = await page.evaluate(() => window.scrollY);
-
     const brandCard = page.getByRole("region", { name: "برند خودرو" });
     await brandCard.getByRole("button", { name: "مشاهده همه" }).click();
     const listDialog = page.getByRole("dialog", { name: "برند خودرو" });
@@ -156,12 +154,14 @@ test.describe.serial("Fleet Catalogs", () => {
     );
     expect(bodyMetrics.scrollHeight).toBeGreaterThan(bodyMetrics.clientHeight);
 
-    // Scrolling over the backdrop must not move the background page.
+    // Scrolling over the backdrop must not move the background page. The
+    // baseline is taken with the dialog already open: clicking the trigger can
+    // scroll it into view first, which says nothing about the backdrop.
+    const scrollYWhileOpen = await page.evaluate(() => window.scrollY);
     await page.mouse.move(40, 400);
     await page.mouse.wheel(0, 800);
     await page.waitForTimeout(100);
-    const scrollYWhileOpen = await page.evaluate(() => window.scrollY);
-    expect(scrollYWhileOpen).toBe(scrollYBeforeOpen);
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrollYWhileOpen);
 
     await page.keyboard.press("Escape");
     await expect(listDialog).toBeHidden();

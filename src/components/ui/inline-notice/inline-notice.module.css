@@ -1,0 +1,28 @@
+.danger,
+.info,
+.empty {
+  padding: 11px var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--app-radius-message);
+  line-height: 1.8;
+}
+
+.danger {
+  border-color: color-mix(in srgb, var(--app-danger-text) 18%, transparent);
+  background: var(--app-danger-background);
+  color: var(--app-danger-text);
+}
+
+.info {
+  border-color: color-mix(in srgb, var(--app-info-text) 18%, transparent);
+  background: var(--app-info-background);
+  color: var(--app-info-text);
+}
+
+.empty {
+  padding: var(--space-6) var(--space-4);
+  border: 1px dashed var(--app-control-border);
+  background: var(--app-surface-subtle);
+  color: var(--app-text-muted);
+  text-align: center;
+}

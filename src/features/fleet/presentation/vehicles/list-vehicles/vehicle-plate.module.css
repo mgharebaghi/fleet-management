@@ -1,0 +1,32 @@
+.plate {
+  display: inline-flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--app-control-border);
+  border-radius: var(--radius-sm);
+  background: var(--app-surface);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.platePart {
+  padding: 3px 8px;
+  border-inline-end: 1px solid var(--app-border);
+  color: var(--app-heading);
+}
+
+.plateIran {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px 8px;
+  background: var(--app-info-background);
+  color: var(--app-info-text);
+}
+
+.plateIranLabel {
+  font-size: 10px;
+  font-weight: 400;
+}

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { ActionButton } from "../../../../../components/ui/action-button/action-button";
+import { InlineNotice } from "../../../../../components/ui/inline-notice/inline-notice";
 import type { VehicleModel } from "../../../application/catalogs/vehicle-model";
 import type { CatalogEntryView } from "../components/catalog-entry-view";
 import type { CreateVehicleModelActionState } from "./create-vehicle-model.action-state";
@@ -56,9 +58,9 @@ export function VehicleModelSummaryCard({
             <h2 id="vehicle-model-title">مدل خودرو</h2>
             <p>مدل‌های ثبت‌شده در ناوگان را مدیریت کنید.</p>
           </header>
-          <div className={styles.errorState} role="alert">
+          <InlineNotice tone="danger" role="alert">
             دریافت فهرست مدل‌های خودرو امکان‌پذیر نبود. لطفاً دوباره تلاش کنید.
-          </div>
+          </InlineNotice>
         </>
       ) : (
         <>
@@ -86,20 +88,16 @@ export function VehicleModelSummaryCard({
               </div>
 
               <div className={styles.actions}>
-                <button
-                  type="button"
-                  className={styles.primaryButton}
-                  onClick={() => setOpenDialog("create")}
-                >
+                <ActionButton size="sm" onClick={() => setOpenDialog("create")}>
                   ایجاد مدل
-                </button>
-                <button
-                  type="button"
-                  className={styles.secondaryButton}
+                </ActionButton>
+                <ActionButton
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setOpenDialog("list")}
                 >
                   مشاهده همه
-                </button>
+                </ActionButton>
               </div>
             </div>
 
@@ -131,9 +129,9 @@ export function VehicleModelSummaryCard({
                   </ul>
                 </>
               ) : (
-                <p className={styles.emptyState}>
+                <InlineNotice tone="empty">
                   هنوز مدل خودرویی ثبت نشده است.
-                </p>
+                </InlineNotice>
               )}
             </div>
           </div>

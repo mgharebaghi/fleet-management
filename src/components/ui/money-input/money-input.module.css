@@ -1,0 +1,28 @@
+.field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.controlRow {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+/* The digits run left to right, so the unit is pinned to the physical right
+   and the control reserves room for it there. */
+.amountInput {
+  padding-right: 62px;
+}
+
+.unit {
+  position: absolute;
+  right: var(--space-3);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  pointer-events: none;
+}

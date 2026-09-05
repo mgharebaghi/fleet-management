@@ -1,12 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  ListPeopleFilters,
-  navigateToStatus,
-  scheduleSearchNavigation,
-  synchronizeFilterState,
-} from "./list-people-filters";
+import { ListPeopleFilters } from "./list-people-filters";
 
 const navigation = vi.hoisted(() => ({
   pathname: "/people",
@@ -25,10 +20,6 @@ describe("ListPeopleFilters", () => {
     navigation.pathname = "/people";
     navigation.query = "";
     navigation.replace.mockReset();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   it("renders its initial search and status from URL-derived props", () => {
@@ -65,112 +56,28 @@ describe("ListPeopleFilters", () => {
     expect(markup).toMatch(/<option value="all" selected="">همه<\/option>/);
   });
 
-  it("replaces a local draft when external URL values change", () => {
-    expect(
-      synchronizeFilterState(
-        {
-          sourceSearch: "Ali",
-          sourceStatus: "active",
-          search: "Ali Reza",
-          status: "active",
-        },
-        "Maryam",
-        "inactive",
-      ),
-    ).toEqual({
-      sourceSearch: "Maryam",
-      sourceStatus: "inactive",
-      search: "Maryam",
-      status: "inactive",
-    });
-  });
-
-  it("preserves a local draft while its URL source is unchanged", () => {
-    const localDraft = {
-      sourceSearch: "Ali",
-      sourceStatus: "active" as const,
-      search: "Ali Reza",
-      status: "active" as const,
-    };
-
-    expect(synchronizeFilterState(localDraft, "Ali", "active")).toBe(
-      localDraft,
-    );
-  });
-
-  it("navigates after 400ms with raw search and preserved query state", () => {
-    vi.useFakeTimers();
-    const navigate = vi.fn();
-    const cancel = scheduleSearchNavigation({
-      pathname: "/people",
-      searchParams: new URLSearchParams(
-        "status=inactive&page=4&view=compact",
-      ),
-      search: "  Ali  ",
-      navigate,
-    });
-
-    vi.advanceTimersByTime(399);
-    expect(navigate).not.toHaveBeenCalled();
-
-    vi.advanceTimersByTime(1);
-    expect(navigate).toHaveBeenCalledWith(
-      "/people?status=inactive&view=compact&search=++Ali++",
+  it("offers no clear affordance while no criteria are applied", () => {
+    const markup = renderToStaticMarkup(
+      <ListPeopleFilters
+        initialSearch=""
+        initialStatus="active"
+        hasCriteria={false}
+      />,
     );
 
-    cancel();
+    expect(markup).not.toContain("پاک کردن");
   });
 
-  it("removes search and resets page when search becomes empty", () => {
-    vi.useFakeTimers();
-    const navigate = vi.fn();
-    scheduleSearchNavigation({
-      pathname: "/people",
-      searchParams: new URLSearchParams(
-        "search=Ali&status=all&page=3&view=compact",
-      ),
-      search: "",
-      navigate,
-    });
-
-    vi.advanceTimersByTime(400);
-
-    expect(navigate).toHaveBeenCalledWith(
-      "/people?status=all&view=compact",
+  it("searches without a submit control", () => {
+    const markup = renderToStaticMarkup(
+      <ListPeopleFilters
+        initialSearch=""
+        initialStatus="active"
+        hasCriteria={false}
+      />,
     );
-  });
 
-  it("cancels stale debounced navigation during cleanup", () => {
-    vi.useFakeTimers();
-    const navigate = vi.fn();
-    const cancel = scheduleSearchNavigation({
-      pathname: "/people",
-      searchParams: new URLSearchParams("status=active&page=2"),
-      search: "Ali",
-      navigate,
-    });
-
-    cancel();
-    vi.advanceTimersByTime(400);
-
-    expect(navigate).not.toHaveBeenCalled();
-  });
-
-  it("navigates immediately for status while preserving search and other params", () => {
-    const navigate = vi.fn();
-
-    navigateToStatus({
-      pathname: "/people",
-      searchParams: new URLSearchParams(
-        "search=Old&page=5&view=compact",
-      ),
-      status: "inactive",
-      search: "Ali",
-      navigate,
-    });
-
-    expect(navigate).toHaveBeenCalledWith(
-      "/people?search=Ali&view=compact&status=inactive",
-    );
+    expect(markup).not.toContain("<button");
+    expect(markup).not.toContain("<form");
   });
 });

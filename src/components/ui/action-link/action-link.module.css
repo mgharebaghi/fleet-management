@@ -1,0 +1,63 @@
+.primary,
+.secondary,
+.quiet {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--app-radius-control);
+  font-weight: 700;
+  transition:
+    background-color var(--app-motion-fast),
+    border-color var(--app-motion-fast),
+    box-shadow var(--app-motion-fast);
+}
+
+.primary {
+  flex: 0 0 auto;
+  padding: 9px var(--space-5);
+  border: 1px solid var(--app-primary);
+  background: var(--app-primary);
+  color: var(--app-on-primary);
+}
+
+.primary:hover {
+  border-color: var(--app-primary-hover);
+  background: var(--app-primary-hover);
+}
+
+.secondary {
+  padding: 8px var(--space-4);
+  border: 1px solid var(--app-control-border);
+  background: var(--app-surface);
+  color: var(--app-primary);
+}
+
+.secondary:hover {
+  border-color: var(--app-primary);
+  background: var(--app-info-background);
+}
+
+.quiet {
+  padding: var(--space-2);
+  color: var(--app-primary);
+}
+
+.quiet:hover {
+  text-decoration: underline;
+}
+
+.primary:focus-visible,
+.secondary:focus-visible,
+.quiet:focus-visible {
+  outline: 3px solid var(--app-focus-outline);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary,
+  .secondary,
+  .quiet {
+    transition: none;
+  }
+}

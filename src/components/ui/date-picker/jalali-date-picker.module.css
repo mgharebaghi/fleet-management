@@ -1,0 +1,220 @@
+.field {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.controlRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.trigger {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 10px var(--space-3);
+  border: 1px solid var(--app-control-border);
+  border-radius: var(--app-radius-control);
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  cursor: pointer;
+  box-shadow: var(--app-shadow-control);
+  transition:
+    border-color var(--app-motion-fast),
+    box-shadow var(--app-motion-fast);
+}
+
+.trigger:focus-visible {
+  border-color: var(--app-focus);
+  box-shadow: 0 0 0 3px var(--app-focus-ring);
+  outline: none;
+}
+
+.trigger[data-invalid] {
+  border-color: var(--app-danger-border);
+}
+
+.trigger:disabled {
+  background: var(--app-control-disabled);
+  color: var(--app-text-muted);
+  cursor: not-allowed;
+  opacity: var(--app-disabled-opacity);
+}
+
+@media (hover: hover) {
+  .trigger:hover:not(:disabled) {
+    border-color: var(--app-control-hover-border);
+  }
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+  unicode-bidi: isolate;
+}
+
+.placeholder {
+  color: var(--app-text-muted);
+}
+
+.triggerIcon {
+  flex: 0 0 auto;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.clearButton {
+  flex: 0 0 auto;
+  padding: var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--app-primary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.clearButton:hover {
+  text-decoration: underline;
+}
+
+.clearButton:focus-visible {
+  outline: 3px solid var(--app-focus-outline);
+  outline-offset: 2px;
+}
+
+.panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--space-1));
+  inset-inline-start: 0;
+  width: min(300px, calc(100vw - 2 * var(--space-5)));
+  padding: var(--space-3);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface);
+  box-shadow: var(--app-card-shadow);
+}
+
+.panelAbove {
+  top: auto;
+  bottom: calc(100% + var(--space-1));
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.monthLabel {
+  color: var(--app-heading);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.monthButton {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-control);
+  background: var(--app-surface-subtle);
+  color: var(--app-primary);
+  font: inherit;
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.monthButton:hover {
+  border-color: var(--app-primary);
+  background: var(--app-info-background);
+}
+
+.monthButton:focus-visible,
+.day:focus-visible {
+  outline: 3px solid var(--app-focus-outline);
+  outline-offset: 2px;
+}
+
+.weekdays,
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.weekdays {
+  margin-bottom: var(--space-1);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  text-align: center;
+}
+
+.day {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--app-radius-message);
+  background: none;
+  color: var(--app-text);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.day:hover:not(:disabled) {
+  background: var(--app-surface-subtle);
+}
+
+.day:disabled {
+  color: var(--app-text-muted);
+  cursor: not-allowed;
+  opacity: var(--app-disabled-opacity);
+}
+
+.today {
+  border-color: var(--app-accent);
+  font-weight: 700;
+}
+
+.selected {
+  border-color: var(--app-primary);
+  background: var(--app-primary);
+  color: var(--app-on-primary);
+  font-weight: 700;
+}
+
+.selected:hover:not(:disabled) {
+  background: var(--app-primary-hover);
+}
+
+@media (max-width: 480px) {
+  .panel {
+    inset-inline: 0;
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger {
+    transition: none;
+  }
+}

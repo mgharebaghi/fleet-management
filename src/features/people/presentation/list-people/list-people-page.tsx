@@ -1,5 +1,16 @@
-import Link from "next/link";
-
+import { ActionLink } from "../../../../components/ui/action-link/action-link";
+import { DataTable } from "../../../../components/ui/data-table/data-table";
+import { PageHeader } from "../../../../components/ui/page-header/page-header";
+import { PageShell } from "../../../../components/ui/page-shell/page-shell";
+import { Pagination } from "../../../../components/ui/pagination/pagination";
+import {
+  RecordCard,
+  RecordCardDetail,
+  RecordCardDetails,
+  RecordCardHeader,
+  RecordCardList,
+} from "../../../../components/ui/record-cards/record-cards";
+import { ResultState } from "../../../../components/ui/result-state/result-state";
 import { StatusBadge } from "../../../../components/ui/status-badge/status-badge";
 import { TechnicalValue } from "../../../../components/ui/technical-value/technical-value";
 import type { ListPeopleInput } from "../../application/list-people/list-people.contract";
@@ -80,114 +91,110 @@ function buildPageHref(
   return `/people?${params.toString()}`;
 }
 
+function CreatePersonLink() {
+  return (
+    <ActionLink href="/people/create" variant="primary">
+      افزودن شخص
+    </ActionLink>
+  );
+}
+
 function PeopleTable({ people }: { people: PersonSummary[] }) {
   return (
-    <div className={styles.tableFrame}>
-      <table className={styles.table}>
-        <caption className={styles.visuallyHidden}>فهرست اشخاص</caption>
-        <thead>
-          <tr>
-            <th scope="col">نام و نام خانوادگی</th>
-            <th scope="col">شماره پرسنلی</th>
-            <th scope="col">کد ملی</th>
-            <th scope="col">وضعیت</th>
+    <DataTable caption="فهرست اشخاص">
+      <thead>
+        <tr>
+          <th scope="col">نام و نام خانوادگی</th>
+          <th scope="col">شماره پرسنلی</th>
+          <th scope="col">کد ملی</th>
+          <th scope="col">وضعیت</th>
+        </tr>
+      </thead>
+      <tbody>
+        {people.map((person) => (
+          <tr key={person.personId}>
+            <td className={styles.personName}>
+              {person.firstName} {person.lastName}
+            </td>
+            <td>
+              <TechnicalValue>{person.personnelNo ?? "—"}</TechnicalValue>
+            </td>
+            <td>
+              <TechnicalValue>{person.nationalCode ?? "—"}</TechnicalValue>
+            </td>
+            <td>
+              <StatusBadge
+                label={person.isActive ? "فعال" : "غیرفعال"}
+                tone={person.isActive ? "positive" : "negative"}
+              />
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          {people.map((person) => (
-            <tr key={person.personId}>
-              <td className={styles.personName}>
-                {person.firstName} {person.lastName}
-              </td>
-              <td>
-                <TechnicalValue>{person.personnelNo ?? "—"}</TechnicalValue>
-              </td>
-              <td>
-                <TechnicalValue>{person.nationalCode ?? "—"}</TechnicalValue>
-              </td>
-              <td>
-                <StatusBadge
-                  label={person.isActive ? "فعال" : "غیرفعال"}
-                  tone={person.isActive ? "positive" : "negative"}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+        ))}
+      </tbody>
+    </DataTable>
   );
 }
 
 function PersonCards({ people }: { people: PersonSummary[] }) {
   return (
-    <ul className={styles.personCards}>
+    <RecordCardList>
       {people.map((person) => (
-        <li key={person.personId} className={styles.personCard}>
-          <div className={styles.personCardHeader}>
-            <p className={styles.personCardName}>
-              {person.firstName} {person.lastName}
-            </p>
-            <StatusBadge
-              label={person.isActive ? "فعال" : "غیرفعال"}
-              tone={person.isActive ? "positive" : "negative"}
-            />
-          </div>
-          <dl className={styles.personCardDetails}>
-            <div>
-              <dt>شماره پرسنلی</dt>
-              <dd>
-                <TechnicalValue>{person.personnelNo ?? "—"}</TechnicalValue>
-              </dd>
-            </div>
-            <div>
-              <dt>کد ملی</dt>
-              <dd>
-                <TechnicalValue>{person.nationalCode ?? "—"}</TechnicalValue>
-              </dd>
-            </div>
-          </dl>
-        </li>
+        <RecordCard key={person.personId}>
+          <RecordCardHeader
+            title={`${person.firstName} ${person.lastName}`}
+            badge={
+              <StatusBadge
+                label={person.isActive ? "فعال" : "غیرفعال"}
+                tone={person.isActive ? "positive" : "negative"}
+              />
+            }
+          />
+          <RecordCardDetails>
+            <RecordCardDetail label="شماره پرسنلی">
+              <TechnicalValue>{person.personnelNo ?? "—"}</TechnicalValue>
+            </RecordCardDetail>
+            <RecordCardDetail label="کد ملی">
+              <TechnicalValue>{person.nationalCode ?? "—"}</TechnicalValue>
+            </RecordCardDetail>
+          </RecordCardDetails>
+        </RecordCard>
       ))}
-    </ul>
+    </RecordCardList>
   );
 }
 
 function EmptyState({ hasCriteria }: { hasCriteria: boolean }) {
   return (
-    <div className={styles.emptyState}>
-      <h2>
-        {hasCriteria
+    <ResultState
+      title={
+        hasCriteria
           ? "نتیجه‌ای مطابق جستجو یا فیلتر شما پیدا نشد"
-          : "هنوز شخصی ثبت نشده است"}
-      </h2>
-      <p>
-        {hasCriteria
+          : "هنوز شخصی ثبت نشده است"
+      }
+      description={
+        hasCriteria
           ? "عبارت جستجو یا وضعیت انتخاب‌شده را تغییر دهید."
-          : "برای شروع، اطلاعات اولین شخص را در سامانه ثبت کنید."}
-      </p>
-      {hasCriteria ? (
-        <Link className={styles.secondaryLink} href="/people">
-          پاک کردن جستجو و فیلتر
-        </Link>
-      ) : (
-        <Link className={styles.primaryLink} href="/people/create">
-          افزودن شخص
-        </Link>
-      )}
-    </div>
+          : "برای شروع، اطلاعات اولین شخص را در سامانه ثبت کنید."
+      }
+      action={
+        hasCriteria ? (
+          <ActionLink href="/people">پاک کردن جستجو و فیلتر</ActionLink>
+        ) : (
+          <CreatePersonLink />
+        )
+      }
+    />
   );
 }
 
 function ErrorState() {
   return (
-    <div className={styles.errorState} role="alert">
-      <h2>دریافت فهرست اشخاص امکان‌پذیر نبود</h2>
-      <p>لطفاً دوباره تلاش کنید. اگر مشکل ادامه داشت، با پشتیبانی تماس بگیرید.</p>
-      <Link className={styles.secondaryLink} href="/people">
-        تلاش دوباره
-      </Link>
-    </div>
+    <ResultState
+      variant="error"
+      title="دریافت فهرست اشخاص امکان‌پذیر نبود"
+      description="لطفاً دوباره تلاش کنید. اگر مشکل ادامه داشت، با پشتیبانی تماس بگیرید."
+      action={<ActionLink href="/people">تلاش دوباره</ActionLink>}
+    />
   );
 }
 
@@ -208,20 +215,14 @@ export async function ListPeoplePage({ searchParams }: ListPeoplePageProps) {
     result = await makeListPeople().execute(input);
   } catch {
     return (
-      <main className={styles.page} lang="fa" dir="rtl">
-        <section className={styles.card}>
-          <header className={styles.header}>
-            <div>
-              <p className={styles.eyebrow}>مدیریت اشخاص</p>
-              <h1>فهرست اشخاص</h1>
-            </div>
-            <Link className={styles.primaryLink} href="/people/create">
-              افزودن شخص
-            </Link>
-          </header>
-          <ErrorState />
-        </section>
-      </main>
+      <PageShell>
+        <PageHeader
+          eyebrow="مدیریت اشخاص"
+          title="فهرست اشخاص"
+          action={<CreatePersonLink />}
+        />
+        <ErrorState />
+      </PageShell>
     );
   }
 
@@ -230,75 +231,40 @@ export async function ListPeoplePage({ searchParams }: ListPeoplePageProps) {
     (search !== undefined && search !== "") || status !== undefined;
 
   return (
-    <main className={styles.page} lang="fa" dir="rtl">
-      <section className={styles.card}>
-        <header className={styles.header}>
-          <div>
-            <p className={styles.eyebrow}>مدیریت اشخاص</p>
-            <h1>فهرست اشخاص</h1>
-            <p className={styles.description}>
-              اطلاعات اشخاص را مشاهده کنید یا با نام، شماره پرسنلی و کد ملی
-              جستجو کنید.
-            </p>
-          </div>
-          <Link className={styles.primaryLink} href="/people/create">
-            افزودن شخص
-          </Link>
-        </header>
+    <PageShell>
+      <PageHeader
+        eyebrow="مدیریت اشخاص"
+        title="فهرست اشخاص"
+        description="اطلاعات اشخاص را مشاهده کنید یا با نام، شماره پرسنلی و کد ملی جستجو کنید."
+        action={<CreatePersonLink />}
+      />
 
-        <ListPeopleFilters
-          initialSearch={search ?? ""}
-          initialStatus={status ?? "active"}
-          hasCriteria={hasCriteria}
-        />
+      <ListPeopleFilters
+        initialSearch={search ?? ""}
+        initialStatus={status ?? "active"}
+        hasCriteria={hasCriteria}
+      />
 
-        {result.people.length > 0 ? (
-          <>
-            <div className={styles.resultSummary} aria-live="polite">
-              <span>
-                {new Intl.NumberFormat("fa-IR").format(result.totalCount)} شخص
-              </span>
-            </div>
-            <PeopleTable people={result.people} />
-            <PersonCards people={result.people} />
-          </>
-        ) : (
-          <EmptyState hasCriteria={hasCriteria || result.totalCount > 0} />
-        )}
-
-        {totalPages > 1 && (
-          <nav className={styles.pagination} aria-label="صفحه‌بندی اشخاص">
-            {displayedPageNumber > 1 ? (
-              <Link
-                className={styles.pageLink}
-                href={buildPageHref(search, status, displayedPageNumber - 1)}
-                rel="prev"
-              >
-                صفحه قبل
-              </Link>
-            ) : (
-              <span className={styles.disabledPageLink}>صفحه قبل</span>
-            )}
-
-            <span className={styles.pageIndicator} aria-current="page">
-              صفحه {new Intl.NumberFormat("fa-IR").format(displayedPageNumber)} از{" "}
-              {new Intl.NumberFormat("fa-IR").format(totalPages)}
+      {result.people.length > 0 ? (
+        <>
+          <div className={styles.resultSummary} aria-live="polite">
+            <span>
+              {new Intl.NumberFormat("fa-IR").format(result.totalCount)} شخص
             </span>
+          </div>
+          <PeopleTable people={result.people} />
+          <PersonCards people={result.people} />
+        </>
+      ) : (
+        <EmptyState hasCriteria={hasCriteria || result.totalCount > 0} />
+      )}
 
-            {displayedPageNumber < totalPages ? (
-              <Link
-                className={styles.pageLink}
-                href={buildPageHref(search, status, displayedPageNumber + 1)}
-                rel="next"
-              >
-                صفحه بعد
-              </Link>
-            ) : (
-              <span className={styles.disabledPageLink}>صفحه بعد</span>
-            )}
-          </nav>
-        )}
-      </section>
-    </main>
+      <Pagination
+        label="صفحه‌بندی اشخاص"
+        currentPage={displayedPageNumber}
+        totalPages={totalPages}
+        buildHref={(page) => buildPageHref(search, status, page)}
+      />
+    </PageShell>
   );
 }
