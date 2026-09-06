@@ -1,7 +1,7 @@
 "use client";
 
 import type { HTMLInputTypeAttribute, ReactNode } from "react";
-import { useActionState } from "react";
+import { useActionState, useMemo } from "react";
 
 import { ActionButton } from "../../../../../components/ui/action-button/action-button";
 import { ActionLink } from "../../../../../components/ui/action-link/action-link";
@@ -17,9 +17,12 @@ import { FormGrid } from "../../../../../components/ui/form-grid/form-grid";
 import { InlineNotice } from "../../../../../components/ui/inline-notice/inline-notice";
 import { LoadingIndicator } from "../../../../../components/ui/loading-indicator/loading-indicator";
 import { MoneyInput } from "../../../../../components/ui/money-input/money-input";
+import { SearchableSelect } from "../../../../../components/ui/searchable-select/searchable-select";
+import type { SearchableSelectOption } from "../../../../../components/ui/searchable-select/searchable-select-options";
 import type { CatalogEntry } from "../../../application/catalogs/catalog-entry";
 import type { VehicleModel } from "../../../application/catalogs/vehicle-model";
 import type { NewVehicle } from "../../../application/vehicles/vehicle";
+import { normalizeVehicleSearchText } from "../../../application/vehicles/vehicle-text";
 import { createVehicleAction } from "./create-vehicle.action";
 import type { VehicleFormValues } from "./create-vehicle.form-data";
 import {
@@ -98,37 +101,50 @@ type SelectFieldProps = {
   name: VehicleFieldName;
   span: FieldSpan;
   defaultValue: string;
+  placeholder: string;
+  options: SearchableSelectOption[];
   error?: string;
-  children: ReactNode;
 };
 
 function VehicleSelectField({
   name,
   span,
   defaultValue,
+  placeholder,
+  options,
   error,
-  children,
 }: SelectFieldProps) {
   const errorId = `${name}-error`;
 
   return (
     <FieldFrame span={span}>
-      <FieldLabel htmlFor={name}>{vehicleLabels[name]}</FieldLabel>
-
-      <select
-        className={formControlClassName}
-        id={name}
+      <SearchableSelect
         name={name}
+        label={vehicleLabels[name]}
+        options={options}
         defaultValue={defaultValue}
-        aria-invalid={Boolean(error)}
-        aria-describedby={error ? errorId : undefined}
-      >
-        {children}
-      </select>
+        placeholder={placeholder}
+        normalizeQuery={normalizeVehicleSearchText}
+        invalid={Boolean(error)}
+        describedBy={error ? errorId : undefined}
+      />
 
       <FieldError id={errorId} message={error} />
     </FieldFrame>
   );
+}
+
+export function buildModelOptions(models: VehicleModel[]): SearchableSelectOption[] {
+  return models.map((model) => {
+    const text = `${model.brand.name} — ${model.name}${model.isActive ? "" : " (غیرفعال)"}`;
+    return { value: String(model.id), label: text, searchText: `${model.brand.name} ${model.name}`, content: <span>{text}</span> };
+  });
+}
+
+function buildStatusOptions(statuses: CatalogEntry[]): SearchableSelectOption[] {
+  return statuses.map((status) => ({
+    value: String(status.id), label: status.name, searchText: status.name, content: <span>{status.name}</span>,
+  }));
 }
 
 type PlatePartName = keyof typeof vehiclePlatePartCaptions;
@@ -208,6 +224,8 @@ export function CreateVehicleForm({
   const valueOf = (name: keyof VehicleFormValues) => state.values?.[name] ?? "";
 
   const today = new Date().toISOString().slice(0, 10);
+  const modelOptions = useMemo(() => buildModelOptions(models), [models]);
+  const statusOptions = useMemo(() => buildStatusOptions(statuses), [statuses]);
 
   return (
     <form
@@ -239,33 +257,19 @@ export function CreateVehicleForm({
             name="modelId"
             span={4}
             defaultValue={valueOf("modelId")}
+            placeholder="انتخاب مدل"
+            options={modelOptions}
             error={errors.modelId}
-          >
-            <option value="">انتخاب مدل</option>
-
-            {models.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.brand.name} — {model.name}
-                {model.isActive ? "" : " (غیرفعال)"}
-              </option>
-            ))}
-          </VehicleSelectField>
+          />
 
           <VehicleSelectField
             name="vehicleStatusId"
             span={3}
             defaultValue={valueOf("vehicleStatusId")}
+            placeholder="انتخاب وضعیت"
+            options={statusOptions}
             error={errors.vehicleStatusId}
-          >
-            <option value="">انتخاب وضعیت</option>
-
-            {statuses.map((status) => (
-              <option key={status.id} value={status.id}>
-                {status.name}
-              </option>
-            ))}
-          </VehicleSelectField>
-
+          />
           <VehicleTextField
             name="modelYear"
             span={2}

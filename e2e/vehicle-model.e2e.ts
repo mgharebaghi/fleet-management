@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 
 import type { E2EDatabaseAdapter } from "./support/e2e-database";
 import { connectToE2EDatabase } from "./support/e2e-database";
+import { selectSearchableOption } from "./support/searchable-select";
 
 let e2eDatabaseAdapter: E2EDatabaseAdapter;
 const createdVehicleModelNames = new Set<string>();
@@ -129,16 +130,30 @@ test.describe.serial("Vehicle Model Catalog", () => {
     });
     await expect(createDialog).toBeVisible();
     await createDialog.getByLabel("نام مدل").fill(modelName);
-    await createDialog.getByLabel("برند").selectOption(String(brandId));
-    await createDialog
-      .getByLabel("نوع خودرو")
-      .selectOption(String(vehicleTypeId));
-    await createDialog
-      .getByLabel("نوع سوخت")
-      .selectOption(String(fuelTypeId));
+    await selectSearchableOption(createDialog, "برند", brandName, brandName);
+    await selectSearchableOption(createDialog, "نوع خودرو", vehicleTypeName, vehicleTypeName);
+    await selectSearchableOption(createDialog, "نوع سوخت", fuelTypeName, fuelTypeName);
     await createDialog.getByRole("button", { name: "ایجاد مدل" }).click();
 
     await expect(createDialog).toBeHidden({ timeout: 10_000 });
+
+    // The dialog stays mounted across close/reopen, so a prior selection
+    // must not survive the create action's native form.reset() call.
+    await modelCard.getByRole("button", { name: "ایجاد مدل" }).click();
+    await expect(createDialog).toBeVisible();
+    await expect(createDialog.getByLabel("نام مدل")).toHaveValue("");
+    const referenceSelections: Array<[string, string]> = [
+      ["برند", brandName],
+      ["نوع خودرو", vehicleTypeName],
+      ["نوع سوخت", fuelTypeName],
+    ];
+    for (const [label, previousSelection] of referenceSelections) {
+      const trigger = createDialog.getByLabel(label, { exact: true });
+      await expect(trigger).toContainText("انتخاب کنید");
+      await expect(trigger).not.toContainText(previousSelection);
+    }
+    await createDialog.getByRole("button", { name: "انصراف" }).click();
+    await expect(createDialog).toBeHidden();
 
     await modelCard.getByRole("button", { name: "مشاهده همه" }).click();
     const listDialog = page.getByRole("dialog", { name: "مدل‌های خودرو" });
@@ -207,9 +222,9 @@ test.describe.serial("Vehicle Model Catalog", () => {
     const brandName = uniqueName("Brand");
     const vehicleTypeName = uniqueName("Type");
     const fuelTypeName = uniqueName("Fuel");
-    const brandId = await createVehicleBrand(brandName);
-    const vehicleTypeId = await createVehicleType(vehicleTypeName);
-    const fuelTypeId = await createFuelType(fuelTypeName);
+    await createVehicleBrand(brandName);
+    await createVehicleType(vehicleTypeName);
+    await createFuelType(fuelTypeName);
 
     await page.goto("/fleet/catalogs");
     const modelCard = page.getByRole("region", { name: "مدل خودرو" });
@@ -217,13 +232,9 @@ test.describe.serial("Vehicle Model Catalog", () => {
     const createDialog = page.getByRole("dialog", {
       name: "ایجاد مدل خودرو",
     });
-    await createDialog.getByLabel("برند").selectOption(String(brandId));
-    await createDialog
-      .getByLabel("نوع خودرو")
-      .selectOption(String(vehicleTypeId));
-    await createDialog
-      .getByLabel("نوع سوخت")
-      .selectOption(String(fuelTypeId));
+    await selectSearchableOption(createDialog, "برند", brandName, brandName);
+    await selectSearchableOption(createDialog, "نوع خودرو", vehicleTypeName, vehicleTypeName);
+    await selectSearchableOption(createDialog, "نوع سوخت", fuelTypeName, fuelTypeName);
     await createDialog.getByRole("button", { name: "ایجاد مدل" }).click();
 
     await expect(createDialog.getByText("نام مدل الزامی است.")).toBeVisible();
