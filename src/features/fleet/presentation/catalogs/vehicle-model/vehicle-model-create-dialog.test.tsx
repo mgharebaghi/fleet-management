@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { VehicleModelCreateDialog } from "./vehicle-model-create-dialog";
+import { VehicleModelCreateDialog, buildReferenceOptions } from "./vehicle-model-create-dialog";
 
 const noop = () => {};
 const noopAction = vi.fn();
@@ -27,34 +27,36 @@ function renderDialog(
 }
 
 describe("VehicleModelCreateDialog", () => {
-  it("renders a labeled name input and required brand select", () => {
+  it("renders a labeled name input and a searchable brand field", () => {
     const markup = renderDialog();
 
     expect(markup).toContain("ایجاد مدل خودرو");
     expect(markup).toMatch(/<label[^>]*for="vehicle-model-name"[^>]*>نام مدل/);
     expect(markup).toMatch(/<input(?=[^>]*name="name")(?=[^>]*autofocus)[^>]*>/);
-    expect(markup).toMatch(/<select(?=[^>]*name="brandId")(?=[^>]*required)[^>]*>/);
+    // The brand/type/fuel pickers submit through a hidden field, not a native select.
+    expect(markup).toContain('type="hidden"');
+    expect(markup).toContain('name="brandId"');
+    expect(markup).not.toContain("<select");
   });
 
-  it("renders required type and fuel selects with a placeholder option", () => {
+  it("renders brand, type and fuel as searchable pickers with a placeholder", () => {
     const markup = renderDialog();
 
     expect(markup).not.toContain("اختیاری");
-    expect(markup).toMatch(
-      /<select(?=[^>]*name="vehicleTypeId")(?=[^>]*required)[^>]*>/,
-    );
-    expect(markup).toMatch(
-      /<select(?=[^>]*name="fuelTypeId")(?=[^>]*required)[^>]*>/,
-    );
-    expect(
-      markup.match(/<option value=""[^>]*>انتخاب کنید<\/option>/g),
-    ).toHaveLength(3);
+    expect(markup).toContain('name="vehicleTypeId"');
+    expect(markup).toContain('name="fuelTypeId"');
+    // Once per picker's placeholder, plus once in the dialog's own description text.
+    expect(markup.match(/انتخاب کنید/g)).toHaveLength(4);
   });
 
   it("keeps inactive reference options visible and identifies them", () => {
-    const markup = renderDialog();
+    const [active, inactive] = buildReferenceOptions([
+      { id: 1, name: "Volvo", isActive: true },
+      { id: 2, name: "Old Brand", isActive: false },
+    ]);
 
-    expect(markup).toContain("Old Brand (غیرفعال)");
+    expect(active.label).toBe("Volvo");
+    expect(inactive.label).toBe("Old Brand (غیرفعال)");
   });
 
   it("shows a safe error and disables submission when references fail to load", () => {

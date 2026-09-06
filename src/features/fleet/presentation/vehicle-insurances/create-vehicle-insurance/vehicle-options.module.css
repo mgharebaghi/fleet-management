@@ -1,0 +1,51 @@
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mainLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--app-heading);
+  font-weight: 700;
+}
+
+.secondaryLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.vehicleCode {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+/* Closed trigger: everything on one line so a selection keeps the field's height. */
+.trigger {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.triggerName {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-heading);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.triggerMeta {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-2);
+}

@@ -14,6 +14,9 @@ import {
 import { FormGrid } from "../../../../../components/ui/form-grid/form-grid";
 import { InlineNotice } from "../../../../../components/ui/inline-notice/inline-notice";
 import { LoadingIndicator } from "../../../../../components/ui/loading-indicator/loading-indicator";
+import { SearchableSelect } from "../../../../../components/ui/searchable-select/searchable-select";
+import type { SearchableSelectOption } from "../../../../../components/ui/searchable-select/searchable-select-options";
+import { normalizeVehicleSearchText } from "../../../application/vehicles/vehicle-text";
 import type { CatalogEntryView } from "../components/catalog-entry-view";
 import type { CreateVehicleModelActionState } from "./create-vehicle-model.action-state";
 import { initialCreateVehicleModelActionState } from "./create-vehicle-model.action-state";
@@ -39,7 +42,6 @@ export type VehicleModelCreateDialogProps = {
 };
 
 type ReferenceSelectProps = {
-  id: string;
   name: "brandId" | "vehicleTypeId" | "fuelTypeId";
   label: string;
   placeholder: string;
@@ -48,8 +50,15 @@ type ReferenceSelectProps = {
   errors: string[];
 };
 
+/** Turns a flat catalog list into searchable-select options: name plus an inactive suffix. */
+export function buildReferenceOptions(options: CatalogEntryView[]): SearchableSelectOption[] {
+  return options.map((option) => {
+    const text = `${option.name}${option.isActive === false ? " (غیرفعال)" : ""}`;
+    return { value: String(option.id), label: text, searchText: option.name, content: <span>{text}</span> };
+  });
+}
+
 function ReferenceSelect({
-  id,
   name,
   label,
   placeholder,
@@ -57,29 +66,21 @@ function ReferenceSelect({
   disabled,
   errors,
 }: ReferenceSelectProps) {
-  const errorId = `${id}-error`;
+  const errorId = `${name}-error`;
 
   return (
     <FormField>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <select
-        className={formControlClassName}
-        id={id}
+      <SearchableSelect
         name={name}
+        label={label}
+        options={buildReferenceOptions(options)}
         defaultValue=""
-        required
+        placeholder={placeholder}
+        normalizeQuery={normalizeVehicleSearchText}
         disabled={disabled}
-        aria-invalid={errors.length > 0}
-        aria-describedby={errors.length > 0 ? errorId : undefined}
-      >
-        <option value="">{placeholder}</option>
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.name}
-            {option.isActive === false ? " (غیرفعال)" : ""}
-          </option>
-        ))}
-      </select>
+        invalid={errors.length > 0}
+        describedBy={errors.length > 0 ? errorId : undefined}
+      />
       <FieldErrors id={errorId} messages={errors} />
     </FormField>
   );
@@ -166,7 +167,6 @@ export function VehicleModelCreateDialog({
 
         <FormGrid>
           <ReferenceSelect
-            id="vehicle-model-brand"
             name="brandId"
             label="برند"
             placeholder="انتخاب کنید"
@@ -175,7 +175,6 @@ export function VehicleModelCreateDialog({
             errors={fieldErrors.brandId}
           />
           <ReferenceSelect
-            id="vehicle-model-type"
             name="vehicleTypeId"
             label="نوع خودرو"
             placeholder="انتخاب کنید"
@@ -184,7 +183,6 @@ export function VehicleModelCreateDialog({
             errors={fieldErrors.vehicleTypeId}
           />
           <ReferenceSelect
-            id="vehicle-model-fuel"
             name="fuelTypeId"
             label="نوع سوخت"
             placeholder="انتخاب کنید"

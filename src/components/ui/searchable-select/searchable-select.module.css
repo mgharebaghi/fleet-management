@@ -1,0 +1,155 @@
+.field {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.trigger {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 10px var(--space-3);
+  border: 1px solid var(--app-control-border);
+  border-radius: var(--app-radius-control);
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  box-shadow: var(--app-shadow-control);
+  transition:
+    border-color var(--app-motion-fast),
+    box-shadow var(--app-motion-fast);
+}
+
+.trigger:focus-visible {
+  border-color: var(--app-focus);
+  box-shadow: 0 0 0 3px var(--app-focus-ring);
+  outline: none;
+}
+
+.trigger[data-invalid] {
+  border-color: var(--app-danger-border);
+}
+
+.trigger:disabled {
+  background: var(--app-control-disabled);
+  color: var(--app-text-muted);
+  cursor: not-allowed;
+  opacity: var(--app-disabled-opacity);
+}
+
+@media (hover: hover) {
+  .trigger:hover:not(:disabled) {
+    border-color: var(--app-control-hover-border);
+  }
+}
+
+.value {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.placeholder {
+  color: var(--app-text-muted);
+}
+
+.triggerIcon {
+  flex: 0 0 auto;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--space-1));
+  inset-inline-start: 0;
+  width: min(360px, calc(100vw - 2 * var(--space-5)));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface);
+  box-shadow: var(--app-card-shadow);
+}
+
+.panelAbove {
+  top: auto;
+  bottom: calc(100% + var(--space-1));
+}
+
+.search {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px var(--space-3);
+  border: 1px solid var(--app-control-border);
+  border-radius: var(--app-radius-control);
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+}
+
+.search:focus-visible {
+  border-color: var(--app-focus);
+  box-shadow: 0 0 0 3px var(--app-focus-ring);
+  outline: none;
+}
+
+.options {
+  max-height: 280px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--app-radius-control);
+  cursor: pointer;
+}
+
+.option:hover {
+  background: var(--app-surface-subtle);
+}
+
+.optionActive {
+  background: var(--app-info-background);
+}
+
+.optionDisabled {
+  cursor: not-allowed;
+  opacity: var(--app-disabled-opacity);
+}
+
+.empty {
+  padding: var(--space-3);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .panel {
+    inset-inline: 0;
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger {
+    transition: none;
+  }
+}

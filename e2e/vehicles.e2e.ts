@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { connectToE2EDatabase, type E2EDatabaseAdapter } from "./support/e2e-database";
 import { selectJalaliDate } from "./support/jalali-calendar";
+import { searchableSelectTrigger, selectSearchableOption } from "./support/searchable-select";
 
 let adapter: E2EDatabaseAdapter;
 let brandId: number | undefined, modelId: number | undefined, statusId: number | undefined;
@@ -37,9 +38,9 @@ test.describe.serial("Vehicles", () => {
     await page.goto("/fleet/vehicles/create");
     await expect(page.getByAltText("نشان سامانه مدیریت ناوگان")).toBeVisible();
     await page.getByLabel("کد خودرو", { exact: true }).fill(code);
-    await page.getByLabel("مدل خودرو", { exact: true }).selectOption(String(modelId));
-    await expect(page.getByLabel("مدل خودرو").locator("option:checked")).toContainText("غیرفعال");
-    await page.getByLabel("وضعیت عملیاتی", { exact: true }).selectOption(String(statusId));
+    await selectSearchableOption(page, "مدل خودرو", `${catalogName}-MODEL`, `${catalogName}-MODEL`);
+    await expect(searchableSelectTrigger(page, "مدل خودرو")).toContainText("غیرفعال");
+    await selectSearchableOption(page, "وضعیت عملیاتی", `${catalogName}-STATUS`, `${catalogName}-STATUS`);
     await page.getByLabel("دو رقم سمت چپ").fill("۱۲");
     await page.getByLabel("حرف یا بخش میانی").fill(randomUUID().slice(0, 3));
     await page.getByLabel("سه رقم سمت راست").fill("٣٤٥");

@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { buildModelOptions } from "./create-vehicle-form";
 import { CreateVehiclePage } from "./create-vehicle-page";
 
 const { models, statuses } = vi.hoisted(() => ({
@@ -35,7 +36,22 @@ describe("CreateVehiclePage", () => {
     expect(markup).not.toContain("private");
   });
 
-  it("renders the form with selectable inactive models, RTL and explicit plate ordering", async () => {
+  it("marks an inactive model in its searchable picker option", () => {
+    const [option] = buildModelOptions([
+      {
+        id: 9,
+        name: "Legacy",
+        isActive: false,
+        brand: { id: 1, name: "Brand" },
+        vehicleType: null,
+        fuelType: null,
+      },
+    ]);
+
+    expect(option.label).toContain("غیرفعال");
+  });
+
+  it("renders the form with a searchable model picker, RTL and explicit plate ordering", async () => {
     models.mockResolvedValue([
       {
         id: 9,
@@ -49,7 +65,9 @@ describe("CreateVehiclePage", () => {
 
     const markup = renderToStaticMarkup(await CreateVehiclePage());
 
-    expect(markup).toContain("غیرفعال");
+    // Migrated off the native <select>: the picker submits through a hidden field.
+    expect(markup).not.toContain("<select");
+    expect(markup).toContain('name="modelId"');
     expect(markup).toContain('dir="rtl"');
     expect(markup.indexOf('id="plateNoLeftSide"')).toBeLessThan(
       markup.indexOf('id="plateNoCenterChar"'),
