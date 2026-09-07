@@ -1,0 +1,6 @@
+/* Icons sit on the text baseline of whatever control holds them and never
+   shrink when that control runs out of room. */
+.icon {
+  display: block;
+  flex: none;
+}

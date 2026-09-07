@@ -10,7 +10,8 @@
   transition:
     background-color var(--app-motion-fast),
     border-color var(--app-motion-fast),
-    box-shadow var(--app-motion-fast);
+    box-shadow var(--app-motion-fast),
+    transform var(--app-motion-fast);
 }
 
 .sm {
@@ -52,9 +53,32 @@
   background: var(--app-info-background);
 }
 
+.danger {
+  border: 1px solid var(--app-danger-border);
+  background: var(--app-danger);
+  color: var(--app-on-primary);
+}
+
+.danger:hover:not(:disabled) {
+  border-color: var(--app-danger-text);
+  background: var(--app-danger-text);
+}
+
+.danger:active:not(:disabled) {
+  background: var(--app-danger-text);
+}
+
 .button:focus-visible {
   outline: 3px solid var(--app-focus-outline);
   outline-offset: 3px;
+}
+
+.button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(0) scale(0.985);
 }
 
 .button:disabled {
@@ -90,6 +114,7 @@
 @media (prefers-reduced-motion: reduce) {
   .button {
     transition: none;
+    transform: none;
   }
 
   .spinner {

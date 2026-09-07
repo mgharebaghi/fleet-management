@@ -10,7 +10,8 @@
   transition:
     background-color var(--app-motion-fast),
     border-color var(--app-motion-fast),
-    box-shadow var(--app-motion-fast);
+    box-shadow var(--app-motion-fast),
+    transform var(--app-motion-fast);
 }
 
 .primary {
@@ -54,10 +55,21 @@
   outline-offset: 3px;
 }
 
+.primary:hover,
+.secondary:hover {
+  transform: translateY(-1px);
+}
+
+.primary:active,
+.secondary:active {
+  transform: translateY(0) scale(0.985);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .primary,
   .secondary,
   .quiet {
     transition: none;
+    transform: none;
   }
 }
