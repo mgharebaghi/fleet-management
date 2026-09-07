@@ -1,5 +1,12 @@
+"use client";
+
 import { DataTable } from "../../../../../components/ui/data-table/data-table";
 import { Dialog } from "../../../../../components/ui/dialog/dialog";
+import { DeleteIcon, EditIcon } from "../../../../../components/ui/icon/icons";
+import {
+  IconActionButton,
+  IconActionGroup,
+} from "../../../../../components/ui/icon-action-button/icon-action-button";
 import { InlineNotice } from "../../../../../components/ui/inline-notice/inline-notice";
 import {
   RecordCard,
@@ -16,6 +23,9 @@ export type VehicleModelListDialogProps = {
   open: boolean;
   onClose: () => void;
   vehicleModels: VehicleModel[];
+  /** Omit to render a read-only list. */
+  onEditVehicleModel?: (vehicleModel: VehicleModel) => void;
+  onDeleteVehicleModel?: (vehicleModel: VehicleModel) => void;
 };
 
 function VehicleModelStatus({ isActive }: { isActive: boolean }) {
@@ -27,11 +37,45 @@ function VehicleModelStatus({ isActive }: { isActive: boolean }) {
   );
 }
 
+function VehicleModelRowActions({
+  vehicleModel,
+  onEditVehicleModel,
+  onDeleteVehicleModel,
+}: {
+  vehicleModel: VehicleModel;
+  onEditVehicleModel?: (vehicleModel: VehicleModel) => void;
+  onDeleteVehicleModel?: (vehicleModel: VehicleModel) => void;
+}) {
+  return (
+    <IconActionGroup>
+      {onEditVehicleModel && (
+        <IconActionButton
+          label={`ویرایش ${vehicleModel.name}`}
+          icon={<EditIcon />}
+          onClick={() => onEditVehicleModel(vehicleModel)}
+        />
+      )}
+      {onDeleteVehicleModel && (
+        <IconActionButton
+          label={`حذف ${vehicleModel.name}`}
+          icon={<DeleteIcon />}
+          tone="danger"
+          onClick={() => onDeleteVehicleModel(vehicleModel)}
+        />
+      )}
+    </IconActionGroup>
+  );
+}
+
 export function VehicleModelListDialog({
   open,
   onClose,
   vehicleModels,
+  onEditVehicleModel,
+  onDeleteVehicleModel,
 }: VehicleModelListDialogProps) {
+  const hasRowActions = Boolean(onEditVehicleModel || onDeleteVehicleModel);
+
   return (
     <Dialog
       open={open}
@@ -53,6 +97,7 @@ export function VehicleModelListDialog({
                 <th scope="col">نوع خودرو</th>
                 <th scope="col">نوع سوخت</th>
                 <th scope="col">وضعیت</th>
+                {hasRowActions && <th scope="col">عملیات</th>}
               </tr>
             </thead>
             <tbody>
@@ -65,6 +110,15 @@ export function VehicleModelListDialog({
                   <td>
                     <VehicleModelStatus isActive={vehicleModel.isActive} />
                   </td>
+                  {hasRowActions && (
+                    <td>
+                      <VehicleModelRowActions
+                        vehicleModel={vehicleModel}
+                        onEditVehicleModel={onEditVehicleModel}
+                        onDeleteVehicleModel={onDeleteVehicleModel}
+                      />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -90,6 +144,13 @@ export function VehicleModelListDialog({
                     {vehicleModel.fuelType?.name ?? "—"}
                   </RecordCardDetail>
                 </RecordCardDetails>
+                {hasRowActions && (
+                  <VehicleModelRowActions
+                    vehicleModel={vehicleModel}
+                    onEditVehicleModel={onEditVehicleModel}
+                    onDeleteVehicleModel={onDeleteVehicleModel}
+                  />
+                )}
               </RecordCard>
             ))}
           </RecordCardList>

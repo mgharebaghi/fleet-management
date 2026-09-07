@@ -21,6 +21,12 @@ class CatalogEntryWriterFake implements CatalogEntryWriter<CatalogEntry> {
     this.createdNames.push(name);
     return { id: this.nextId++, name };
   }
+
+  async update(id: number, changes: { name: string }): Promise<CatalogEntry> {
+    return { id, name: changes.name };
+  }
+
+  async remove(): Promise<void> {}
 }
 
 describe("CreateCatalogEntry", () => {

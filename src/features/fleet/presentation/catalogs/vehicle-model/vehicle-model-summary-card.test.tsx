@@ -26,6 +26,8 @@ function renderCard(
       hasLoadError={false}
       hasReferenceLoadError={false}
       action={noopAction}
+      updateAction={noopAction}
+      deleteAction={noopAction}
       {...overrides}
     />,
   );

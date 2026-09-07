@@ -1,8 +1,16 @@
-import type { PrismaClient } from "@/generated/prisma/client";
-import type { VehicleType as PrismaVehicleType } from "@/generated/prisma/client";
+import {
+  Prisma,
+  type PrismaClient,
+  type VehicleType as PrismaVehicleType,
+} from "../../../../../generated/prisma/client";
 
 import type { CatalogEntryReader } from "../../../application/catalogs/ports/catalog-entry-reader";
-import type { CatalogEntryWriter } from "../../../application/catalogs/ports/catalog-entry-writer";
+import {
+  CatalogEntryInUseError,
+  CatalogEntryNotFoundError,
+  type CatalogEntryChanges,
+  type CatalogEntryWriter,
+} from "../../../application/catalogs/ports/catalog-entry-writer";
 import type { VehicleType } from "../../../application/catalogs/vehicle-type";
 
 type VehicleTypePrismaClient = Pick<PrismaClient, "vehicleType">;
@@ -30,9 +38,14 @@ export class PrismaVehicleTypeRepository
     return vehicleTypes.map(mapPrismaVehicleTypeToVehicleType);
   }
 
-  async existsByName(name: string): Promise<boolean> {
+  async existsByName(name: string, excludeId?: number): Promise<boolean> {
     const vehicleType = await this.prismaClient.vehicleType.findFirst({
-      where: { TypeName: name },
+      where: {
+        TypeName: name,
+        ...(excludeId !== undefined
+          ? { VehicleTypeId: { not: excludeId } }
+          : {}),
+      },
       select: { VehicleTypeId: true },
     });
 
@@ -45,5 +58,47 @@ export class PrismaVehicleTypeRepository
     });
 
     return mapPrismaVehicleTypeToVehicleType(createdVehicleType);
+  }
+
+  async update(id: number, changes: CatalogEntryChanges): Promise<VehicleType> {
+    try {
+      const updatedVehicleType = await this.prismaClient.vehicleType.update({
+        where: { VehicleTypeId: id },
+        data: {
+          TypeName: changes.name,
+          ...(changes.isActive !== undefined
+            ? { IsActive: changes.isActive }
+            : {}),
+        },
+      });
+
+      return mapPrismaVehicleTypeToVehicleType(updatedVehicleType);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2025"
+      ) {
+        throw new CatalogEntryNotFoundError();
+      }
+      throw error;
+    }
+  }
+
+  async remove(id: number): Promise<void> {
+    try {
+      await this.prismaClient.vehicleType.delete({
+        where: { VehicleTypeId: id },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === "P2025") {
+          throw new CatalogEntryNotFoundError();
+        }
+        if (error.code === "P2003") {
+          throw new CatalogEntryInUseError();
+        }
+      }
+      throw error;
+    }
   }
 }

@@ -21,6 +21,12 @@ class VehicleModelWriterFake implements VehicleModelWriter {
     this.createdVehicleModels.push(input);
     return VEHICLE_MODEL;
   }
+
+  async update(): Promise<VehicleModel> {
+    return VEHICLE_MODEL;
+  }
+
+  async remove(): Promise<void> {}
 }
 
 class VehicleModelReferenceReaderFake

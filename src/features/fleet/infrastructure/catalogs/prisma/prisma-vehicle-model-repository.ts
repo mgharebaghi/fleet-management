@@ -1,8 +1,15 @@
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import { Prisma, type PrismaClient } from "../../../../../generated/prisma/client";
 
+import {
+  CatalogEntryInUseError,
+  CatalogEntryNotFoundError,
+} from "../../../application/catalogs/ports/catalog-entry-writer";
 import type { VehicleModelReader } from "../../../application/catalogs/ports/vehicle-model-reader";
 import type { VehicleModelReferenceReader } from "../../../application/catalogs/ports/vehicle-model-reference-reader";
-import type { VehicleModelWriter } from "../../../application/catalogs/ports/vehicle-model-writer";
+import type {
+  UpdateVehicleModelChanges,
+  VehicleModelWriter,
+} from "../../../application/catalogs/ports/vehicle-model-writer";
 import type {
   NewVehicleModel,
   VehicleModel,
@@ -98,6 +105,50 @@ export class PrismaVehicleModelRepository
     });
 
     return mapPrismaVehicleModelToVehicleModel(vehicleModel);
+  }
+
+  async update(
+    id: number,
+    changes: UpdateVehicleModelChanges,
+  ): Promise<VehicleModel> {
+    try {
+      const vehicleModel = await this.prismaClient.vehicleModel.update({
+        where: { ModelId: id },
+        data: {
+          ModelName: changes.name,
+          BrandId: changes.brandId,
+          VehicleTypeId: changes.vehicleTypeId,
+          FuelTypeId: changes.fuelTypeId,
+          IsActive: changes.isActive,
+        },
+        select: vehicleModelSelect,
+      });
+
+      return mapPrismaVehicleModelToVehicleModel(vehicleModel);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === "P2025") {
+          throw new CatalogEntryNotFoundError();
+        }
+      }
+      throw error;
+    }
+  }
+
+  async remove(id: number): Promise<void> {
+    try {
+      await this.prismaClient.vehicleModel.delete({ where: { ModelId: id } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === "P2025") {
+          throw new CatalogEntryNotFoundError();
+        }
+        if (error.code === "P2003") {
+          throw new CatalogEntryInUseError();
+        }
+      }
+      throw error;
+    }
   }
 
   async brandExists(brandId: number): Promise<boolean> {
