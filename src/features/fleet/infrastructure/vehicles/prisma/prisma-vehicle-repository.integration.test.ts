@@ -6,6 +6,7 @@ import { PrismaClient } from "../../../../../generated/prisma/client";
 import { createMssqlConfigFromEnvironment } from "../../../../../infrastructure/database/prisma/mssql-config";
 import { PrismaVehicleRepository } from "./prisma-vehicle-repository";
 import { CreateVehicle } from "../../../application/vehicles/create-vehicle/create-vehicle";
+import { VehicleInUseError, VehicleNotFoundError } from "../../../application/vehicles/ports/vehicle-writer";
 import type { NewVehicle } from "../../../application/vehicles/vehicle";
 
 config({ path: ".env", quiet: true });
@@ -103,5 +104,109 @@ describe.sequential("PrismaVehicleRepository integration", () => {
     // ModelYear is a smallint, so it matches exactly rather than by substring.
     expect((await repository.search({ ...criteria, search: "1402", vehicleStatusId: input.vehicleStatusId })).vehicles.map(v => v.vehicleId)).toEqual([id]);
     expect((await repository.search({ ...criteria, search: "140", vehicleStatusId: input.vehicleStatusId })).totalCount).toBe(0);
+  });
+
+  it("finds a vehicle by id with exact decimals and every relation name, and returns null for a missing one", async () => {
+    const input = await fixture();
+    input.purchasePrice = "9999999999999999.99";
+    input.currentOdometer = "1234567890123456.78";
+    input.currentEngineHour = "12.50";
+    input.purchaseDate = new Date("2024-03-20T00:00:00Z");
+    input.vin = `VIN-${randomUUID()}`;
+    const id = await create(input);
+
+    const detail = await repository.findById(id);
+
+    expect(detail).toMatchObject({
+      vehicleId: id,
+      vehicleCode: input.vehicleCode,
+      vin: input.vin,
+      modelId: input.modelId,
+      vehicleStatusId: input.vehicleStatusId,
+      purchasePrice: input.purchasePrice,
+      currentOdometer: input.currentOdometer,
+      currentEngineHour: input.currentEngineHour,
+      purchaseDate: input.purchaseDate,
+      isActive: true,
+      model: { id: input.modelId },
+      brand: { id: brands[0] },
+      vehicleType: { id: types[0] },
+      fuelType: { id: fuels[0] },
+      status: { id: input.vehicleStatusId },
+    });
+    expect(detail!.createdAt).toBeInstanceOf(Date);
+
+    expect(await repository.findById(-1)).toBeNull();
+  });
+
+  it("updates a vehicle's fields, excluding its own id from uniqueness checks", async () => {
+    const input = await fixture();
+    const id = await create(input);
+    const otherFixture = await fixture();
+
+    await repository.update(id, {
+      ...input,
+      vehicleCode: input.vehicleCode,
+      modelId: otherFixture.modelId,
+      vehicleStatusId: otherFixture.vehicleStatusId,
+      vin: `VIN-${randomUUID()}`,
+    });
+
+    const detail = await repository.findById(id);
+    expect(detail).toMatchObject({
+      modelId: otherFixture.modelId,
+      vehicleStatusId: otherFixture.vehicleStatusId,
+    });
+    expect(
+      await repository.identifierExists("vehicleCode", input.vehicleCode, id),
+    ).toBe(false);
+  });
+
+  it("rejects updating a vehicle that no longer exists", async () => {
+    const input = await fixture();
+
+    await expect(repository.update(999999999, input)).rejects.toBeInstanceOf(
+      VehicleNotFoundError,
+    );
+  });
+
+  it("deletes an unreferenced vehicle, and rejects deleting one referenced by an insurance record", async () => {
+    const deletableInput = await fixture();
+    const deletableId = await create(deletableInput);
+
+    await repository.remove(deletableId);
+    await expect(
+      client.vehicle.findUnique({ where: { VehicleId: deletableId } }),
+    ).resolves.toBeNull();
+
+    const referencedInput = await fixture();
+    const referencedId = await create(referencedInput);
+    const insurance = await client.vehicleInsurance.create({
+      data: {
+        VehicleId: referencedId,
+        InsuranceType: "IT",
+        StartDate: new Date("2024-01-01T00:00:00Z"),
+        ExpireDate: new Date("2025-01-01T00:00:00Z"),
+      },
+    });
+
+    try {
+      await expect(repository.remove(referencedId)).rejects.toBeInstanceOf(
+        VehicleInUseError,
+      );
+      await expect(
+        client.vehicle.findUnique({ where: { VehicleId: referencedId } }),
+      ).resolves.not.toBeNull();
+    } finally {
+      await client.vehicleInsurance.delete({
+        where: { VehicleInsuranceId: insurance.VehicleInsuranceId },
+      });
+    }
+  });
+
+  it("rejects deleting a vehicle that no longer exists", async () => {
+    await expect(repository.remove(999999999)).rejects.toBeInstanceOf(
+      VehicleNotFoundError,
+    );
   });
 });

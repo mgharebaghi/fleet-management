@@ -1,28 +1,29 @@
 "use client";
 
-import type { HTMLInputTypeAttribute, ReactNode } from "react";
 import { useActionState, useMemo } from "react";
 
 import { ActionButton } from "../../../../../components/ui/action-button/action-button";
-import { ActionLink } from "../../../../../components/ui/action-link/action-link";
 import { JalaliDatePicker } from "../../../../../components/ui/date-picker/jalali-date-picker";
 import {
-  FieldErrors,
   FieldLabel,
   FormActions,
-  FormField,
   formControlClassName,
 } from "../../../../../components/ui/form-field/form-field";
 import { FormGrid } from "../../../../../components/ui/form-grid/form-grid";
 import { InlineNotice } from "../../../../../components/ui/inline-notice/inline-notice";
 import { LoadingIndicator } from "../../../../../components/ui/loading-indicator/loading-indicator";
 import { MoneyInput } from "../../../../../components/ui/money-input/money-input";
-import { SearchableSelect } from "../../../../../components/ui/searchable-select/searchable-select";
-import type { SearchableSelectOption } from "../../../../../components/ui/searchable-select/searchable-select-options";
 import type { CatalogEntry } from "../../../application/catalogs/catalog-entry";
 import type { VehicleModel } from "../../../application/catalogs/vehicle-model";
 import type { NewVehicle } from "../../../application/vehicles/vehicle";
-import { normalizeVehicleSearchText } from "../../../application/vehicles/vehicle-text";
+import {
+  FieldError,
+  FieldFrame,
+  VehicleSelectField,
+  VehicleTextField,
+  buildModelOptions,
+  buildStatusOptions,
+} from "../components/vehicle-form-fields";
 import { createVehicleAction } from "./create-vehicle.action";
 import type { VehicleFormValues } from "./create-vehicle.form-data";
 import {
@@ -33,119 +34,11 @@ import {
 } from "./create-vehicle.messages";
 import styles from "./create-vehicle-form.module.css";
 
+export { buildModelOptions } from "../components/vehicle-form-fields";
+
 type VehicleFieldName = keyof NewVehicle;
 
 type VehicleFieldErrors = Partial<Record<VehicleFieldName, string>>;
-
-type FieldSpan = 2 | 3 | 4 | 6;
-
-type FieldFrameProps = {
-  span: FieldSpan;
-  children: ReactNode;
-};
-
-function FieldFrame({ span, children }: FieldFrameProps) {
-  return <FormField className={styles[`span${span}`]}>{children}</FormField>;
-}
-
-function FieldError({ id, message }: { id: string; message?: string }) {
-  return <FieldErrors id={id} messages={message ? [message] : []} />;
-}
-
-type TextFieldProps = {
-  name: VehicleFieldName;
-  span: FieldSpan;
-  defaultValue: string;
-  error?: string;
-  inputMode?: "numeric" | "decimal";
-  placeholder?: string;
-  direction?: "ltr" | "rtl";
-  type?: HTMLInputTypeAttribute;
-};
-
-function VehicleTextField({
-  name,
-  span,
-  defaultValue,
-  error,
-  inputMode,
-  placeholder,
-  direction = "ltr",
-  type = "text",
-}: TextFieldProps) {
-  const errorId = `${name}-error`;
-
-  return (
-    <FieldFrame span={span}>
-      <FieldLabel htmlFor={name}>{vehicleLabels[name]}</FieldLabel>
-
-      <input
-        className={formControlClassName}
-        id={name}
-        name={name}
-        type={type}
-        dir={direction}
-        inputMode={inputMode}
-        placeholder={placeholder}
-        defaultValue={defaultValue}
-        aria-invalid={Boolean(error)}
-        aria-describedby={error ? errorId : undefined}
-      />
-
-      <FieldError id={errorId} message={error} />
-    </FieldFrame>
-  );
-}
-
-type SelectFieldProps = {
-  name: VehicleFieldName;
-  span: FieldSpan;
-  defaultValue: string;
-  placeholder: string;
-  options: SearchableSelectOption[];
-  error?: string;
-};
-
-function VehicleSelectField({
-  name,
-  span,
-  defaultValue,
-  placeholder,
-  options,
-  error,
-}: SelectFieldProps) {
-  const errorId = `${name}-error`;
-
-  return (
-    <FieldFrame span={span}>
-      <SearchableSelect
-        name={name}
-        label={vehicleLabels[name]}
-        options={options}
-        defaultValue={defaultValue}
-        placeholder={placeholder}
-        normalizeQuery={normalizeVehicleSearchText}
-        invalid={Boolean(error)}
-        describedBy={error ? errorId : undefined}
-      />
-
-      <FieldError id={errorId} message={error} />
-    </FieldFrame>
-  );
-}
-
-export function buildModelOptions(models: VehicleModel[]): SearchableSelectOption[] {
-  return models.map((model) => {
-    const text = `${model.brand.name} — ${model.name}${model.isActive ? "" : " (غیرفعال)"}`;
-    return { value: String(model.id), label: text, searchText: `${model.brand.name} ${model.name}`, content: <span>{text}</span> };
-  });
-}
-
-function buildStatusOptions(statuses: CatalogEntry[]): SearchableSelectOption[] {
-  return statuses.map((status) => ({
-    value: String(status.id), label: status.name, searchText: status.name, content: <span>{status.name}</span>,
-  }));
-}
 
 type PlatePartName = keyof typeof vehiclePlatePartCaptions;
 
@@ -248,6 +141,7 @@ export function CreateVehicleForm({
         <FormGrid columns={12}>
           <VehicleTextField
             name="vehicleCode"
+            label={vehicleLabels.vehicleCode}
             span={3}
             defaultValue={valueOf("vehicleCode")}
             error={errors.vehicleCode}
@@ -255,6 +149,7 @@ export function CreateVehicleForm({
 
           <VehicleSelectField
             name="modelId"
+            label={vehicleLabels.modelId}
             span={4}
             defaultValue={valueOf("modelId")}
             placeholder="انتخاب مدل"
@@ -264,6 +159,7 @@ export function CreateVehicleForm({
 
           <VehicleSelectField
             name="vehicleStatusId"
+            label={vehicleLabels.vehicleStatusId}
             span={3}
             defaultValue={valueOf("vehicleStatusId")}
             placeholder="انتخاب وضعیت"
@@ -272,6 +168,7 @@ export function CreateVehicleForm({
           />
           <VehicleTextField
             name="modelYear"
+            label={vehicleLabels.modelYear}
             span={2}
             defaultValue={valueOf("modelYear")}
             error={errors.modelYear}
@@ -356,6 +253,7 @@ export function CreateVehicleForm({
 
           <VehicleTextField
             name="vin"
+            label={vehicleLabels.vin}
             span={4}
             defaultValue={valueOf("vin")}
             error={errors.vin}
@@ -363,6 +261,7 @@ export function CreateVehicleForm({
 
           <VehicleTextField
             name="engineNo"
+            label={vehicleLabels.engineNo}
             span={4}
             defaultValue={valueOf("engineNo")}
             error={errors.engineNo}
@@ -370,6 +269,7 @@ export function CreateVehicleForm({
 
           <VehicleTextField
             name="chassisNo"
+            label={vehicleLabels.chassisNo}
             span={4}
             defaultValue={valueOf("chassisNo")}
             error={errors.chassisNo}
@@ -422,6 +322,7 @@ export function CreateVehicleForm({
 
           <VehicleTextField
             name="currentOdometer"
+            label={vehicleLabels.currentOdometer}
             span={3}
             defaultValue={valueOf("currentOdometer")}
             error={errors.currentOdometer}
@@ -430,6 +331,7 @@ export function CreateVehicleForm({
 
           <VehicleTextField
             name="currentEngineHour"
+            label={vehicleLabels.currentEngineHour}
             span={3}
             defaultValue={valueOf("currentEngineHour")}
             error={errors.currentEngineHour}
@@ -444,10 +346,6 @@ export function CreateVehicleForm({
         <ActionButton type="submit" disabled={isPending} pending={isPending}>
           {isPending ? "در حال ثبت…" : "ثبت خودرو"}
         </ActionButton>
-
-        <ActionLink href="/fleet/vehicles" variant="quiet">
-          بازگشت به خودروها
-        </ActionLink>
       </FormActions>
     </form>
   );

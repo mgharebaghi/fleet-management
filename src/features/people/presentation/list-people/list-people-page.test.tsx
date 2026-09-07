@@ -29,6 +29,10 @@ vi.mock("./list-people-filters", () => ({
   ),
 }));
 
+vi.mock("./person-row-actions", () => ({
+  PersonRowActions: () => <div data-testid="person-row-actions" />,
+}));
+
 const peopleResult: PersonSearchResult = {
   people: [
     {

@@ -2,12 +2,12 @@ import styles from "./status-badge.module.css";
 
 type StatusBadgeProps = {
   label: string;
-  tone: "positive" | "negative";
+  tone: "positive" | "negative" | "warning" | "info";
 };
 
 export function StatusBadge({ label, tone }: StatusBadgeProps) {
   return (
-    <span className={tone === "positive" ? styles.positive : styles.negative}>
+    <span className={styles[tone]}>
       {label}
     </span>
   );

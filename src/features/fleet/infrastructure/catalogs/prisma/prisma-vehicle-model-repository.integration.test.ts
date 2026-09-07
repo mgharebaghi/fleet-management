@@ -7,6 +7,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaClient } from "../../../../../generated/prisma/client";
 import { createMssqlConfigFromEnvironment } from "../../../../../infrastructure/database/prisma/mssql-config";
+import {
+  CatalogEntryInUseError,
+  CatalogEntryNotFoundError,
+} from "../../../application/catalogs/ports/catalog-entry-writer";
 import { PrismaVehicleModelRepository } from "./prisma-vehicle-model-repository";
 
 config({
@@ -296,5 +300,107 @@ describe.sequential("PrismaVehicleModelRepository integration", () => {
         fuelTypeId: 0,
       }),
     ).rejects.toBeDefined();
+  });
+
+  it("updates a vehicle model's name, references, and active flag", async () => {
+    const references = await createReferences();
+    const created = await vehicleModelRepository.create({
+      name: `IT-Model-${randomUUID()}`,
+      brandId: references.brand.BrandId,
+      vehicleTypeId: references.vehicleType.VehicleTypeId,
+      fuelTypeId: references.fuelType.FuelTypeId,
+    });
+    createdModelIds.add(created.id);
+
+    const otherReferences = await createReferences();
+    const renamedName = `IT-Model-${randomUUID()}`;
+    const updated = await vehicleModelRepository.update(created.id, {
+      name: renamedName,
+      brandId: otherReferences.brand.BrandId,
+      vehicleTypeId: otherReferences.vehicleType.VehicleTypeId,
+      fuelTypeId: otherReferences.fuelType.FuelTypeId,
+      isActive: false,
+    });
+
+    expect(updated).toEqual({
+      id: created.id,
+      name: renamedName,
+      isActive: false,
+      brand: {
+        id: otherReferences.brand.BrandId,
+        name: otherReferences.brand.BrandName,
+      },
+      vehicleType: {
+        id: otherReferences.vehicleType.VehicleTypeId,
+        name: otherReferences.vehicleType.TypeName,
+      },
+      fuelType: {
+        id: otherReferences.fuelType.FuelTypeId,
+        name: otherReferences.fuelType.FuelTypeName,
+      },
+    });
+  });
+
+  it("rejects updating a vehicle model that no longer exists", async () => {
+    const references = await createReferences();
+
+    await expect(
+      vehicleModelRepository.update(999999999, {
+        name: "IT-missing",
+        brandId: references.brand.BrandId,
+        vehicleTypeId: references.vehicleType.VehicleTypeId,
+        fuelTypeId: references.fuelType.FuelTypeId,
+        isActive: true,
+      }),
+    ).rejects.toBeInstanceOf(CatalogEntryNotFoundError);
+  });
+
+  it("deletes an unreferenced vehicle model, and rejects deleting one referenced by a vehicle", async () => {
+    const references = await createReferences();
+    const deletable = await vehicleModelRepository.create({
+      name: `IT-Model-${randomUUID()}`,
+      brandId: references.brand.BrandId,
+      vehicleTypeId: references.vehicleType.VehicleTypeId,
+      fuelTypeId: references.fuelType.FuelTypeId,
+    });
+
+    await vehicleModelRepository.remove(deletable.id);
+    await expect(
+      testPrismaClient.vehicleModel.findUnique({
+        where: { ModelId: deletable.id },
+      }),
+    ).resolves.toBeNull();
+
+    const referenced = await vehicleModelRepository.create({
+      name: `IT-Model-${randomUUID()}`,
+      brandId: references.brand.BrandId,
+      vehicleTypeId: references.vehicleType.VehicleTypeId,
+      fuelTypeId: references.fuelType.FuelTypeId,
+    });
+    createdModelIds.add(referenced.id);
+    const status = await testPrismaClient.vehicleStatus.create({
+      data: { StatusName: `IT-Status-${randomUUID()}` },
+    });
+    const vehicle = await testPrismaClient.vehicle.create({
+      data: {
+        VehicleCode: `IT-${randomUUID().slice(0, 20)}`,
+        PlateNoLeftSide: "11",
+        ModelId: referenced.id,
+        VehicleStatusId: status.VehicleStatusId,
+      },
+    });
+
+    try {
+      await expect(
+        vehicleModelRepository.remove(referenced.id),
+      ).rejects.toBeInstanceOf(CatalogEntryInUseError);
+    } finally {
+      await testPrismaClient.vehicle.delete({
+        where: { VehicleId: vehicle.VehicleId },
+      });
+      await testPrismaClient.vehicleStatus.delete({
+        where: { VehicleStatusId: status.VehicleStatusId },
+      });
+    }
   });
 });

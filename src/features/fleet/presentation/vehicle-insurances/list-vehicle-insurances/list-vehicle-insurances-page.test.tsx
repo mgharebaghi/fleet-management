@@ -47,15 +47,16 @@ describe("ListVehicleInsurancesPage", () => {
     vi.resetAllMocks();
   });
 
-  it("groups columns into five headers instead of one per field", async () => {
+  it("groups columns into six headers instead of one per field", async () => {
     const markup = await renderList({ insurances: [insurance()], totalCount: 1 });
 
-    expect((markup.match(/<th scope="col">/g) ?? [])).toHaveLength(5);
+    expect((markup.match(/<th scope="col">/g) ?? [])).toHaveLength(6);
     expect(markup).toContain(">خودرو<");
     expect(markup).toContain(">بیمه‌نامه<");
     expect(markup).toContain(">دوره بیمه<");
     expect(markup).toContain(">مبالغ<");
     expect(markup).toContain(">وضعیت رکورد<");
+    expect(markup).toContain(">عملیات<");
   });
 
   it("shows the vehicle's brand, model and plate in the desktop table, without its vehicle id", async () => {

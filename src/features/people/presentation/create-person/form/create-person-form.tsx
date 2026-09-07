@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 
 import { ActionButton } from "../../../../../components/ui/action-button/action-button";
-import { ActionLink } from "../../../../../components/ui/action-link/action-link";
+import { BackLink } from "../../../../../components/ui/back-link/back-link";
 import { JalaliDatePicker } from "../../../../../components/ui/date-picker/jalali-date-picker";
 import {
   FieldErrors,
@@ -70,6 +70,8 @@ export function CreatePersonForm() {
         title="ثبت شخص جدید"
         titleId={CREATE_PERSON_TITLE_ID}
         description="اطلاعات فردی و سازمانی شخص را وارد کنید."
+        action={<BackLink label="انصراف و بازگشت به اشخاص" href="/people" />}
+        compactAction
       />
 
       <form
@@ -238,9 +240,6 @@ export function CreatePersonForm() {
           <ActionButton type="submit" disabled={isPending} pending={isPending}>
             {isPending ? "در حال ثبت…" : "ثبت شخص"}
           </ActionButton>
-          <ActionLink href="/people" variant="quiet">
-            انصراف
-          </ActionLink>
         </FormActions>
       </form>
     </PageShell>

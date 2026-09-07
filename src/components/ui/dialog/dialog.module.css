@@ -26,6 +26,22 @@
   width: min(96vw, 920px);
 }
 
+/* A full-height panel against the page's start edge, for navigation that
+   would be a sidebar if the screen were wide enough. */
+.dialog.drawer {
+  width: min(86vw, 320px);
+  max-width: 320px;
+  max-height: none;
+  height: 100dvh;
+  margin: 0 0 0 auto;
+  border: none;
+  border-radius: 0;
+}
+
+.dialog.drawer .panel {
+  height: 100%;
+}
+
 .dialog::backdrop {
   background: rgb(13 27 42 / 45%);
 }
@@ -113,9 +129,7 @@
 }
 
 @media (max-width: 760px) {
-  .dialog,
-  .dialog.list,
-  .dialog.wide {
+  .dialog:not(.drawer) {
     width: min(96vw, 480px);
     max-height: 90dvh;
   }

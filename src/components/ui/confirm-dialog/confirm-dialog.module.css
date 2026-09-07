@@ -1,0 +1,78 @@
+.body {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.mark {
+  display: flex;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.danger {
+  background: var(--app-danger-background);
+  color: var(--app-danger-text);
+}
+
+.primary {
+  background: var(--app-info-background);
+  color: var(--app-info-text);
+}
+
+.copy {
+  min-width: 0;
+}
+
+.recordName {
+  color: var(--app-heading);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.identity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.identityLine {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.identityLine dt::after {
+  content: ":";
+}
+
+.identityLine dd {
+  color: var(--app-text);
+  font-weight: 700;
+}
+
+.message {
+  margin-top: var(--space-3);
+  color: var(--app-text);
+  line-height: 1.85;
+}
+
+@media (max-width: 760px) {
+  .body {
+    gap: var(--space-3);
+  }
+
+  .mark {
+    width: 38px;
+    height: 38px;
+  }
+}

@@ -18,6 +18,7 @@ import { makeListVehicleStatuses } from "../../../composition/catalogs/vehicle-s
 import { makeListVehicles } from "../../../composition/vehicles/vehicle.factory";
 import { ListVehiclesFilters } from "./list-vehicles-filters";
 import { VehiclePlate } from "./vehicle-plate";
+import { VehicleRowActions } from "./vehicle-row-actions";
 import styles from "./list-vehicles-page.module.css";
 
 const PAGE_SIZE = 20;
@@ -119,6 +120,7 @@ function VehiclesTable({ vehicles }: { vehicles: VehicleSummary[] }) {
           <th scope="col">وضعیت عملیاتی</th>
           <th scope="col">سال ساخت</th>
           <th scope="col">وضعیت رکورد</th>
+          <th scope="col">عملیات</th>
         </tr>
       </thead>
       <tbody>
@@ -162,6 +164,9 @@ function VehiclesTable({ vehicles }: { vehicles: VehicleSummary[] }) {
                 label={vehicle.isActive ? "فعال" : "غیرفعال"}
                 tone={vehicle.isActive ? "positive" : "negative"}
               />
+            </td>
+            <td>
+              <VehicleRowActions vehicle={vehicle} />
             </td>
           </tr>
         ))}
@@ -211,6 +216,7 @@ function VehicleCards({ vehicles }: { vehicles: VehicleSummary[] }) {
               </TechnicalValue>
             </RecordCardDetail>
           </RecordCardDetails>
+          <VehicleRowActions vehicle={vehicle} />
         </RecordCard>
       ))}
     </RecordCardList>

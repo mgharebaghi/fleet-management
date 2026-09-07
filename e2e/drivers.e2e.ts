@@ -55,6 +55,12 @@ test.describe.serial("Drivers management", () => {
     await license.getByLabel("شمارهٔ گواهینامه", { exact: true }).fill(token);
     await license.getByRole("button", { name: "ثبت گواهینامه", exact: true }).click();
     await expect(page.locator("tbody tr").filter({ hasText: token })).toContainText("فعال و معتبر");
+    await page.getByRole("button", { name: "ویرایش گواهینامه Heavy" }).click();
+    const editLicense = page.getByRole("form", { name: "ذخیره تغییرات گواهینامه" });
+    await expect(editLicense.getByLabel("شمارهٔ گواهینامه", { exact: true })).toHaveValue(token);
+    await editLicense.getByLabel("نوع گواهینامه", { exact: true }).fill("Heavy Edited");
+    await editLicense.getByRole("button", { name: "ذخیره تغییرات گواهینامه", exact: true }).click();
+    await expect(page.locator("tbody tr").filter({ hasText: token })).toContainText("Heavy Edited");
     // The registered license unlocks assignment and clears the hint.
     await expect(newAssignment).toBeEnabled();
     await expect(page.getByText("برای ثبت تخصیص، ابتدا باید یک گواهینامه برای راننده ثبت شود.", { exact: true })).toBeHidden();
@@ -79,7 +85,7 @@ test.describe.serial("Drivers management", () => {
     const assignmentId = stored.recordset[0].id;
     expect(stored.recordset[0]).toMatchObject({ start: "1234567890123456.78", from: "2025-03-21T04:30:00", end: null });
     await page.screenshot({ path: "test-results/drivers-current-desktop.png", fullPage: true });
-    await current.getByText("بستن تخصیص", { exact: true }).click();
+    await current.getByRole("button", { name: "پایان تخصیص", exact: true }).click();
     const close = current.getByRole("form", { name: "ثبت پایان تخصیص", exact: true });
     await close.getByRole("button", { name: "تاریخ پایان (شمسی)", exact: true }).click();
     await selectJalaliDate(page.getByRole("dialog", { name: "انتخاب تاریخ پایان (شمسی)" }), 1404, "فروردین", "۲");
@@ -87,15 +93,80 @@ test.describe.serial("Drivers management", () => {
     await close.getByLabel("کیلومتر پایان", { exact: true }).fill("1234567890123456.79");
     await close.getByRole("button", { name: "ثبت پایان تخصیص", exact: true }).click();
     await expect(current).toContainText("تخصیص جاری ندارد");
-    const history = page.getByRole("region", { name: "تاریخچه و تخصیص‌های آینده", exact: true });
+    const history = page.getByRole("region", { name: "تاریخچه", exact: true });
     await expect(history.getByTestId(`assignment-${assignmentId}`)).toContainText("پایان‌یافته");
     const ended = await request().input("id", driverId).query<{ id: number; end: string; odometer: string }>("SELECT AssignmentId AS id, CONVERT(varchar(30), ToDateTime,126) AS [end], CONVERT(varchar(40),EndOdometer) AS odometer FROM driver.VehicleDriverAssignment WHERE DriverId=@id");
     expect(ended.recordset).toEqual([{ id: assignmentId, end: "2025-03-22T04:30:00", odometer: "1234567890123456.79" }]);
+    // A completed assignment is the immutable record: no edit control remains on it.
+    await expect(history.getByRole("button", { name: `ویرایش تخصیص ${vehicleCode}` })).toHaveCount(0);
+
+    // A future assignment stays editable and deletable, and gets its own section.
+    await page.getByText("تخصیص جدید", { exact: true }).click();
+    const futureAssign = page.getByRole("form", { name: "ثبت تخصیص", exact: true });
+    await selectSearchableOption(futureAssign, "خودرو", token, token);
+    await futureAssign.getByRole("button", { name: "تاریخ شروع (شمسی)", exact: true }).click();
+    await selectJalaliDate(page.getByRole("dialog", { name: "انتخاب تاریخ شروع (شمسی)" }), 1406, "فروردین", "۱");
+    await futureAssign.getByLabel("ساعت شروع (تهران)", { exact: true }).selectOption("08");
+    await futureAssign.getByRole("button", { name: "ثبت تخصیص", exact: true }).click();
+    const future = page.getByRole("region", { name: "تخصیص‌های آینده", exact: true });
+    await expect(future).toContainText(vehicleCode);
+    await expect(future).toContainText("آینده");
+
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator("table")).toBeHidden();
     await expect(page.locator("main li").filter({ hasText: token })).toBeVisible();
     expect(await page.locator("main").evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
     await page.screenshot({ path: "test-results/drivers-history-mobile.png", fullPage: true });
+
+    await page.setViewportSize({ width: 390, height: 500 });
+    const pageScrollRange = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+    expect(pageScrollRange).toBeGreaterThan(0);
+    await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+    expect(await page.evaluate(() => scrollY)).toBeGreaterThan(0);
+
+    await future.getByRole("button", { name: `ویرایش تخصیص ${vehicleCode}` }).click();
+    const mobileEditDialog = page.getByRole("dialog", { name: "ویرایش تخصیص خودرو" });
+    const dialogBox = await mobileEditDialog.boundingBox();
+    expect(dialogBox).not.toBeNull();
+    expect(dialogBox!.y).toBeGreaterThanOrEqual(0);
+    expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(500);
+    await expect(page.locator("html")).toHaveCSS("overflow", "hidden");
+    const dialogBody = mobileEditDialog.locator(":scope > div > div").last();
+    expect(await dialogBody.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+    await dialogBody.evaluate(element => { element.scrollTop = element.scrollHeight; });
+    expect(await dialogBody.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+    const editAssignment = page.getByRole("form", { name: "ذخیره تغییرات تخصیص" });
+    await editAssignment.getByLabel("توضیحات", { exact: true }).fill("اصلاح پیش از شروع");
+    await editAssignment.getByRole("button", { name: "ذخیره تغییرات تخصیص", exact: true }).click();
+    await expect(page.locator("html")).not.toHaveCSS("overflow", "hidden");
+    await expect(future).toContainText("اصلاح پیش از شروع");
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await future.getByRole("button", { name: /^حذف تخصیص/ }).click();
+    const deleteFutureDialog = page.getByRole("dialog", { name: "حذف تخصیص", exact: true });
+    await expect(deleteFutureDialog).toContainText(token);
+    await deleteFutureDialog.getByRole("button", { name: "حذف تخصیص", exact: true }).click();
+    await expect(page.getByRole("region", { name: "تخصیص‌های آینده" })).toHaveCount(0);
+    const afterFutureDelete = await request().input("id", driverId).query<{ count: number }>("SELECT COUNT(*) AS count FROM driver.VehicleDriverAssignment WHERE DriverId=@id");
+    expect(afterFutureDelete.recordset[0].count).toBe(1);
+
+    // A current assignment (not only a future one) can also be deleted outright.
+    // Open-ended (no "to"), same as the very first assignment: the future one
+    // above is already gone, so nothing left on this vehicle can overlap it.
+    await page.getByText("تخصیص جدید", { exact: true }).click();
+    const extraAssign = page.getByRole("form", { name: "ثبت تخصیص", exact: true });
+    await selectSearchableOption(extraAssign, "خودرو", token, token);
+    await extraAssign.getByRole("button", { name: "تاریخ شروع (شمسی)", exact: true }).click();
+    await selectJalaliDate(page.getByRole("dialog", { name: "انتخاب تاریخ شروع (شمسی)" }), 1405, "فروردین", "۱");
+    await extraAssign.getByLabel("ساعت شروع (تهران)", { exact: true }).selectOption("08");
+    await extraAssign.getByRole("button", { name: "ثبت تخصیص", exact: true }).click();
+    await expect(current).toContainText(vehicleCode);
+    await current.getByRole("button", { name: /^حذف تخصیص/ }).click();
+    const deleteCurrentDialog = page.getByRole("dialog", { name: "حذف تخصیص", exact: true });
+    await deleteCurrentDialog.getByRole("button", { name: "حذف تخصیص", exact: true }).click();
+    await expect(current).toContainText("تخصیص جاری ندارد");
+    const afterCurrentDelete = await request().input("id", driverId).query<{ count: number }>("SELECT COUNT(*) AS count FROM driver.VehicleDriverAssignment WHERE DriverId=@id");
+    expect(afterCurrentDelete.recordset[0].count).toBe(1);
   });
   test("shows overlap conflict, keeps input and preserves focus during live search", async ({ page }) => {
     await page.goto(`/drivers/${driverId}`);
@@ -124,5 +195,16 @@ test.describe.serial("Drivers management", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator("main li").filter({ hasText: token })).toBeVisible();
     expect(await page.locator("main").evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  });
+  test("confirms a license by human-readable identity and deletes it", async ({ page }) => {
+    await page.goto(`/drivers/${driverId}`);
+    await page.getByRole("button", { name: "حذف گواهینامه Heavy Edited" }).click();
+    const dialog = page.getByRole("dialog", { name: "حذف گواهینامه" });
+    await expect(dialog).toContainText("گواهینامه Heavy Edited");
+    await expect(dialog).toContainText(token);
+    await dialog.getByRole("button", { name: "حذف گواهینامه", exact: true }).click();
+    await expect(page.getByText("گواهینامه‌ای ثبت نشده", { exact: true })).toBeVisible();
+    const remaining = await request().input("id", driverId).query<{ count: number }>("SELECT COUNT(*) AS count FROM driver.DriverLicense WHERE DriverId=@id");
+    expect(remaining.recordset[0].count).toBe(0);
   });
 });

@@ -140,6 +140,14 @@ values outside decimal(18,2), and are converted only in Infrastructure.
 VehicleId, IsActive and CreatedAt are left to database defaults. No meter-reading
 record is created. Currency is not assumed.
 
+A vehicle's Detail page is at `/fleet/vehicles/[vehicleId]`, Update at
+`/fleet/vehicles/[vehicleId]/edit` (same fields, same validation as create,
+preloaded), and Delete is a confirmation dialog on the Detail page. Delete is
+blocked whenever a driver assignment, an insurance record or a meter reading
+still references the vehicle — the last of those has no feature in this
+project's approved scope, but its foreign key exists in the database and is
+still respected.
+
 Run Vehicle checks with:
 
 ```bash
@@ -150,6 +158,14 @@ npx playwright test e2e/vehicles.e2e.ts e2e/list-people.e2e.ts
 The people list shows and searches the name, personnel number and national
 code. The mobile number is collected on the create form but is deliberately
 kept out of the list and its search.
+
+A person's Detail page is at `/people/[personId]`, Update at
+`/people/[personId]/edit`, and Delete is a confirmation dialog on the Detail
+page. Delete is blocked whenever the person has a `Driver` record — the
+Persian message names the relation without exposing the raw database error.
+The national-code checksum lives in one place (`src/features/people/
+application/national-code.ts`) so Create and Update can never validate it
+differently.
 
 ## Shared presentation foundation
 
@@ -213,5 +229,46 @@ through `TEST_DATABASE_*`; E2E uses `FleetManagementDB_E2ETest` and
 their own fixtures. They do not provision or change database structure.
 The SQL Server driver decodes Decimal results through JavaScript numbers, so
 the persistence tests read decimals using SQL `CONVERT(varchar(40), ...)` to
-verify exact stored digits. The production list does not select decimal fields.
-Any future decimal read behavior must preserve that precision as well.
+verify exact stored digits. The production list does not select decimal
+fields; a single-record read (a Detail page, an Update form's preload) does,
+and applies the same `CONVERT(varchar(40), ...)` reading pattern so a large or
+finely fractional value never loses a digit. Any future decimal read behavior
+must preserve that precision as well.
+
+## Admin shell and navigation
+
+`People`, `Fleet` and `Drivers` share one persistent shell, wired through the
+`(admin)` route group (`src/app/(admin)/layout.tsx`) so it applies without
+changing any URL. `AdminShell` (`src/components/admin-shell`) renders a
+right-aligned sidebar above 760px and a compact top-bar disclosure panel below
+it; both read the same `ADMIN_NAV_SECTIONS` list, so a new top-level route is
+added to navigation in exactly one place. The shell only arranges navigation —
+it carries no business logic, and every page keeps its own `PageShell`/
+`PageHeader` inside it, so nothing here duplicates a feature's own identity or
+actions.
+
+## Detail, Update and Delete
+
+Person, Vehicle and the Fleet catalog entities (`VehicleBrand`, `VehicleType`,
+`FuelType`, `VehicleStatus`, `VehicleModel`) each expose a Detail view, an
+Update form that preloads the current record, and a Delete confirmation.
+`VehicleInsurance` gets Update and Delete only: its list already shows every
+field a Detail page would, so a separate route would only duplicate it.
+
+Update reuses the same normalization and validation the create flow already
+established (imported directly, never re-implemented) and excludes the
+record's own id from every uniqueness check, so keeping a value unchanged
+never reports itself as a duplicate.
+
+Delete always confirms through a shared dialog before submitting, and the
+database is the final authority on whether a row can be removed. Infrastructure
+catches the two Prisma error codes a real SQL Server foreign-key constraint
+produces through this project's `mssql` adapter — `P2003` (still referenced)
+and `P2025` (already gone) — and raises a small typed error
+(`*InUseError` / `*NotFoundError`, one pair per entity's own writer port)
+instead of leaking the raw database error. Application maps that to a typed
+result, and Presentation turns it into a plain Persian sentence; nothing here
+guesses at or bypasses the constraint. `Driver`, `DriverLicense` and
+`VehicleDriverAssignment` intentionally keep no generic delete — see
+[docs/drivers.md](./docs/drivers.md) for why history stays immutable and
+`Close Assignment` is the only supported end to a period.

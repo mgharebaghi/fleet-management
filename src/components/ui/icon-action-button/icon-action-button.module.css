@@ -1,0 +1,78 @@
+.action {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-control);
+  background: var(--app-surface);
+  cursor: pointer;
+  transition:
+    background-color var(--app-motion-fast),
+    border-color var(--app-motion-fast),
+    color var(--app-motion-fast),
+    transform var(--app-motion-fast);
+}
+
+.neutral {
+  color: var(--app-primary);
+}
+
+.neutral:hover:not(:disabled) {
+  border-color: var(--app-primary);
+  background: var(--app-info-background);
+}
+
+.danger {
+  color: var(--app-danger-text);
+}
+
+.danger:hover:not(:disabled) {
+  border-color: var(--app-danger-border);
+  background: var(--app-danger-background);
+}
+
+.action:focus-visible {
+  outline: 3px solid var(--app-focus-outline);
+  outline-offset: 2px;
+}
+
+.action:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.025);
+}
+
+.action:active:not(:disabled) {
+  transform: translateY(0) scale(0.96);
+}
+
+.action:disabled {
+  cursor: not-allowed;
+  opacity: var(--app-disabled-opacity);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action {
+    transition: none;
+    transform: none;
+  }
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+@media (max-width: 760px) {
+  /* Comfortable touch targets, and the group stays a row inside a card
+     instead of inheriting the full-width stacking of text buttons. */
+  .action {
+    width: 40px;
+    height: 40px;
+  }
+
+  .group {
+    flex-wrap: wrap;
+  }
+}

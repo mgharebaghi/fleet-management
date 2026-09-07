@@ -5,7 +5,7 @@ import type { NewVehicleInsurance } from "../vehicle-insurance";
 
 const valid = (): NewVehicleInsurance => ({ vehicleId: 1, insuranceType: " Liability ", insuranceCompany: " Company ", policyNo: " P-1 ", startDate: new Date("2024-03-20"), expireDate: new Date("2025-03-20"), premiumAmount: " 0 ", coverageAmount: "9999999999999999.99" });
 function setup() {
-  const writer = { create: vi.fn(async () => ({ vehicleInsuranceId: "9007199254740993" })) };
+  const writer = { create: vi.fn(async () => ({ vehicleInsuranceId: "9007199254740993" })), update: vi.fn(async () => {}), remove: vi.fn(async () => {}) };
   const vehicles = { vehicleExists: vi.fn(async () => true), listVehicles: vi.fn(async () => []) };
   return { writer, vehicles, useCase: new CreateVehicleInsurance(writer, vehicles) };
 }

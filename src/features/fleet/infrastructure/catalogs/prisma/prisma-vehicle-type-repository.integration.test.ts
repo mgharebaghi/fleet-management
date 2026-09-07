@@ -7,6 +7,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaClient } from "../../../../../generated/prisma/client";
 import { createMssqlConfigFromEnvironment } from "../../../../../infrastructure/database/prisma/mssql-config";
+import {
+  CatalogEntryInUseError,
+  CatalogEntryNotFoundError,
+} from "../../../application/catalogs/ports/catalog-entry-writer";
 import { PrismaVehicleTypeRepository } from "./prisma-vehicle-type-repository";
 
 config({
@@ -96,5 +100,56 @@ describe.sequential("PrismaVehicleTypeRepository integration", () => {
 
     const listedVehicleTypes = await vehicleTypeRepository.list();
     expect(listedVehicleTypes).toContainEqual(createdVehicleType);
+  });
+
+  it("renames a vehicle type and rejects updating one that no longer exists", async () => {
+    const created = await vehicleTypeRepository.create(`IT-${randomUUID()}`);
+    createdVehicleTypeIds.add(created.id);
+
+    const renamedName = `IT-${randomUUID()}`;
+    const renamed = await vehicleTypeRepository.update(created.id, {
+      name: renamedName,
+    });
+    expect(renamed).toEqual({ id: created.id, name: renamedName, isActive: true });
+
+    await expect(
+      vehicleTypeRepository.update(999999999, { name: "IT-missing" }),
+    ).rejects.toBeInstanceOf(CatalogEntryNotFoundError);
+  });
+
+  it("deletes an unreferenced vehicle type, and rejects deleting one referenced by a vehicle model", async () => {
+    const deletable = await vehicleTypeRepository.create(`IT-${randomUUID()}`);
+    await vehicleTypeRepository.remove(deletable.id);
+    await expect(
+      testPrismaClient.vehicleType.findUnique({
+        where: { VehicleTypeId: deletable.id },
+      }),
+    ).resolves.toBeNull();
+
+    const referenced = await vehicleTypeRepository.create(`IT-${randomUUID()}`);
+    createdVehicleTypeIds.add(referenced.id);
+    const brand = await testPrismaClient.vehicleBrand.create({
+      data: { BrandName: `IT-${randomUUID()}` },
+    });
+    const model = await testPrismaClient.vehicleModel.create({
+      data: {
+        ModelName: `IT-${randomUUID()}`,
+        BrandId: brand.BrandId,
+        VehicleTypeId: referenced.id,
+      },
+    });
+
+    try {
+      await expect(
+        vehicleTypeRepository.remove(referenced.id),
+      ).rejects.toBeInstanceOf(CatalogEntryInUseError);
+    } finally {
+      await testPrismaClient.vehicleModel.delete({
+        where: { ModelId: model.ModelId },
+      });
+      await testPrismaClient.vehicleBrand.delete({
+        where: { BrandId: brand.BrandId },
+      });
+    }
   });
 });

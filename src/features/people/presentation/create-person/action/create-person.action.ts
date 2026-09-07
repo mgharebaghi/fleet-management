@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { makeCreatePerson } from "../../../composition/create-person.factory";
+import { makeCreatePerson } from "../../../composition/person.factory";
 import type { CreatePersonActionState } from "./create-person.action-state";
 import { parseCreatePersonFormData } from "./create-person.form-data";
 

@@ -35,6 +35,10 @@ vi.mock("./list-vehicles-filters", () => ({
   ),
 }));
 
+vi.mock("./vehicle-row-actions", () => ({
+  VehicleRowActions: () => <div data-testid="vehicle-row-actions" />,
+}));
+
 const vehicle: VehicleSummary = {
   vehicleId: 4,
   vehicleCode: "V-100",

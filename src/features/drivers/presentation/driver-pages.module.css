@@ -150,14 +150,10 @@
   font-size: var(--font-size-sm);
 }
 
-.closeDisclosure {
-  margin-block-start: var(--space-2);
-}
-
-.closeDisclosure summary {
-  display: inline-flex;
-  padding-block: var(--space-1);
-  color: var(--app-text-muted);
-  font-size: var(--font-size-xs);
-  cursor: pointer;
+.assignmentHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }

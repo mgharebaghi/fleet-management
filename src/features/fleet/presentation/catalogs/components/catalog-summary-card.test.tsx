@@ -18,9 +18,13 @@ function renderCard(
       submitPendingLabel="در حال ثبت…"
       emptyStateMessage="هنوز برندی ثبت نشده است."
       duplicateMessage="این نام برند قبلاً ثبت شده است."
+      inUseMessage="این مورد به اطلاعات دیگری متصل است و امکان حذف آن وجود ندارد."
+      supportsActiveToggle
       entries={[]}
       hasLoadError={false}
       action={noopAction}
+      updateAction={noopAction}
+      deleteAction={noopAction}
       {...overrides}
     />,
   );

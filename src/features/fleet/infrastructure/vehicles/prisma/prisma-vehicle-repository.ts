@@ -1,9 +1,13 @@
 import { Prisma, type PrismaClient } from "../../../../../generated/prisma/client";
-import type { VehicleWriter } from "../../../application/vehicles/ports/vehicle-writer";
+import {
+  VehicleInUseError,
+  VehicleNotFoundError,
+  type VehicleWriter,
+} from "../../../application/vehicles/ports/vehicle-writer";
 import type { VehicleReader } from "../../../application/vehicles/ports/vehicle-reader";
 import type { VehicleIdentifierReader, VehicleIdentifier } from "../../../application/vehicles/ports/vehicle-identifier-reader";
 import type { VehicleReferenceReader } from "../../../application/vehicles/ports/vehicle-reference-reader";
-import type { NewVehicle, InternalPlate, VehicleSummary, VehicleSearchCriteria } from "../../../application/vehicles/vehicle";
+import type { NewVehicle, InternalPlate, VehicleDetail, VehicleSummary, VehicleSearchCriteria } from "../../../application/vehicles/vehicle";
 
 const vehicleSelect = {
   VehicleId: true, VehicleCode: true, PlateNoLeftSide: true, PlateNoCenterChar: true,
@@ -24,6 +28,42 @@ function mapVehicle(row: SelectedVehicle): VehicleSummary {
     plateNoLeftSide: row.PlateNoLeftSide, plateNoCenterChar: row.PlateNoCenterChar,
     plateNoRightSide: row.PlateNoRightSide, plateNoIranNo: row.PlateNoIranNo,
     internationalPlateNo: row.InternationalPlateNo, vin: row.VIN, modelYear: row.ModelYear, isActive: row.IsActive,
+    model: { id: model.ModelId, name: model.ModelName },
+    brand: { id: model.VehicleBrand.BrandId, name: model.VehicleBrand.BrandName },
+    vehicleType: model.VehicleType ? { id: model.VehicleType.VehicleTypeId, name: model.VehicleType.TypeName } : null,
+    fuelType: model.FuelType ? { id: model.FuelType.FuelTypeId, name: model.FuelType.FuelTypeName } : null,
+    status: { id: row.VehicleStatus.VehicleStatusId, name: row.VehicleStatus.StatusName },
+  };
+}
+const vehicleDetailSelect = {
+  VehicleId: true, VehicleCode: true, PlateNoLeftSide: true, PlateNoCenterChar: true,
+  PlateNoRightSide: true, PlateNoIranNo: true, InternationalPlateNo: true, VIN: true,
+  EngineNo: true, ChassisNo: true, ModelYear: true, PurchaseDate: true, IsActive: true, CreatedAt: true,
+  ModelId: true, VehicleStatusId: true,
+  VehicleStatus: { select: { VehicleStatusId: true, StatusName: true } },
+  VehicleModel: { select: { ModelId: true, ModelName: true,
+    VehicleBrand: { select: { BrandId: true, BrandName: true } },
+    VehicleType: { select: { VehicleTypeId: true, TypeName: true } },
+    FuelType: { select: { FuelTypeId: true, FuelTypeName: true } },
+  } },
+} satisfies Prisma.VehicleSelect;
+type SelectedVehicleDetail = Prisma.VehicleGetPayload<{ select: typeof vehicleDetailSelect }>;
+type DecimalAmounts = { purchasePrice: string | null; currentOdometer: string | null; currentEngineHour: string | null };
+function mapVehicleDetail(row: SelectedVehicleDetail, amounts: DecimalAmounts): VehicleDetail {
+  const model = row.VehicleModel;
+  return {
+    vehicleId: row.VehicleId, vehicleCode: row.VehicleCode,
+    // The columns allow null at the database level, but every write this
+    // application makes fills them; a stray null reads back as empty text
+    // instead of breaking the (always-string) application shape.
+    plateNoLeftSide: row.PlateNoLeftSide, plateNoCenterChar: row.PlateNoCenterChar ?? "",
+    plateNoRightSide: row.PlateNoRightSide ?? "", plateNoIranNo: row.PlateNoIranNo ?? "",
+    internationalPlateNo: row.InternationalPlateNo, vin: row.VIN,
+    engineNo: row.EngineNo, chassisNo: row.ChassisNo,
+    modelId: row.ModelId, vehicleStatusId: row.VehicleStatusId, modelYear: row.ModelYear,
+    purchaseDate: row.PurchaseDate,
+    purchasePrice: amounts.purchasePrice, currentOdometer: amounts.currentOdometer, currentEngineHour: amounts.currentEngineHour,
+    isActive: row.IsActive, createdAt: row.CreatedAt,
     model: { id: model.ModelId, name: model.ModelName },
     brand: { id: model.VehicleBrand.BrandId, name: model.VehicleBrand.BrandName },
     vehicleType: model.VehicleType ? { id: model.VehicleType.VehicleTypeId, name: model.VehicleType.TypeName } : null,
@@ -67,14 +107,18 @@ function parseModelYear(search: string): number | null {
 }
 
 export class PrismaVehicleRepository implements VehicleWriter, VehicleReader, VehicleIdentifierReader, VehicleReferenceReader {
-  constructor(private readonly client: Pick<PrismaClient, "vehicle" | "vehicleModel" | "vehicleStatus">) {}
-  async identifierExists(identifier: VehicleIdentifier, value: string) {
-    return await this.client.vehicle.findFirst({ where: { [identifierColumns[identifier]]: value }, select: { VehicleId: true } }) !== null;
+  constructor(private readonly client: Pick<PrismaClient, "vehicle" | "vehicleModel" | "vehicleStatus" | "$queryRaw">) {}
+  async identifierExists(identifier: VehicleIdentifier, value: string, excludeVehicleId?: number) {
+    return await this.client.vehicle.findFirst({ where: {
+      [identifierColumns[identifier]]: value,
+      ...(excludeVehicleId !== undefined ? { VehicleId: { not: excludeVehicleId } } : {}),
+    }, select: { VehicleId: true } }) !== null;
   }
-  async internalPlateExists(plate: InternalPlate) {
+  async internalPlateExists(plate: InternalPlate, excludeVehicleId?: number) {
     return await this.client.vehicle.findFirst({ where: {
       PlateNoLeftSide: plate.plateNoLeftSide, PlateNoCenterChar: plate.plateNoCenterChar,
       PlateNoRightSide: plate.plateNoRightSide, PlateNoIranNo: plate.plateNoIranNo,
+      ...(excludeVehicleId !== undefined ? { VehicleId: { not: excludeVehicleId } } : {}),
     }, select: { VehicleId: true } }) !== null;
   }
   async modelExists(modelId: number) {
@@ -105,5 +149,48 @@ export class PrismaVehicleRepository implements VehicleWriter, VehicleReader, Ve
       this.client.vehicle.count({ where }),
     ]);
     return { vehicles: rows.map(mapVehicle), totalCount };
+  }
+  async findById(vehicleId: number): Promise<VehicleDetail | null> {
+    const row = await this.client.vehicle.findUnique({ where: { VehicleId: vehicleId }, select: vehicleDetailSelect });
+    if (row === null) return null;
+    // MSSQL decimal decoding can pass through a JS number; read this single
+    // row's amounts as SQL text to preserve every digit without changing the schema.
+    const [amounts] = await this.client.$queryRaw<Array<DecimalAmounts>>(Prisma.sql`
+      SELECT
+        CONVERT(varchar(40), PurchasePrice) AS purchasePrice,
+        CONVERT(varchar(40), CurrentOdometer) AS currentOdometer,
+        CONVERT(varchar(40), CurrentEngineHour) AS currentEngineHour
+      FROM fleet.Vehicle
+      WHERE VehicleId = ${vehicleId}
+    `);
+    if (!amounts) throw new Error("Vehicle changed while reading its amounts.");
+    return mapVehicleDetail(row, amounts);
+  }
+  async update(vehicleId: number, input: NewVehicle): Promise<void> {
+    const decimal = (value: string | null) => value === null ? null : new Prisma.Decimal(value);
+    try {
+      await this.client.vehicle.update({ where: { VehicleId: vehicleId }, data: {
+        VehicleCode: input.vehicleCode, PlateNoLeftSide: input.plateNoLeftSide,
+        PlateNoCenterChar: input.plateNoCenterChar, PlateNoRightSide: input.plateNoRightSide, PlateNoIranNo: input.plateNoIranNo,
+        InternationalPlateNo: input.internationalPlateNo, VIN: input.vin, EngineNo: input.engineNo, ChassisNo: input.chassisNo,
+        ModelId: input.modelId, VehicleStatusId: input.vehicleStatusId, ModelYear: input.modelYear,
+        PurchaseDate: input.purchaseDate, PurchasePrice: decimal(input.purchasePrice),
+        CurrentOdometer: decimal(input.currentOdometer), CurrentEngineHour: decimal(input.currentEngineHour),
+      } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") throw new VehicleNotFoundError();
+      throw error;
+    }
+  }
+  async remove(vehicleId: number): Promise<void> {
+    try {
+      await this.client.vehicle.delete({ where: { VehicleId: vehicleId } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === "P2025") throw new VehicleNotFoundError();
+        if (error.code === "P2003") throw new VehicleInUseError();
+      }
+      throw error;
+    }
   }
 }

@@ -1,33 +1,17 @@
-/* Brand facing the page identity in one row; the divider spans both. */
+/* Page identity facing its primary action, with a divider spanning both. */
 .header {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas: "brand content";
-  direction: ltr;
-  align-items: center;
-  gap: var(--space-8);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
   margin-bottom: var(--space-6);
   padding-bottom: var(--space-5);
   border-bottom: 1px solid var(--app-border-subtle);
 }
 
 .content {
-  grid-area: content;
   min-width: 0;
-  direction: rtl;
   text-align: right;
-}
-
-.brandColumn {
-  grid-area: brand;
-  display: flex;
-  width: 230px;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  justify-self: start;
-  direction: rtl;
-  gap: var(--space-2);
 }
 
 .eyebrow {
@@ -64,31 +48,28 @@
 
 .action {
   display: flex;
-  width: 100%;
-}
-
-.action > * {
-  width: 100%;
-  justify-content: center;
+  flex: none;
 }
 
 @media (max-width: 760px) {
   .header {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "brand"
-      "content";
+    flex-direction: column;
+    align-items: stretch;
     gap: var(--space-4);
   }
 
-  .brandColumn {
+  /* A compact action (an icon-only back control) is excluded here rather
+     than overridden afterwards — an override would have to re-win against
+     the control's own width, which a same-specificity tie can't guarantee. */
+  .action:not(.compactAction),
+  .action:not(.compactAction) > * {
     width: 100%;
-    max-width: 230px;
-    justify-self: center;
+    justify-content: center;
   }
 
-  .action,
-  .action > * {
-    width: 100%;
+  /* Stacked, the compact action keeps the side it holds on desktop, so back
+     stays at the same corner of the header in both layouts. */
+  .action.compactAction {
+    justify-content: flex-end;
   }
 }

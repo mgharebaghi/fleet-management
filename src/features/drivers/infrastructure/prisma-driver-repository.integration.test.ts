@@ -79,6 +79,15 @@ describe.sequential("Drivers SQL Server integration", () => {
     id(await useCase.addLicense({ ...f.license, licenseNo: `old-${f.token}`, isActive: false, issueDate: new Date("2020-01-01"), expireDate: new Date("2021-01-01") }));
     expect((await repository.details(f.driverId))?.licenses).toHaveLength(2);
   });
+  it("updates and deletes an owned license", async () => {
+    const f = await fixture();
+    const existing = (await repository.details(f.driverId))!.licenses[0];
+    const updatedNo = `edited-${f.token}`;
+    expect(await useCase.updateLicense({ ...existing, licenseType: "Edited", licenseNo: updatedNo, isActive: false })).toEqual({ success: true, id: existing.licenseId });
+    expect((await repository.details(f.driverId))!.licenses[0]).toMatchObject({ licenseId: existing.licenseId, licenseType: "Edited", licenseNo: updatedNo, isActive: false });
+    expect(await useCase.deleteLicense(f.driverId, existing.licenseId)).toEqual({ success: true, id: existing.licenseId });
+    expect((await repository.details(f.driverId))!.licenses).toHaveLength(0);
+  });
   it("preserves exact decimal text and closes the same current record into history", async () => {
     const f = await fixture();
     const assignmentId = id(await useCase.assignVehicle({ ...f.input, startOdometer: "9999999999999999.98" }));
@@ -90,6 +99,64 @@ describe.sequential("Drivers SQL Server integration", () => {
     expect(after).toHaveLength(1); expect(after[0]).toMatchObject({ assignmentId, endOdometer: "9999999999999999.99" });
     expect(assignmentState(after[0], new Date("2026-01-02T08:00:00Z"))).toBe("past");
     expect(await useCase.closeAssignment(assignmentId, new Date("2026-01-03"), null)).toEqual({ success: false, error: "ASSIGNMENT_CLOSED" });
+  });
+  it("deletes both a current and a future assignment", async () => {
+    const f = await fixture();
+    // A future assignment can only coexist with a current one if the current
+    // one has a defined end at or before the future one's start (two open-ended
+    // rows for the same driver would overlap forever and rightly conflict).
+    const currentEnd = new Date(Date.now() + 60 * 60 * 1000);
+    const currentId = id(await useCase.assignVehicle({ ...f.input, toDateTime: currentEnd }));
+    const futureId = id(await useCase.assignVehicle({ ...f.input, fromDateTime: currentEnd, toDateTime: null }));
+    expect(await useCase.deleteAssignment(f.driverId, futureId)).toEqual({ success: true, id: futureId });
+    expect(await useCase.deleteAssignment(f.driverId, currentId)).toEqual({ success: true, id: currentId });
+    expect((await repository.details(f.driverId))!.assignments).toHaveLength(0);
+  });
+  it("closes an assignment then allows a new one starting at or after its end, and rejects one starting before", async () => {
+    const f = await fixture();
+    const assignmentId = id(await useCase.assignVehicle(f.input));
+    const end = new Date(Date.now() + 60 * 60 * 1000);
+    id(await useCase.closeAssignment(assignmentId, end, null));
+
+    // Previous assignment still active at the new start (1ms before it ends) -> reject.
+    expect(await useCase.assignVehicle({ ...f.input, fromDateTime: new Date(end.getTime() - 1), toDateTime: null })).toEqual({ success: false, error: "DRIVER_OVERLAP" });
+
+    // Previous end exactly equals the new start -> allow (half-open interval: the boundary instant is the handover).
+    const boundaryId = id(await useCase.assignVehicle({ ...f.input, fromDateTime: end, toDateTime: new Date(end.getTime() + 60_000) }));
+
+    // Previous ended strictly before the new start -> allow.
+    const afterId = id(await useCase.assignVehicle({ ...f.input, fromDateTime: new Date(end.getTime() + 60 * 60 * 1000), toDateTime: null }));
+
+    const rows = (await repository.details(f.driverId))!.assignments;
+    const numericAsc = (a: number, b: number) => a - b;
+    expect(rows.map(r => r.assignmentId).sort(numericAsc)).toEqual([assignmentId, boundaryId, afterId].sort(numericAsc));
+  });
+  it("keeps a completed assignment immutable to both delete and edit", async () => {
+    const f = await fixture();
+    const assignmentId = id(await useCase.assignVehicle(f.input));
+    id(await useCase.closeAssignment(assignmentId, new Date("2026-01-02T08:00:00Z"), null));
+    expect(await useCase.deleteAssignment(f.driverId, assignmentId)).toEqual({ success: false, error: "ASSIGNMENT_NOT_DELETABLE" });
+    expect(await useCase.updateAssignment({ ...f.input, assignmentId, description: "should not apply" })).toEqual({ success: false, error: "ASSIGNMENT_IMMUTABLE" });
+    const remaining = (await repository.details(f.driverId))!.assignments;
+    expect(remaining).toEqual([expect.objectContaining({ assignmentId, description: null })]);
+  });
+  it("updates the same assignment without deleting history and still rejects overlap", async () => {
+    // Both windows sit in the future relative to real time, so the edited row
+    // stays current (not yet completed/immutable) for the whole test.
+    const a = await fixture(), b = await fixture();
+    const soon = new Date(Date.now() + 60 * 60 * 1000);
+    const extendedEnd = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const secondStart = new Date(Date.now() + 5 * 60 * 60 * 1000);
+    const secondEnd = new Date(Date.now() + 6 * 60 * 60 * 1000);
+    const firstId = id(await useCase.assignVehicle({ ...a.input, toDateTime: soon }));
+    id(await useCase.assignVehicle({ ...a.input, fromDateTime: secondStart, toDateTime: secondEnd }));
+    const updated = { ...a.input, assignmentId: firstId, vehicleId: b.vehicleId, toDateTime: extendedEnd, startOdometer: "10.10", endOdometer: "20.20", description: "corrected" };
+    expect(await useCase.updateAssignment(updated)).toEqual({ success: true, id: firstId });
+    expect((await repository.details(a.driverId))!.assignments).toHaveLength(2);
+    expect((await repository.details(a.driverId))!.assignments.find(row => row.assignmentId === firstId)).toMatchObject({ vehicleId: b.vehicleId, startOdometer: "10.10", endOdometer: "20.20", description: "corrected" });
+    const overlappingStart = new Date(secondStart.getTime() + 30 * 60 * 1000);
+    const overlappingEnd = new Date(secondEnd.getTime() + 60 * 60 * 1000);
+    expect(await useCase.updateAssignment({ ...updated, fromDateTime: overlappingStart, toDateTime: overlappingEnd })).toEqual({ success: false, error: "DRIVER_OVERLAP" });
   });
   it("detects driver and vehicle overlap including future open periods and allows adjacent boundaries", async () => {
     const a = await fixture(), b = await fixture();

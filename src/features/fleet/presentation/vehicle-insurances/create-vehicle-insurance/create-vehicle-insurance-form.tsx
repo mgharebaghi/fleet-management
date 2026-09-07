@@ -2,7 +2,6 @@
 
 import { useActionState, useMemo } from "react";
 import { ActionButton } from "../../../../../components/ui/action-button/action-button";
-import { ActionLink } from "../../../../../components/ui/action-link/action-link";
 import { JalaliDatePicker } from "../../../../../components/ui/date-picker/jalali-date-picker";
 import { FormField, FieldLabel, FieldErrors, FormActions, formControlClassName } from "../../../../../components/ui/form-field/form-field";
 import { FormGrid } from "../../../../../components/ui/form-grid/form-grid";
@@ -73,7 +72,6 @@ export function CreateVehicleInsuranceForm({ vehicles }: { vehicles: InsuranceVe
       {pending && <LoadingIndicator label="در حال ثبت بیمه…" />}
       <FormActions separated>
         <ActionButton type="submit" disabled={pending} pending={pending}>{pending ? "در حال ثبت…" : "ثبت بیمه خودرو"}</ActionButton>
-        <ActionLink href="/fleet/vehicle-insurances" variant="quiet">بازگشت به بیمه‌ها</ActionLink>
       </FormActions>
     </form>
   );

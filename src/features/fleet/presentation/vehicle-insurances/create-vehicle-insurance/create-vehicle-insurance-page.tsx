@@ -1,4 +1,5 @@
 import { ActionLink } from "../../../../../components/ui/action-link/action-link";
+import { BackLink } from "../../../../../components/ui/back-link/back-link";
 import { PageHeader } from "../../../../../components/ui/page-header/page-header";
 import { PageShell } from "../../../../../components/ui/page-shell/page-shell";
 import { ResultState } from "../../../../../components/ui/result-state/result-state";
@@ -15,7 +16,7 @@ export async function CreateVehicleInsurancePage() {
     </PageShell>;
   }
   return <PageShell width="narrow" labelledBy="create-insurance-title">
-    <PageHeader eyebrow="مدیریت ناوگان" title="ثبت بیمه خودرو" titleId="create-insurance-title" description="خودرو، مشخصات و دوره بیمه را وارد کنید. شرکت، شماره بیمه‌نامه و مبالغ اختیاری هستند." />
+    <PageHeader eyebrow="مدیریت ناوگان" title="ثبت بیمه خودرو" titleId="create-insurance-title" description="خودرو، مشخصات و دوره بیمه را وارد کنید. شرکت، شماره بیمه‌نامه و مبالغ اختیاری هستند." action={<BackLink label="بازگشت به بیمه‌ها" href="/fleet/vehicle-insurances" />} compactAction />
     {vehicles.length ? <CreateVehicleInsuranceForm vehicles={vehicles} /> : <ResultState title="هنوز خودرویی ثبت نشده است" description="برای ثبت بیمه، ابتدا یک خودرو ثبت کنید." action={<ActionLink href="/fleet/vehicles/create">ثبت خودرو</ActionLink>} />}
   </PageShell>;
 }

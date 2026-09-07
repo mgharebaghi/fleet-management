@@ -7,6 +7,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaClient } from "../../../../../generated/prisma/client";
 import { createMssqlConfigFromEnvironment } from "../../../../../infrastructure/database/prisma/mssql-config";
+import {
+  CatalogEntryInUseError,
+  CatalogEntryNotFoundError,
+} from "../../../application/catalogs/ports/catalog-entry-writer";
 import { PrismaFuelTypeRepository } from "./prisma-fuel-type-repository";
 
 config({
@@ -90,5 +94,54 @@ describe.sequential("PrismaFuelTypeRepository integration", () => {
 
     const listedFuelTypes = await fuelTypeRepository.list();
     expect(listedFuelTypes).toContainEqual(createdFuelType);
+  });
+
+  it("renames a fuel type and rejects updating one that no longer exists", async () => {
+    const created = await fuelTypeRepository.create(`IT-${randomUUID().slice(0, 30)}`);
+    createdFuelTypeIds.add(created.id);
+
+    const renamedName = `IT-${randomUUID().slice(0, 30)}`;
+    const renamed = await fuelTypeRepository.update(created.id, {
+      name: renamedName,
+    });
+    expect(renamed).toEqual({ id: created.id, name: renamedName, isActive: true });
+
+    await expect(
+      fuelTypeRepository.update(999999999, { name: "IT-missing" }),
+    ).rejects.toBeInstanceOf(CatalogEntryNotFoundError);
+  });
+
+  it("deletes an unreferenced fuel type, and rejects deleting one referenced by a vehicle model", async () => {
+    const deletable = await fuelTypeRepository.create(`IT-${randomUUID().slice(0, 30)}`);
+    await fuelTypeRepository.remove(deletable.id);
+    await expect(
+      testPrismaClient.fuelType.findUnique({ where: { FuelTypeId: deletable.id } }),
+    ).resolves.toBeNull();
+
+    const referenced = await fuelTypeRepository.create(`IT-${randomUUID().slice(0, 30)}`);
+    createdFuelTypeIds.add(referenced.id);
+    const brand = await testPrismaClient.vehicleBrand.create({
+      data: { BrandName: `IT-${randomUUID()}` },
+    });
+    const model = await testPrismaClient.vehicleModel.create({
+      data: {
+        ModelName: `IT-${randomUUID()}`,
+        BrandId: brand.BrandId,
+        FuelTypeId: referenced.id,
+      },
+    });
+
+    try {
+      await expect(
+        fuelTypeRepository.remove(referenced.id),
+      ).rejects.toBeInstanceOf(CatalogEntryInUseError);
+    } finally {
+      await testPrismaClient.vehicleModel.delete({
+        where: { ModelId: model.ModelId },
+      });
+      await testPrismaClient.vehicleBrand.delete({
+        where: { BrandId: brand.BrandId },
+      });
+    }
   });
 });

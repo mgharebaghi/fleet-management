@@ -16,6 +16,10 @@ import { PrismaClient } from "../../../../generated/prisma/client";
 import { createMssqlConfigFromEnvironment } from "../../../../infrastructure/database/prisma/mssql-config";
 
 import type { NewPerson } from "../../application/person";
+import {
+  PersonNotFoundError,
+  PersonReferencedError,
+} from "../../application/ports/person-repository";
 import { PrismaPersonRepository } from "./prisma-person-repository";
 
 config({
@@ -192,5 +196,89 @@ describe.sequential("PrismaPersonRepository integration", () => {
       isActive: true,
       createdAt: expect.any(Date),
     });
+  });
+
+  it("finds a person by id and returns null for a missing one", async () => {
+    const newPerson = createNewPerson();
+    const createdPerson = await personRepository.create(newPerson);
+    createdPersonIds.add(createdPerson.personId);
+
+    await expect(
+      personRepository.findById(createdPerson.personId),
+    ).resolves.toEqual(createdPerson);
+    await expect(personRepository.findById(999999999)).resolves.toBeNull();
+  });
+
+  it("updates a person's fields and active flag, excluding its own id from uniqueness checks", async () => {
+    const newPerson = createNewPerson();
+    const createdPerson = await personRepository.create(newPerson);
+    createdPersonIds.add(createdPerson.personId);
+
+    const updated = await personRepository.update(createdPerson.personId, {
+      ...newPerson,
+      lastName: "Renamed",
+      isActive: false,
+    });
+
+    expect(updated).toEqual({
+      ...newPerson,
+      lastName: "Renamed",
+      personId: createdPerson.personId,
+      isActive: false,
+      createdAt: createdPerson.createdAt,
+    });
+
+    await expect(
+      personRepository.existsByNationalCode(
+        newPerson.nationalCode!,
+        createdPerson.personId,
+      ),
+    ).resolves.toBe(false);
+  });
+
+  it("rejects updating a person that no longer exists", async () => {
+    const newPerson = createNewPerson();
+
+    await expect(
+      personRepository.update(999999999, { ...newPerson, isActive: true }),
+    ).rejects.toBeInstanceOf(PersonNotFoundError);
+  });
+
+  it("deletes an unreferenced person, and rejects deleting one referenced by a driver", async () => {
+    const deletable = await personRepository.create(createNewPerson());
+    await personRepository.remove(deletable.personId);
+    await expect(
+      testPrismaClient.people.findUnique({
+        where: { PersonId: deletable.personId },
+      }),
+    ).resolves.toBeNull();
+
+    const referenced = await personRepository.create(createNewPerson());
+    createdPersonIds.add(referenced.personId);
+    const driver = await testPrismaClient.driver.create({
+      data: { PersonId: referenced.personId },
+    });
+
+    try {
+      await expect(
+        personRepository.remove(referenced.personId),
+      ).rejects.toBeInstanceOf(PersonReferencedError);
+
+      await expect(
+        testPrismaClient.people.findUnique({
+          where: { PersonId: referenced.personId },
+        }),
+      ).resolves.not.toBeNull();
+    } finally {
+      await testPrismaClient.driver.delete({
+        where: { DriverId: driver.DriverId },
+      });
+    }
+  });
+
+  it("rejects deleting a person that no longer exists", async () => {
+    await expect(
+      personRepository.remove(999999999),
+    ).rejects.toBeInstanceOf(PersonNotFoundError);
   });
 });

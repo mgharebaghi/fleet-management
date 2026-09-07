@@ -5,8 +5,8 @@ import styles from "./brand-mark.module.css";
 const PRODUCT_NAME = "سامانه مدیریت ناوگان";
 
 /**
- * The product's identity as it appears at the top of every page header. It
- * carries no page or feature context: the header's own eyebrow and title say
+ * The product's identity as it appears in the panel's top bar. It carries no
+ * page or feature context: the bar's own breadcrumb and the page heading say
  * where the user is, so repeating that here would only duplicate it.
  */
 export function BrandMark() {

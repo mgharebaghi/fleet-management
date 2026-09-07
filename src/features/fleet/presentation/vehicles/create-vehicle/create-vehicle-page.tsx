@@ -1,4 +1,5 @@
 import { ActionLink } from "../../../../../components/ui/action-link/action-link";
+import { BackLink } from "../../../../../components/ui/back-link/back-link";
 import { PageHeader } from "../../../../../components/ui/page-header/page-header";
 import { PageShell } from "../../../../../components/ui/page-shell/page-shell";
 import { ResultState } from "../../../../../components/ui/result-state/result-state";
@@ -45,6 +46,8 @@ export async function CreateVehiclePage() {
         title="ثبت خودرو"
         titleId={CREATE_VEHICLE_TITLE_ID}
         description="اطلاعات هویتی و مشخصات اولیه خودرو را وارد کنید."
+        action={<BackLink label="بازگشت به خودروها" href="/fleet/vehicles" />}
+        compactAction
       />
 
       {models.length === 0 || statuses.length === 0 ? (
