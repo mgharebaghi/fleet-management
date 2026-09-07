@@ -1,6 +1,6 @@
 import { Prisma, type PrismaClient } from "../../../generated/prisma/client";
 import type { DriverRepository, DriverSession } from "../application/driver-repository";
-import type { Assignment, NewAssignment, NewLicense } from "../application/driver-records";
+import type { Assignment, NewAssignment, NewLicense, UpdatedAssignment, UpdatedLicense } from "../application/driver-records";
 
 const personSelect = { PersonId: true, FirstName: true, LastName: true, PersonnelNo: true, NationalCode: true, IsActive: true } satisfies Prisma.PeopleSelect;
 const vehicleSelect = {
@@ -43,10 +43,17 @@ class PrismaDriverSession implements DriverSession {
   }
   async vehicle(id: number) { const row = await this.client.vehicle.findUnique({ where: { VehicleId: id }, select: vehicleSelect }); return row ? mapVehicle(row) : null; }
   async licenses(id: number) { return (await this.client.driverLicense.findMany({ where: { DriverId: id }, orderBy: { DriverLicenseId: "desc" } })).map(mapLicense); }
-  async licenseNumberExists(number: string) { return await this.client.driverLicense.findFirst({ where: { LicenseNo: number }, select: { DriverLicenseId: true } }) !== null; }
-  async overlap(input: NewAssignment, by: "driver" | "vehicle") {
+  async license(id: number) { const row = await this.client.driverLicense.findUnique({ where: { DriverLicenseId: id } }); return row ? mapLicense(row) : null; }
+  async licenseNumberExists(number: string, excludingLicenseId?: number) { return await this.client.driverLicense.findFirst({ where: { LicenseNo: number, ...(excludingLicenseId ? { DriverLicenseId: { not: excludingLicenseId } } : {}) }, select: { DriverLicenseId: true } }) !== null; }
+  // Half-open intervals ([From, To)), mirroring assignment-rules.ts's overlaps():
+  // an existing row only conflicts if it starts before the new period ends AND
+  // ends after the new period starts. A row whose ToDateTime lands exactly on
+  // the new FromDateTime is a handover, not a conflict — `gt`, not `gte`, is
+  // what allows the new assignment to start the instant the old one ended.
+  async overlap(input: NewAssignment, by: "driver" | "vehicle", excludingAssignmentId?: number) {
     return await this.client.vehicleDriverAssignment.findFirst({ where: {
       ...(by === "driver" ? { DriverId: input.driverId } : { VehicleId: input.vehicleId }),
+      ...(excludingAssignmentId ? { AssignmentId: { not: excludingAssignmentId } } : {}),
       ...(input.toDateTime === null ? {} : { FromDateTime: { lt: input.toDateTime } }),
       OR: [{ ToDateTime: null }, { ToDateTime: { gt: input.fromDateTime } }],
     }, select: { AssignmentId: true } }) !== null;
@@ -56,16 +63,27 @@ class PrismaDriverSession implements DriverSession {
   async createLicense(input: NewLicense) {
     return (await this.client.driverLicense.create({ data: { DriverId: input.driverId, LicenseType: input.licenseType, LicenseNo: input.licenseNo, IssueDate: input.issueDate, ExpireDate: input.expireDate, IsActive: input.isActive } })).DriverLicenseId;
   }
+  async updateLicense(input: UpdatedLicense) {
+    await this.client.driverLicense.update({ where: { DriverLicenseId: input.licenseId }, data: { LicenseType: input.licenseType, LicenseNo: input.licenseNo, IssueDate: input.issueDate, ExpireDate: input.expireDate, IsActive: input.isActive } });
+  }
+  async deleteLicense(id: number) { await this.client.driverLicense.delete({ where: { DriverLicenseId: id } }); }
   async createAssignment(input: NewAssignment) {
     return (await this.client.vehicleDriverAssignment.create({ data: {
       DriverId: input.driverId, VehicleId: input.vehicleId, FromDateTime: input.fromDateTime, ToDateTime: input.toDateTime,
       StartOdometer: input.startOdometer === null ? null : new Prisma.Decimal(input.startOdometer), EndOdometer: input.endOdometer === null ? null : new Prisma.Decimal(input.endOdometer), Description: input.description,
     }, select: { AssignmentId: true } })).AssignmentId;
   }
+  async updateAssignment(input: UpdatedAssignment) {
+    await this.client.vehicleDriverAssignment.update({ where: { AssignmentId: input.assignmentId }, data: {
+      VehicleId: input.vehicleId, FromDateTime: input.fromDateTime, ToDateTime: input.toDateTime,
+      StartOdometer: input.startOdometer === null ? null : new Prisma.Decimal(input.startOdometer), EndOdometer: input.endOdometer === null ? null : new Prisma.Decimal(input.endOdometer), Description: input.description,
+    } });
+  }
   async closeAssignment(id: number, end: Date, odometer: string | null) {
     const result = await this.client.vehicleDriverAssignment.updateMany({ where: { AssignmentId: id, ToDateTime: null }, data: { ToDateTime: end, EndOdometer: odometer === null ? null : new Prisma.Decimal(odometer) } });
     if (result.count !== 1) throw new Error("Assignment changed during close.");
   }
+  async deleteAssignment(id: number) { await this.client.vehicleDriverAssignment.delete({ where: { AssignmentId: id } }); }
 }
 
 export class PrismaDriverRepository implements DriverRepository {
