@@ -4,14 +4,6 @@ import { describe, expect, it } from "vitest";
 import { PageHeader } from "./page-header";
 
 describe("PageHeader", () => {
-  it("carries the product brand on every page without being asked to", () => {
-    const markup = renderToStaticMarkup(
-      <PageHeader eyebrow="مدیریت ناوگان" title="خودروها" />,
-    );
-
-    expect(markup).toContain("نشان سامانه مدیریت ناوگان");
-  });
-
   it("names the page through a heading the shell can point at", () => {
     const markup = renderToStaticMarkup(
       <PageHeader
@@ -27,16 +19,23 @@ describe("PageHeader", () => {
     expect(markup).toContain("اطلاعات فردی و سازمانی شخص را وارد کنید.");
   });
 
-  it("renders the page action with the product brand", () => {
+  it("leaves the product brand to the panel's top bar", () => {
+    const markup = renderToStaticMarkup(
+      <PageHeader eyebrow="مدیریت ناوگان" title="خودروها" />,
+    );
+
+    expect(markup).not.toContain("نشان سامانه مدیریت ناوگان");
+  });
+
+  it("renders the page action beside the page identity", () => {
     const markup = renderToStaticMarkup(
       <PageHeader
         eyebrow="مدیریت اشخاص"
         title="فهرست اشخاص"
-        action={<a href="/people/create">افزودن شخص</a>}
+        action={<button type="button">افزودن شخص</button>}
       />,
     );
 
-    expect(markup).toContain("نشان سامانه مدیریت ناوگان");
     expect(markup).toContain("افزودن شخص");
     expect(markup).toContain("فهرست اشخاص");
   });

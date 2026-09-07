@@ -5,17 +5,23 @@ import { useEffect, useRef } from "react";
 
 import styles from "./dialog.module.css";
 
+let openDialogScrollLocks = 0;
+let rootOverflowBeforeFirstDialog = "";
+
 export type DialogProps = {
+  id?: string;
   open: boolean;
   onClose: () => void;
   titleId: string;
   title: string;
   description?: string;
   children: ReactNode;
-  size?: "form" | "list" | "wide";
+  /** "drawer" pins the panel to the inline-start edge, full height. */
+  size?: "form" | "list" | "wide" | "drawer";
 };
 
 export function Dialog({
+  id,
   open,
   onClose,
   titleId,
@@ -50,10 +56,16 @@ export function Dialog({
     // (globals.css sets overflow-x on both html and body, which disables
     // the usual body->viewport overflow propagation), so lock it there.
     const rootElement = document.documentElement;
-    const previousOverflow = rootElement.style.overflow;
+    if (openDialogScrollLocks === 0) {
+      rootOverflowBeforeFirstDialog = rootElement.style.overflow;
+    }
+    openDialogScrollLocks += 1;
     rootElement.style.overflow = "hidden";
     return () => {
-      rootElement.style.overflow = previousOverflow;
+      openDialogScrollLocks = Math.max(0, openDialogScrollLocks - 1);
+      if (openDialogScrollLocks === 0) {
+        rootElement.style.overflow = rootOverflowBeforeFirstDialog;
+      }
     };
   }, [open]);
 
@@ -63,8 +75,19 @@ export function Dialog({
     }
   }
 
+  // <dialog> fires "close" for programmatic close() too, so reporting every
+  // one of them back as onClose would let a dialog that is closing because
+  // the caller already moved on (opening another dialog, say) overwrite that
+  // newer state. Only a close the caller did not ask for — Escape — is news.
+  function handleNativeClose() {
+    if (open) {
+      onClose();
+    }
+  }
+
   return (
     <dialog
+      id={id}
       ref={dialogRef}
       className={
         size === "form"
@@ -74,7 +97,7 @@ export function Dialog({
       aria-labelledby={titleId}
       aria-describedby={description ? `${titleId}-description` : undefined}
       onClick={handleBackdropClick}
-      onClose={onClose}
+      onClose={handleNativeClose}
     >
       <div className={styles.panel}>
         <header className={styles.header}>

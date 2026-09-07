@@ -1,0 +1,324 @@
+.shell {
+  --admin-topbar-height: 64px;
+  --admin-sidebar-width: 248px;
+
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  font-family: var(--app-font-family);
+}
+
+/* Top bar and sidebar are taken out of normal flow and pinned to the
+   viewport, so they never move. The document (html, see globals.css) stays
+   the only scrolling box — Dialog already locks scroll there — and only
+   .content, offset by their reserved size below, grows past the viewport. */
+.topBar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: var(--admin-topbar-height);
+  padding: 0 var(--space-5);
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
+  box-shadow: 0 1px 2px rgb(13 27 42 / 4%);
+}
+
+.topBarStart {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.breadcrumb {
+  min-width: 0;
+  padding-right: var(--space-4);
+  border-right: 1px solid var(--app-border);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.breadcrumbSeparator {
+  margin: 0 var(--space-2);
+  color: var(--app-border-subtle);
+}
+
+.body {
+  flex: 1;
+  padding-top: var(--admin-topbar-height);
+}
+
+.content {
+  display: flex;
+  min-width: 0;
+  /* A page shorter than the viewport must still paint its own background
+     (PageShell's gradient, stretched here via flex:1) down to the bottom
+     of the screen — otherwise the plain body background shows through
+     below it, splitting the page visually in two. */
+  min-height: calc(100dvh - var(--admin-topbar-height));
+  flex-direction: column;
+  margin-right: var(--admin-sidebar-width);
+}
+
+/* Desktop sidebar: renders on the right in this RTL shell, fixed under the
+   top bar. Its own scroll is a fallback for a nav list that outgrows the
+   viewport — it does not run today, so it stays a single, non-nested case. */
+.sidebar {
+  position: fixed;
+  top: var(--admin-topbar-height);
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  width: var(--admin-sidebar-width);
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-3);
+  border-left: 1px solid var(--app-border);
+  background: var(--app-surface);
+  overflow-y: auto;
+}
+
+.sidebarTitle {
+  padding: 0 var(--space-3);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.sidebarNav {
+  min-width: 0;
+}
+
+.navList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  list-style: none;
+}
+
+.navSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.navLink,
+.navSubLink {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-radius: var(--app-radius-control);
+  font-weight: 700;
+  transition:
+    background-color var(--app-motion-fast),
+    color var(--app-motion-fast);
+}
+
+.navLink {
+  padding: 10px var(--space-3);
+  color: var(--app-text);
+}
+
+.navIcon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  color: var(--app-text-muted);
+  transition: color var(--app-motion-fast);
+}
+
+.navLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navLink:hover,
+.navSubLink:hover {
+  background: var(--app-info-background);
+  color: var(--app-primary);
+}
+
+.navLink:hover .navIcon,
+.navSubLink:hover .navIcon {
+  color: var(--app-primary);
+}
+
+.navLink:focus-visible,
+.navSubLink:focus-visible {
+  outline: 3px solid var(--app-focus-outline);
+  outline-offset: 2px;
+}
+
+.navLink[aria-current="page"] {
+  background: var(--app-primary);
+  color: var(--app-on-primary);
+}
+
+.navLink[aria-current="page"] .navIcon {
+  color: var(--app-on-primary);
+}
+
+.navSubList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--space-1) var(--space-3) 0 0;
+  padding-right: var(--space-3);
+  border-right: 1px solid var(--app-border-subtle);
+  list-style: none;
+}
+
+.navSubLink {
+  padding: 8px var(--space-3);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.navSubLink[aria-current="page"] {
+  background: var(--app-info-background);
+  color: var(--app-primary);
+}
+
+.navSubLink[aria-current="page"] .navIcon {
+  color: var(--app-primary);
+}
+
+/* An active child also gets a marker on the group's rule, so the open branch
+   reads at a glance without colouring the parent as if it were the page. */
+.navSubLink[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: calc(var(--space-3) * -1 - 1px);
+  width: 2px;
+  height: 20px;
+  border-radius: 2px;
+  background: var(--app-primary);
+  transform: translateY(-50%);
+}
+
+/* The drawer button belongs to the top bar and only exists on narrow screens. */
+.mobileToggle {
+  display: none;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--app-control-border);
+  border-radius: var(--app-radius-control);
+  background: var(--app-surface);
+  color: var(--app-primary);
+  cursor: pointer;
+  transition:
+    border-color var(--app-motion-fast),
+    background-color var(--app-motion-fast),
+    transform var(--app-motion-fast);
+}
+
+.mobileToggle:hover {
+  border-color: var(--app-primary);
+  background: var(--app-info-background);
+}
+
+.mobileToggle:focus-visible {
+  outline: 3px solid var(--app-focus-outline);
+  outline-offset: 2px;
+}
+
+.mobileToggle:hover {
+  transform: translateY(-1px);
+}
+
+.mobileToggle:active {
+  transform: translateY(0) scale(0.96);
+}
+
+.mobileToggleIcon {
+  position: relative;
+  width: 18px;
+  height: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobileToggle {
+    transition: none;
+    transform: none;
+  }
+}
+
+.mobileToggleIcon::before,
+.mobileToggleIcon::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: currentcolor;
+}
+
+.mobileToggleIcon::before {
+  top: 0;
+  box-shadow: 0 5px 0 currentcolor;
+}
+
+.mobileToggleIcon::after {
+  bottom: 0;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .shell {
+    --admin-topbar-height: 56px;
+  }
+
+  .topBar {
+    padding: 0 var(--space-3);
+    gap: var(--space-3);
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .content {
+    margin-right: 0;
+  }
+
+  .mobileToggle {
+    display: inline-flex;
+  }
+
+  .breadcrumb {
+    padding-right: var(--space-3);
+  }
+
+  /* Touch targets stay comfortably tappable inside the drawer. */
+  .navLink,
+  .navSubLink {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}

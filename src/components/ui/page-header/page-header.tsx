@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-import { BrandMark } from "../brand-mark/brand-mark";
 import styles from "./page-header.module.css";
 
 type PageHeaderProps = {
@@ -16,12 +15,18 @@ type PageHeaderProps = {
   avatar?: ReactNode;
   /** The page's primary action, aligned with the title on every page. */
   action?: ReactNode;
+  /**
+   * A compact action (e.g. an icon-only back control) keeps its own size
+   * instead of stretching to the full width the mobile layout otherwise
+   * gives every header action a comfortable tap target.
+   */
+  compactAction?: boolean;
 };
 
 /**
- * The one header every product page uses: the brand mark facing the page's
- * own identity in a single balanced row. Pages never place the brand
- * themselves, so it cannot drift between them.
+ * The one header every product page uses: the page's own identity on the
+ * start side and its primary action opposite. The product brand belongs to
+ * the panel's top bar, not to each page, so it is deliberately absent here.
  */
 export function PageHeader({
   eyebrow,
@@ -30,16 +35,10 @@ export function PageHeader({
   description,
   avatar,
   action,
+  compactAction = false,
 }: PageHeaderProps) {
   return (
     <header className={styles.header}>
-      {/* First in the DOM so mobile stacks the brand above the page
-          identity; desktop repositions it to the opposite side with grid
-          placement, independent of source order. */}
-      <div className={styles.brandColumn}>
-        <BrandMark />
-        {action && <div className={styles.action}>{action}</div>}
-      </div>
       <div className={styles.content}>
         <p className={styles.eyebrow}>{eyebrow}</p>
         <div className={avatar ? styles.identity : undefined}>
@@ -50,6 +49,11 @@ export function PageHeader({
           </div>
         </div>
       </div>
+      {action && (
+        <div className={compactAction ? `${styles.action} ${styles.compactAction}` : styles.action}>
+          {action}
+        </div>
+      )}
     </header>
   );
 }
