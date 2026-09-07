@@ -5,7 +5,11 @@ import type { VehicleIdentifier } from "../ports/vehicle-identifier-reader";
 
 const valid = (): NewVehicle => ({ vehicleCode: " V-100 ", plateNoLeftSide: "۱۲", plateNoCenterChar: " ب ", plateNoRightSide: "٣٤٥", plateNoIranNo: "۶۷", internationalPlateNo: null, vin: null, engineNo: null, chassisNo: null, modelId: 1, vehicleStatusId: 2, modelYear: null, purchaseDate: null, purchasePrice: null, currentOdometer: null, currentEngineHour: null });
 function setup() {
-  const writer = { create: vi.fn<(input: NewVehicle) => Promise<{ vehicleId: number }>>().mockResolvedValue({ vehicleId: 42 }) };
+  const writer = {
+    create: vi.fn<(input: NewVehicle) => Promise<{ vehicleId: number }>>().mockResolvedValue({ vehicleId: 42 }),
+    update: vi.fn(async () => {}),
+    remove: vi.fn(async () => {}),
+  };
   const identifiers = { identifierExists: vi.fn<(field: VehicleIdentifier, value: string) => Promise<boolean>>().mockResolvedValue(false), internalPlateExists: vi.fn(async () => false) };
   const references = { modelExists: vi.fn(async () => true), statusExists: vi.fn(async () => true) };
   return { writer, identifiers, references, useCase: new CreateVehicle(writer, identifiers, references, () => new Date("2026-09-05T12:00:00Z")) };

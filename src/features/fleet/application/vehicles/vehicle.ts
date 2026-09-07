@@ -39,6 +39,17 @@ export type VehicleSummary = {
   status: ReferenceSummary;
 };
 
+export type VehicleDetail = NewVehicle & {
+  vehicleId: number;
+  isActive: boolean;
+  createdAt: Date;
+  model: ReferenceSummary;
+  brand: ReferenceSummary;
+  vehicleType: ReferenceSummary | null;
+  fuelType: ReferenceSummary | null;
+  status: ReferenceSummary;
+};
+
 export type VehicleSearchCriteria = {
   search: string | null;
   pageNumber: number;

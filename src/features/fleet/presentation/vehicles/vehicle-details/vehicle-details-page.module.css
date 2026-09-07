@@ -1,0 +1,86 @@
+.identityMeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  line-height: 1.6;
+}
+
+.identityBadges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.operationalStatus {
+  display: inline-flex;
+  padding: 3px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: var(--app-surface-subtle);
+  color: var(--app-text);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.plateRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.secondaryValue {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5) var(--space-6);
+  margin-bottom: var(--space-8);
+  padding: var(--space-5);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface-subtle);
+}
+
+.details dt {
+  margin-bottom: var(--space-1);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.details dd {
+  color: var(--app-heading);
+  font-weight: 700;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .details {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions > * {
+    width: 100%;
+  }
+}
