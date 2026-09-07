@@ -1,0 +1,5 @@
+.confirmText {
+  margin-bottom: var(--space-4);
+  color: var(--app-text);
+  line-height: 1.85;
+}

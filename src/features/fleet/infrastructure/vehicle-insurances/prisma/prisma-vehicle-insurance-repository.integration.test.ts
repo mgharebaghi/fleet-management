@@ -6,7 +6,10 @@ import { PrismaClient } from "../../../../../generated/prisma/client";
 import { createMssqlConfigFromEnvironment } from "../../../../../infrastructure/database/prisma/mssql-config";
 import { PrismaVehicleInsuranceRepository } from "./prisma-vehicle-insurance-repository";
 import { CreateVehicleInsurance } from "../../../application/vehicle-insurances/create-vehicle-insurance/create-vehicle-insurance";
-import { InsuranceVehicleNotFoundError } from "../../../application/vehicle-insurances/ports/vehicle-insurance-writer";
+import {
+  InsuranceVehicleNotFoundError,
+  VehicleInsuranceNotFoundError,
+} from "../../../application/vehicle-insurances/ports/vehicle-insurance-writer";
 import type { NewVehicleInsurance, VehicleInsuranceSearchCriteria } from "../../../application/vehicle-insurances/vehicle-insurance";
 
 config({ path: ".env", quiet: true });
@@ -120,5 +123,71 @@ describe.sequential("PrismaVehicleInsuranceRepository integration", () => {
       expect(result.insurances.map(row => row.vehicleInsuranceId)).toContain(id);
     }
     expect(await repository.search(criteria(`missing-${randomUUID()}' OR 1=1 --`))).toEqual({ insurances: [], totalCount: 0 });
+  });
+
+  it("finds a record by id with exact decimals, and returns null for a missing one", async () => {
+    const input = await fixture();
+    input.premiumAmount = "9999999999999999.99";
+    input.coverageAmount = "1234567890123456.78";
+    const id = await create(input);
+
+    const found = await repository.findById(id);
+
+    expect(found).toMatchObject({
+      vehicleInsuranceId: id,
+      vehicleId: input.vehicleId,
+      insuranceType: input.insuranceType,
+      premiumAmount: input.premiumAmount,
+      coverageAmount: input.coverageAmount,
+      isActive: true,
+      vehicle: { vehicleId: input.vehicleId, brandName: input.vehicleBrandName },
+    });
+
+    expect(await repository.findById("999999999999")).toBeNull();
+  });
+
+  it("updates a record's fields and active flag, and rejects an invalid vehicle reference", async () => {
+    const input = await fixture();
+    const id = await create(input);
+    const otherFixture = await fixture();
+    const renamedType = `IT-Renamed-${randomUUID()}`;
+
+    await repository.update(id, {
+      ...input,
+      insuranceType: renamedType,
+      vehicleId: otherFixture.vehicleId,
+      isActive: false,
+    });
+
+    const found = await repository.findById(id);
+    expect(found).toMatchObject({
+      insuranceType: renamedType,
+      vehicleId: otherFixture.vehicleId,
+      isActive: false,
+    });
+
+    await expect(
+      repository.update(id, { ...input, vehicleId: -1, isActive: true }),
+    ).rejects.toBeInstanceOf(InsuranceVehicleNotFoundError);
+  });
+
+  it("rejects updating a record that no longer exists", async () => {
+    const input = await fixture();
+
+    await expect(
+      repository.update("999999999999", { ...input, isActive: true }),
+    ).rejects.toBeInstanceOf(VehicleInsuranceNotFoundError);
+  });
+
+  it("deletes a record, and rejects deleting one that no longer exists", async () => {
+    const input = await fixture();
+    const id = await create(input);
+
+    await repository.remove(id);
+    expect(await repository.findById(id)).toBeNull();
+
+    await expect(repository.remove(id)).rejects.toBeInstanceOf(
+      VehicleInsuranceNotFoundError,
+    );
   });
 });

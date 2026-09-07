@@ -6,11 +6,14 @@ import { Pagination } from "../../../../../components/ui/pagination/pagination";
 import { RecordCard, RecordCardHeader, RecordCardList, RecordCardDetails, RecordCardDetail } from "../../../../../components/ui/record-cards/record-cards";
 import { ResultState } from "../../../../../components/ui/result-state/result-state";
 import { StatusBadge } from "../../../../../components/ui/status-badge/status-badge";
+import { StatusTimeline } from "../../../../../components/ui/status-timeline/status-timeline";
 import { TechnicalValue } from "../../../../../components/ui/technical-value/technical-value";
 import { formatMoneyAmount } from "../../../../../components/ui/money-input/money-amount";
+import { InsuranceRowActions } from "../components/insurance-row-actions";
 import { INSURANCE_PAGE_SIZE, MAX_INSURANCE_PAGE } from "../../../application/vehicle-insurances/list-vehicle-insurances/list-vehicle-insurances";
 import type { InsuranceVehicle, VehicleInsuranceSummary } from "../../../application/vehicle-insurances/vehicle-insurance";
 import { makeListVehicleInsurances } from "../../../composition/vehicle-insurances/vehicle-insurance.factory";
+import { getInsuranceExpiryStatus } from "../insurance-status";
 import { VehiclePlate } from "../../vehicles/list-vehicles/vehicle-plate";
 import { ListVehicleInsurancesFilters } from "./list-vehicle-insurances-filters";
 import styles from "./list-vehicle-insurances-page.module.css";
@@ -56,38 +59,41 @@ function InsuranceMeta({ company, policyNo }: { company: string | null; policyNo
 
 function InsuranceRecords({ insurances }: { insurances: VehicleInsuranceSummary[] }) {
   const ambiguousVehicleIds = findAmbiguousVehicleIds(insurances);
+  const now = new Date();
   return <>
     <DataTable caption="فهرست بیمه خودروها" minWidth={860}>
-      <thead><tr><th scope="col">خودرو</th><th scope="col">بیمه‌نامه</th><th scope="col">دوره بیمه</th><th scope="col">مبالغ</th><th scope="col">وضعیت رکورد</th></tr></thead>
-      <tbody>{insurances.map(insurance => <tr key={insurance.vehicleInsuranceId}>
+      <thead><tr><th scope="col">خودرو</th><th scope="col">بیمه‌نامه</th><th scope="col">دوره بیمه</th><th scope="col">مبالغ</th><th scope="col">وضعیت رکورد</th><th scope="col">عملیات</th></tr></thead>
+      <tbody>{insurances.map(insurance => { const coverage = getInsuranceExpiryStatus(insurance, now); return <tr key={insurance.vehicleInsuranceId}>
         <td className={styles.cell}><VehicleCell vehicle={insurance.vehicle} showCode={ambiguousVehicleIds.has(insurance.vehicle.vehicleId)} /></td>
         <td className={styles.cell}>
           <span className={styles.primaryValue}>{insurance.insuranceType}</span>
           <InsuranceMeta company={insurance.insuranceCompany} policyNo={insurance.policyNo} />
         </td>
         <td className={styles.cell}>
-          <span className={styles.plainValue}>شروع <TechnicalValue>{dateFormat.format(insurance.startDate)}</TechnicalValue></span>
-          <span className={styles.secondaryValue}>انقضا <TechnicalValue>{dateFormat.format(insurance.expireDate)}</TechnicalValue></span>
+          <StatusTimeline tone={coverage.tone} statusLabel={coverage.label} startLabel={`شروع ${dateFormat.format(insurance.startDate)}`} endLabel={`انقضا ${dateFormat.format(insurance.expireDate)}`} progress={coverage.progress} />
         </td>
         <td className={styles.cell}>
           <span className={styles.plainValue}>حق بیمه <TechnicalValue>{amountText(insurance.premiumAmount)}</TechnicalValue></span>
           <span className={styles.secondaryValue}>پوشش <TechnicalValue>{amountText(insurance.coverageAmount)}</TechnicalValue></span>
         </td>
         <td className={styles.cell}><RecordStatus active={insurance.isActive} /></td>
-      </tr>)}</tbody>
+        <td className={styles.cell}>
+          <InsuranceRowActions insurance={insurance} />
+        </td>
+      </tr>; })}</tbody>
     </DataTable>
-    <RecordCardList>{insurances.map(insurance => <RecordCard key={insurance.vehicleInsuranceId}>
+    <RecordCardList>{insurances.map(insurance => { const coverage = getInsuranceExpiryStatus(insurance, now); return <RecordCard key={insurance.vehicleInsuranceId}>
       <RecordCardHeader title={insurance.insuranceType} badge={<RecordStatus active={insurance.isActive} />} />
       <TechnicalValue>{insurance.vehicle.vehicleCode}</TechnicalValue><VehiclePlate vehicle={insurance.vehicle} />
       <RecordCardDetails>
         <RecordCardDetail label="شرکت بیمه">{insurance.insuranceCompany ?? "—"}</RecordCardDetail>
         <RecordCardDetail label="شماره بیمه‌نامه"><TechnicalValue>{insurance.policyNo ?? "—"}</TechnicalValue></RecordCardDetail>
-        <RecordCardDetail label="شروع (شمسی)"><TechnicalValue>{dateFormat.format(insurance.startDate)}</TechnicalValue></RecordCardDetail>
-        <RecordCardDetail label="انقضا (شمسی)"><TechnicalValue>{dateFormat.format(insurance.expireDate)}</TechnicalValue></RecordCardDetail>
+        <RecordCardDetail label="دوره بیمه (شمسی)"><StatusTimeline tone={coverage.tone} statusLabel={coverage.label} startLabel={`شروع ${dateFormat.format(insurance.startDate)}`} endLabel={`انقضا ${dateFormat.format(insurance.expireDate)}`} progress={coverage.progress} /></RecordCardDetail>
         <RecordCardDetail label="حق بیمه (تومان)"><TechnicalValue>{amountText(insurance.premiumAmount)}</TechnicalValue></RecordCardDetail>
         <RecordCardDetail label="سقف پوشش (تومان)"><TechnicalValue>{amountText(insurance.coverageAmount)}</TechnicalValue></RecordCardDetail>
       </RecordCardDetails>
-    </RecordCard>)}</RecordCardList>
+      <InsuranceRowActions insurance={insurance} />
+    </RecordCard>; })}</RecordCardList>
   </>;
 }
 

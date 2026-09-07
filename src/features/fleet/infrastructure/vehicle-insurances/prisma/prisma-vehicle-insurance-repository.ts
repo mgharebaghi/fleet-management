@@ -1,8 +1,13 @@
 import { Prisma, type PrismaClient } from "../../../../../generated/prisma/client";
 import type { InsuranceVehicleReader } from "../../../application/vehicle-insurances/ports/insurance-vehicle-reader";
 import type { VehicleInsuranceReader } from "../../../application/vehicle-insurances/ports/vehicle-insurance-reader";
-import { InsuranceVehicleNotFoundError, type VehicleInsuranceWriter } from "../../../application/vehicle-insurances/ports/vehicle-insurance-writer";
-import type { InsuranceVehicle, NewVehicleInsurance, VehicleInsuranceSearchCriteria, VehicleInsuranceSearchResult } from "../../../application/vehicle-insurances/vehicle-insurance";
+import {
+  InsuranceVehicleNotFoundError,
+  VehicleInsuranceNotFoundError,
+  type UpdateVehicleInsuranceChanges,
+  type VehicleInsuranceWriter,
+} from "../../../application/vehicle-insurances/ports/vehicle-insurance-writer";
+import type { InsuranceVehicle, NewVehicleInsurance, VehicleInsuranceSearchCriteria, VehicleInsuranceSearchResult, VehicleInsuranceSummary } from "../../../application/vehicle-insurances/vehicle-insurance";
 
 const vehicleSelect = {
   VehicleId: true, VehicleCode: true, PlateNoLeftSide: true,
@@ -48,6 +53,69 @@ export class PrismaVehicleInsuranceRepository implements VehicleInsuranceReader,
     } catch (error) {
       // VehicleInsurance has one FK: its vehicle reference.
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") throw new InsuranceVehicleNotFoundError();
+      throw error;
+    }
+  }
+
+  async findById(vehicleInsuranceId: string): Promise<VehicleInsuranceSummary | null> {
+    const id = BigInt(vehicleInsuranceId);
+    const row = await this.client.vehicleInsurance.findUnique({
+      where: { VehicleInsuranceId: id },
+      select: {
+        VehicleInsuranceId: true, VehicleId: true, InsuranceType: true,
+        InsuranceCompany: true, PolicyNo: true, StartDate: true, ExpireDate: true,
+        IsActive: true, Vehicle: { select: vehicleSelect },
+      },
+    });
+    if (row === null) return null;
+
+    const [amount] = await this.client.$queryRaw<Array<{ premium: string | null; coverage: string | null }>>(Prisma.sql`
+      SELECT CONVERT(varchar(40), PremiumAmount) AS premium, CONVERT(varchar(40), CoverageAmount) AS coverage
+      FROM fleet.VehicleInsurance
+      WHERE VehicleInsuranceId = ${id}
+    `);
+    if (!amount) throw new Error("Vehicle insurance changed while reading its amounts.");
+
+    return {
+      vehicleInsuranceId: row.VehicleInsuranceId.toString(), vehicleId: row.VehicleId,
+      insuranceType: row.InsuranceType, insuranceCompany: row.InsuranceCompany, policyNo: row.PolicyNo,
+      startDate: row.StartDate, expireDate: row.ExpireDate,
+      premiumAmount: amount.premium, coverageAmount: amount.coverage,
+      isActive: row.IsActive, vehicle: mapVehicle(row.Vehicle),
+    };
+  }
+
+  async update(vehicleInsuranceId: string, changes: UpdateVehicleInsuranceChanges): Promise<void> {
+    const decimal = (value: string | null) => value === null ? null : new Prisma.Decimal(value);
+    try {
+      await this.client.vehicleInsurance.update({
+        where: { VehicleInsuranceId: BigInt(vehicleInsuranceId) },
+        data: {
+          VehicleId: changes.vehicleId, InsuranceType: changes.insuranceType,
+          InsuranceCompany: changes.insuranceCompany, PolicyNo: changes.policyNo,
+          StartDate: changes.startDate, ExpireDate: changes.expireDate,
+          PremiumAmount: decimal(changes.premiumAmount), CoverageAmount: decimal(changes.coverageAmount),
+          IsActive: changes.isActive,
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === "P2025") throw new VehicleInsuranceNotFoundError();
+        if (error.code === "P2003") throw new InsuranceVehicleNotFoundError();
+      }
+      throw error;
+    }
+  }
+
+  async remove(vehicleInsuranceId: string): Promise<void> {
+    try {
+      await this.client.vehicleInsurance.delete({
+        where: { VehicleInsuranceId: BigInt(vehicleInsuranceId) },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+        throw new VehicleInsuranceNotFoundError();
+      }
       throw error;
     }
   }
