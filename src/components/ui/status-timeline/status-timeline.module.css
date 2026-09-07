@@ -1,0 +1,72 @@
+.timeline {
+  display: flex;
+  min-width: 160px;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.statusLabel {
+  align-self: flex-start;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.statusLabel[data-tone="positive"] {
+  color: var(--app-success-text);
+}
+
+.statusLabel[data-tone="warning"] {
+  color: var(--app-warning-text);
+}
+
+.statusLabel[data-tone="negative"] {
+  color: var(--app-danger-text);
+}
+
+.statusLabel[data-tone="info"] {
+  color: var(--app-info-text);
+}
+
+.track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--app-border);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width var(--app-motion-fast);
+}
+
+.fill[data-tone="positive"] {
+  background: var(--app-success-text);
+}
+
+.fill[data-tone="warning"] {
+  background: var(--app-warning-text);
+}
+
+.fill[data-tone="negative"] {
+  background: var(--app-danger-text);
+}
+
+.fill[data-tone="info"] {
+  background: var(--app-info-text);
+}
+
+/* An open end has no fixed length to plot as a fraction, so the fill spans the
+   full track at reduced opacity instead of claiming a false completion. */
+.fillOpenEnded {
+  width: 100%;
+  opacity: 0.55;
+}
+
+.bounds {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}

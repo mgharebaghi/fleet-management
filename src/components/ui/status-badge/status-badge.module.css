@@ -1,5 +1,7 @@
 .positive,
-.negative {
+.negative,
+.warning,
+.info {
   display: inline-flex;
   padding: 3px 10px;
   border-radius: 999px;
@@ -15,4 +17,14 @@
 .negative {
   background: var(--app-danger-background);
   color: var(--app-danger-text);
+}
+
+.warning {
+  background: var(--app-warning-background);
+  color: var(--app-warning-text);
+}
+
+.info {
+  background: var(--app-info-background);
+  color: var(--app-info-text);
 }
