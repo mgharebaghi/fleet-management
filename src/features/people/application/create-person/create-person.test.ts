@@ -55,6 +55,16 @@ class PersonRepositoryFake implements PersonRepository {
     this.receivedPeople.push(person);
     return createdPerson;
   }
+
+  async findById(): Promise<Person | null> {
+    return null;
+  }
+
+  async update(): Promise<Person> {
+    return createdPerson;
+  }
+
+  async remove(): Promise<void> {}
 }
 
 describe("CreatePerson", () => {

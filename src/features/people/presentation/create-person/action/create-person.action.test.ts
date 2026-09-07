@@ -15,7 +15,7 @@ const { executeCreatePerson, makeCreatePerson, redirect, revalidatePath } =
     revalidatePath: vi.fn(),
   }));
 
-vi.mock("../../../composition/create-person.factory", () => ({
+vi.mock("../../../composition/person.factory", () => ({
   makeCreatePerson,
 }));
 

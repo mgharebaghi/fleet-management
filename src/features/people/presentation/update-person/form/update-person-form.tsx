@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 
-import { ActionButton } from "../../../../../components/ui/action-button/action-button";
 import { BackLink } from "../../../../../components/ui/back-link/back-link";
+import { ConfirmedSubmitButton } from "../../../../../components/ui/confirmed-submit/confirmed-submit-button";
 import { JalaliDatePicker } from "../../../../../components/ui/date-picker/jalali-date-picker";
 import {
   FieldErrors,
@@ -18,73 +18,94 @@ import { LoadingIndicator } from "../../../../../components/ui/loading-indicator
 import { PageHeader } from "../../../../../components/ui/page-header/page-header";
 import { PageShell } from "../../../../../components/ui/page-shell/page-shell";
 
-import { createPersonAction } from "../action/create-person.action";
-import { initialCreatePersonActionState } from "../action/create-person.action-state";
-import styles from "./create-person-form.module.css";
+import type { ConfirmDialogIdentityLine } from "../../../../../components/ui/confirm-dialog/confirm-dialog";
+import type { Person } from "../../../application/person";
+import { updatePersonAction } from "../action/update-person.action";
+import { initialUpdatePersonActionState } from "../action/update-person.action-state";
+import styles from "./update-person-form.module.css";
 import {
-  getCreatePersonFieldErrorMessages,
-  getCreatePersonStatusMessage,
-} from "./create-person.messages";
+  getUpdatePersonFieldErrorMessages,
+  getUpdatePersonStatusMessage,
+} from "./update-person.messages";
 
-const CREATE_PERSON_TITLE_ID = "create-person-title";
+const UPDATE_PERSON_TITLE_ID = "update-person-title";
 
-export function CreatePersonForm() {
+function toDateInputValue(date: Date | null): string {
+  return date ? date.toISOString().slice(0, 10) : "";
+}
+
+function buildPersonIdentityLines(person: Person): ConfirmDialogIdentityLine[] {
+  const lines: ConfirmDialogIdentityLine[] = [];
+
+  if (person.personnelNo) {
+    lines.push({ label: "شمارهٔ پرسنلی", value: person.personnelNo });
+  }
+  if (person.nationalCode) {
+    lines.push({ label: "کد ملی", value: person.nationalCode });
+  }
+
+  return lines;
+}
+
+export function UpdatePersonForm({ person }: { person: Person }) {
   const [actionState, formAction, isPending] = useActionState(
-    createPersonAction,
-    initialCreatePersonActionState,
+    updatePersonAction,
+    initialUpdatePersonActionState,
   );
-  const personnelNoErrors = getCreatePersonFieldErrorMessages(
+  const personnelNoErrors = getUpdatePersonFieldErrorMessages(
     actionState,
     "personnelNo",
   );
-  const firstNameErrors = getCreatePersonFieldErrorMessages(
+  const firstNameErrors = getUpdatePersonFieldErrorMessages(
     actionState,
     "firstName",
   );
-  const lastNameErrors = getCreatePersonFieldErrorMessages(
+  const lastNameErrors = getUpdatePersonFieldErrorMessages(
     actionState,
     "lastName",
   );
-  const nationalCodeErrors = getCreatePersonFieldErrorMessages(
+  const nationalCodeErrors = getUpdatePersonFieldErrorMessages(
     actionState,
     "nationalCode",
   );
-  const cardNoErrors = getCreatePersonFieldErrorMessages(
-    actionState,
-    "cardNo",
-  );
-  const mobileErrors = getCreatePersonFieldErrorMessages(
-    actionState,
-    "mobile",
-  );
-  const employmentDateErrors = getCreatePersonFieldErrorMessages(
+  const cardNoErrors = getUpdatePersonFieldErrorMessages(actionState, "cardNo");
+  const mobileErrors = getUpdatePersonFieldErrorMessages(actionState, "mobile");
+  const employmentDateErrors = getUpdatePersonFieldErrorMessages(
     actionState,
     "employmentDate",
   );
-  const statusMessage = getCreatePersonStatusMessage(actionState);
+  const statusMessage = getUpdatePersonStatusMessage(actionState);
 
   return (
-    <PageShell width="narrow" labelledBy={CREATE_PERSON_TITLE_ID}>
+    <PageShell width="narrow" labelledBy={UPDATE_PERSON_TITLE_ID}>
       <PageHeader
         eyebrow="مدیریت اشخاص"
-        title="ثبت شخص جدید"
-        titleId={CREATE_PERSON_TITLE_ID}
-        description="اطلاعات فردی و سازمانی شخص را وارد کنید."
-        action={<BackLink label="انصراف و بازگشت به اشخاص" href="/people" />}
+        title="ویرایش اطلاعات شخص"
+        titleId={UPDATE_PERSON_TITLE_ID}
+        description={`ویرایش اطلاعات ${person.firstName} ${person.lastName}`}
+        action={
+          <BackLink
+            label="انصراف و بازگشت به اشخاص"
+            href="/people"
+          />
+        }
         compactAction
       />
 
       <form
+        id="update-person-form"
         action={formAction}
         className={styles.form}
         aria-busy={isPending}
         aria-labelledby="person-details-title"
         noValidate
       >
+        <input type="hidden" name="personId" value={person.personId} />
+
         <div className={styles.formHeader}>
           <div>
             <h2 id="person-details-title">اطلاعات شخص</h2>
-            <p>اطلاعات هویتی، سازمانی و تاریخ استخدام را وارد کنید.</p>
+            <p>اطلاعات هویتی، سازمانی و تاریخ استخدام را ویرایش کنید.</p>
           </div>
           <p className={styles.requiredHint}>
             <span aria-hidden="true">*</span> فیلد الزامی
@@ -103,6 +124,7 @@ export function CreatePersonForm() {
               type="text"
               autoComplete="given-name"
               required
+              defaultValue={person.firstName}
               disabled={isPending}
               aria-invalid={firstNameErrors.length > 0}
               aria-describedby={
@@ -123,6 +145,7 @@ export function CreatePersonForm() {
               type="text"
               autoComplete="family-name"
               required
+              defaultValue={person.lastName}
               disabled={isPending}
               aria-invalid={lastNameErrors.length > 0}
               aria-describedby={
@@ -140,6 +163,7 @@ export function CreatePersonForm() {
               name="personnelNo"
               type="text"
               dir="ltr"
+              defaultValue={person.personnelNo ?? ""}
               disabled={isPending}
               aria-invalid={personnelNoErrors.length > 0}
               aria-describedby={
@@ -161,6 +185,7 @@ export function CreatePersonForm() {
               type="text"
               inputMode="numeric"
               dir="ltr"
+              defaultValue={person.nationalCode ?? ""}
               disabled={isPending}
               aria-invalid={nationalCodeErrors.length > 0}
               aria-describedby={
@@ -181,6 +206,7 @@ export function CreatePersonForm() {
               name="cardNo"
               type="text"
               dir="ltr"
+              defaultValue={person.cardNo ?? ""}
               disabled={isPending}
               aria-invalid={cardNoErrors.length > 0}
               aria-describedby={
@@ -200,6 +226,7 @@ export function CreatePersonForm() {
               inputMode="tel"
               autoComplete="tel"
               dir="ltr"
+              defaultValue={person.mobile ?? ""}
               disabled={isPending}
               aria-invalid={mobileErrors.length > 0}
               aria-describedby={
@@ -213,6 +240,7 @@ export function CreatePersonForm() {
             <JalaliDatePicker
               name="employmentDate"
               label="تاریخ استخدام (شمسی)"
+              defaultValue={toDateInputValue(person.employmentDate)}
               invalid={employmentDateErrors.length > 0}
               describedBy={
                 employmentDateErrors.length > 0
@@ -226,9 +254,22 @@ export function CreatePersonForm() {
               messages={employmentDateErrors}
             />
           </FormField>
+
+          <FormField>
+            <label className={styles.checkboxRow} htmlFor="isActive">
+              <input
+                id="isActive"
+                name="isActive"
+                type="checkbox"
+                defaultChecked={person.isActive}
+                disabled={isPending}
+              />
+              فعال
+            </label>
+          </FormField>
         </FormGrid>
 
-        {isPending && <LoadingIndicator label="در حال ثبت اطلاعات…" />}
+        {isPending && <LoadingIndicator label="در حال ذخیره اطلاعات…" />}
 
         {statusMessage && (
           <InlineNotice tone="danger" role="alert">
@@ -237,9 +278,18 @@ export function CreatePersonForm() {
         )}
 
         <FormActions>
-          <ActionButton type="submit" disabled={isPending} pending={isPending}>
-            {isPending ? "در حال ثبت…" : "ثبت شخص"}
-          </ActionButton>
+          <ConfirmedSubmitButton
+            formId="update-person-form"
+            titleId="update-person-confirm-title"
+            dialogTitle="ذخیره تغییرات"
+            recordName={`${person.firstName} ${person.lastName}`}
+            identityLines={buildPersonIdentityLines(person)}
+            message="آیا از ذخیره تغییرات این شخص مطمئن هستید؟"
+            label="ذخیره تغییرات"
+            pendingLabel="در حال ذخیره…"
+            confirmLabel="تأیید و ذخیره"
+            pending={isPending}
+          />
         </FormActions>
       </form>
     </PageShell>

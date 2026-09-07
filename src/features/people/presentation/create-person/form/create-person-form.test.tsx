@@ -25,11 +25,12 @@ describe("CreatePersonForm", () => {
     expect(markup).toContain("ثبت شخص");
   });
 
-  it("renders a cancel link back to the people list", () => {
+  it("renders a cancel link back to the people list, named for assistive technology", () => {
     const markup = renderToStaticMarkup(<CreatePersonForm />);
 
+    // Icon-only control: the destination lives in its accessible name.
     expect(markup).toMatch(
-      /<a(?=[^>]*href="\/people")[^>]*>انصراف<\/a>/,
+      /<a(?=[^>]*href="\/people")(?=[^>]*aria-label="انصراف و بازگشت به اشخاص")[^>]*>/,
     );
   });
 

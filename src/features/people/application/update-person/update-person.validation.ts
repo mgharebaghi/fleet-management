@@ -1,13 +1,13 @@
 import { isValidIranianNationalCode } from "../national-code";
 import type {
-  CreatePersonInput,
-  CreatePersonValidationError,
-  CreatePersonValidationErrorCode,
-} from "./create-person.contract";
+  UpdatePersonInput,
+  UpdatePersonValidationError,
+  UpdatePersonValidationErrorCode,
+} from "./update-person.contract";
 
-export function normalizeCreatePersonInput(
-  input: CreatePersonInput,
-): CreatePersonInput {
+export function normalizeUpdatePersonInput(
+  input: UpdatePersonInput,
+): UpdatePersonInput {
   return {
     ...input,
     personnelNo: input.personnelNo?.trim() ?? null,
@@ -22,7 +22,7 @@ export function normalizeCreatePersonInput(
 function validateRequiredString(
   value: string,
   maximumLength: number,
-): CreatePersonValidationErrorCode | undefined {
+): UpdatePersonValidationErrorCode | undefined {
   if (value.trim().length === 0) {
     return "REQUIRED";
   }
@@ -35,7 +35,7 @@ function validateRequiredString(
 function validateOptionalString(
   value: string | null,
   maximumLength: number,
-): CreatePersonValidationErrorCode | undefined {
+): UpdatePersonValidationErrorCode | undefined {
   if (value === null) {
     return undefined;
   }
@@ -49,10 +49,10 @@ function validateOptionalString(
   }
 }
 
-export function validateCreatePersonInput(
-  input: CreatePersonInput,
-): CreatePersonValidationError | null {
-  const fieldErrors: CreatePersonValidationError["fieldErrors"] = {};
+export function validateUpdatePersonInput(
+  input: UpdatePersonInput,
+): UpdatePersonValidationError | null {
+  const fieldErrors: UpdatePersonValidationError["fieldErrors"] = {};
 
   const firstNameError = validateRequiredString(input.firstName, 100);
   if (firstNameError !== undefined) {

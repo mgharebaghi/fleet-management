@@ -17,6 +17,7 @@ import type { ListPeopleInput } from "../../application/list-people/list-people.
 import type { PersonSummary } from "../../application/list-people/person-summary";
 import { makeListPeople } from "../../composition/list-people.factory";
 import { ListPeopleFilters } from "./list-people-filters";
+import { PersonRowActions } from "./person-row-actions";
 import styles from "./list-people-page.module.css";
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -108,6 +109,7 @@ function PeopleTable({ people }: { people: PersonSummary[] }) {
           <th scope="col">شماره پرسنلی</th>
           <th scope="col">کد ملی</th>
           <th scope="col">وضعیت</th>
+          <th scope="col">عملیات</th>
         </tr>
       </thead>
       <tbody>
@@ -127,6 +129,9 @@ function PeopleTable({ people }: { people: PersonSummary[] }) {
                 label={person.isActive ? "فعال" : "غیرفعال"}
                 tone={person.isActive ? "positive" : "negative"}
               />
+            </td>
+            <td>
+              <PersonRowActions person={person} />
             </td>
           </tr>
         ))}
@@ -157,6 +162,7 @@ function PersonCards({ people }: { people: PersonSummary[] }) {
               <TechnicalValue>{person.nationalCode ?? "—"}</TechnicalValue>
             </RecordCardDetail>
           </RecordCardDetails>
+          <PersonRowActions person={person} />
         </RecordCard>
       ))}
     </RecordCardList>
