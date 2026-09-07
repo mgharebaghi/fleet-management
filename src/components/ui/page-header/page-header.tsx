@@ -8,6 +8,12 @@ type PageHeaderProps = {
   title: string;
   titleId?: string;
   description?: ReactNode;
+  /**
+   * Record pages put their subject's picture beside the title, so the page
+   * heading itself carries the identity instead of repeating it in a second
+   * profile block below.
+   */
+  avatar?: ReactNode;
   /** The page's primary action, aligned with the title on every page. */
   action?: ReactNode;
 };
@@ -22,6 +28,7 @@ export function PageHeader({
   title,
   titleId,
   description,
+  avatar,
   action,
 }: PageHeaderProps) {
   return (
@@ -35,8 +42,13 @@ export function PageHeader({
       </div>
       <div className={styles.content}>
         <p className={styles.eyebrow}>{eyebrow}</p>
-        <h1 id={titleId}>{title}</h1>
-        {description && <p className={styles.description}>{description}</p>}
+        <div className={avatar ? styles.identity : undefined}>
+          {avatar}
+          <div className={styles.identityBody}>
+            <h1 id={titleId}>{title}</h1>
+            {description && <p className={styles.description}>{description}</p>}
+          </div>
+        </div>
       </div>
     </header>
   );

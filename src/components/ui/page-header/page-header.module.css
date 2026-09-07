@@ -43,6 +43,18 @@
   letter-spacing: -0.025em;
 }
 
+/* Only record pages that pass an avatar use this row; other pages keep the
+   plain heading block, so the wrapper stays layout-neutral without it. */
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.identityBody {
+  min-width: 0;
+}
+
 .description {
   max-width: 650px;
   margin-top: var(--space-1);

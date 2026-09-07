@@ -1,0 +1,163 @@
+/* Stretching to the identity block's height keeps the portrait and the name,
+   badges and codes reading as one profile row rather than an icon beside text;
+   the bounds stop a wrapped long name from turning it into a large panel. */
+.avatar {
+  display: grid;
+  flex: 0 0 auto;
+  align-self: stretch;
+  place-items: center;
+  aspect-ratio: 1;
+  width: auto;
+  min-height: 64px;
+  max-height: 104px;
+  overflow: hidden;
+  padding: var(--space-2);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-group);
+  background: var(--app-canvas-accent);
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+@media (max-width: 560px) {
+  .avatar {
+    min-height: 52px;
+    max-height: 72px;
+  }
+}
+
+/* Badges and codes sit under the driver's name inside the page heading, so
+   the page never repeats the identity in a second block. */
+.identityMeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  line-height: 1.6;
+}
+
+.identityBadges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.identityCodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  font-size: var(--font-size-xs);
+}
+
+.section {
+  margin-block-start: var(--space-8);
+}
+
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.sectionHeader h2 {
+  color: var(--app-heading);
+  font-size: var(--font-size-lg);
+}
+
+.sectionCount {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.sectionHeaderActions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.sectionHint {
+  margin-bottom: var(--space-3);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+}
+
+.subsection {
+  margin-top: var(--space-6);
+}
+
+.subsection:first-child {
+  margin-top: 0;
+}
+
+.assignment {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  margin-block-end: var(--space-2);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface);
+  overflow-wrap: anywhere;
+}
+
+.assignment:last-child {
+  margin-block-end: 0;
+}
+
+/* The running assignment is marked by a calm accent edge rather than a filled
+   panel, so it reads as current without shouting over the rest of the page. */
+.assignmentCurrent {
+  border-inline-start: 3px solid var(--app-accent-strong);
+  background: var(--app-surface);
+}
+
+.assignmentMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+}
+
+.assignmentNote {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+}
+
+.assignmentHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.assignmentHeader h3 {
+  min-width: 0;
+  color: var(--app-heading);
+  font-size: var(--font-size-sm);
+}
+
+.closeDisclosure {
+  margin-block-start: var(--space-2);
+}
+
+.closeDisclosure summary {
+  display: inline-flex;
+  padding-block: var(--space-1);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}

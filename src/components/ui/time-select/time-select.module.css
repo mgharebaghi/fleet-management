@@ -1,0 +1,29 @@
+.field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* A clock reads hour-then-minute left to right, like the other technical
+   values on the page, so the row keeps that order inside the RTL form. */
+.controlRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
+  direction: ltr;
+}
+
+.part {
+  min-width: 0;
+  flex: 1 1 0;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.separator {
+  flex: 0 0 auto;
+  color: var(--app-text-muted);
+  font-weight: 700;
+}
