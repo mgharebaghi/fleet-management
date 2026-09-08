@@ -58,6 +58,28 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Docker
+
+The production image uses Node.js 24 and Next.js standalone output. The build
+generates the Prisma 7 client from the committed database-first schema using a
+placeholder connection string; it does not require a reachable SQL Server.
+
+```bash
+docker build -t fleet-management .
+docker run --rm -p 3000:3000 --env-file .env fleet-management
+```
+
+At runtime, provide the existing `DATABASE_SERVER`, `DATABASE_PORT`,
+`DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_ENCRYPT` and
+`DATABASE_TRUST_SERVER_CERTIFICATE` variables through the deployment platform.
+Do not put credentials in the Dockerfile or image. `DATABASE_URL` remains a
+Prisma CLI concern and is not used by the running application.
+
+The container listens on port `3000`. `GET /api/health` is a lightweight
+liveness check for Docker or Coolify; it deliberately does not query SQL Server,
+so database connectivity should be monitored separately when readiness is
+required.
+
 ## Environment variables
 
 Copy [.env.example](./.env.example) — it lists every variable with
