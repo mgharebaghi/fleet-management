@@ -1,10 +1,36 @@
 import type { ReactNode } from "react";
 
 import { FieldLabel, formControlClassName } from "../form-field/form-field";
+import { LoadingIndicator } from "../loading-indicator/loading-indicator";
 import styles from "./list-filter-bar.module.css";
 
-export function ListFilterBar({ children }: { children: ReactNode }) {
-  return <div className={styles.bar}>{children}</div>;
+type ListFilterBarProps = {
+  children: ReactNode;
+  /** A filter navigation is in flight; shows a compact shared indicator below the bar. */
+  pending?: boolean;
+  pendingLabel?: string;
+};
+
+/**
+ * Rendered as a sibling of `.bar`, not inside it — `.bar` relies on
+ * `:last-child` to push the clear affordance to the end, and an indicator
+ * appended after it would hijack that rule instead of the clear link.
+ */
+export function ListFilterBar({
+  children,
+  pending = false,
+  pendingLabel = "در حال به‌روزرسانی نتایج…",
+}: ListFilterBarProps) {
+  return (
+    <>
+      <div className={styles.bar}>{children}</div>
+      {pending && (
+        <div className={styles.pendingRow}>
+          <LoadingIndicator label={pendingLabel} />
+        </div>
+      )}
+    </>
+  );
 }
 
 /**

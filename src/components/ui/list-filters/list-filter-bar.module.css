@@ -30,6 +30,11 @@
   margin-inline-start: auto;
 }
 
+.pendingRow {
+  margin-top: calc(var(--space-5) * -1 + var(--space-2));
+  margin-bottom: var(--space-3);
+}
+
 @media (max-width: 760px) {
   .searchField,
   .selectField {

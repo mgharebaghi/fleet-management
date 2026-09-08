@@ -73,3 +73,43 @@
     transform: none;
   }
 }
+
+/* Reserves its own space so appearing/disappearing never shifts the link's
+   layout, and only fades in after a short delay so an instant navigation
+   never flashes it. */
+.pendingHint {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-inline-start: var(--space-2);
+  border: 2px solid color-mix(in srgb, currentcolor 40%, transparent);
+  border-top-color: currentcolor;
+  border-radius: 50%;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.pendingHintVisible {
+  visibility: visible;
+  animation:
+    action-link-pending-fade-in 150ms ease 120ms forwards,
+    action-link-pending-spin 700ms linear 120ms infinite;
+}
+
+@keyframes action-link-pending-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes action-link-pending-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pendingHintVisible {
+    animation: action-link-pending-fade-in 150ms ease 120ms forwards;
+  }
+}

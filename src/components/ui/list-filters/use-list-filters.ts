@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import {
   buildListFilterHref,
@@ -19,6 +19,8 @@ type UseListFiltersOptions<TValues extends ListFilterValues> = {
 
 type ListFiltersController<TValues extends ListFilterValues> = {
   values: TValues;
+  /** A filter navigation is in flight; the listing still shows its previous results. */
+  isPending: boolean;
   changeSearch: (value: string) => void;
   applyFilter: (name: keyof TValues & string, value: string) => void;
 };
@@ -35,6 +37,7 @@ export function useListFilters<TValues extends ListFilterValues>({
   const router = useRouter();
   const pathname = usePathname();
   const currentQuery = useSearchParams().toString();
+  const [isPending, startTransition] = useTransition();
   const [draftState, setDraftState] = useState({
     source: values,
     draft: values,
@@ -89,7 +92,9 @@ export function useListFilters<TValues extends ListFilterValues>({
           ...current,
           navigatedSearches: [...current.navigatedSearches, search],
         }));
-        router.replace(href, { scroll: false });
+        startTransition(() => {
+          router.replace(href, { scroll: false });
+        });
       },
     });
     cancelPendingSearch.current = cancel;
@@ -104,6 +109,7 @@ export function useListFilters<TValues extends ListFilterValues>({
 
   return {
     values: draft,
+    isPending,
     changeSearch(value: string) {
       setDraftState((current) => ({
         ...current,
@@ -118,14 +124,16 @@ export function useListFilters<TValues extends ListFilterValues>({
         draft: { ...current.draft, [name]: value },
         navigatedSearches: [...current.navigatedSearches, draft[searchName]],
       }));
-      router.replace(
-        buildListFilterHref({
-          pathname,
-          searchParams: new URLSearchParams(currentQuery),
-          updates: { ...draft, [name]: value },
-        }),
-        { scroll: false },
-      );
+      startTransition(() => {
+        router.replace(
+          buildListFilterHref({
+            pathname,
+            searchParams: new URLSearchParams(currentQuery),
+            updates: { ...draft, [name]: value },
+          }),
+          { scroll: false },
+        );
+      });
     },
   };
 }

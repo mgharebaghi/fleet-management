@@ -27,7 +27,7 @@ export function ListPeopleFilters({
   });
 
   return (
-    <ListFilterBar>
+    <ListFilterBar pending={filters.isPending}>
       <ListSearchField
         label="جستجوی اشخاص"
         name="search"
