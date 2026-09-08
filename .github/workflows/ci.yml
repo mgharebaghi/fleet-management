@@ -1,12 +1,16 @@
 name: CI
 
-# Quality checks that need no SQL Server: TypeScript, lint, unit tests and a
-# production build. Integration and E2E tests need an isolated SQL Server
-# database and run outside this workflow.
+# `quality` needs no SQL Server: TypeScript, lint, unit tests and a
+# production build, on GitHub-hosted ubuntu-latest. `integration` and `e2e`
+# need a reachable, isolated remote SQL Server test database, so they run on
+# the self-hosted Linux runner instead.
 on:
   push:
     branches: [main]
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   quality:
@@ -56,3 +60,85 @@ jobs:
           DATABASE_PASSWORD: "ci"
           DATABASE_ENCRYPT: "true"
           DATABASE_TRUST_SERVER_CERTIFICATE: "true"
+
+  # Runs Prisma repository tests against the isolated
+  # FleetManagementDB_IntegrationTest database on the self-hosted runner,
+  # which has network access to the remote SQL Server. Depends on `quality`
+  # so a broken build/lint never consumes the self-hosted runner's DB time.
+  integration:
+    needs: quality
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Same rationale as the quality job: generate only needs a
+      # well-formed connection string, never a reachable database.
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: "sqlserver://localhost:1433;database=ci;schema=dbo;user=ci;password=ci;encrypt=true;trustServerCertificate=true;"
+
+      # Each *.integration.test.ts file loads TEST_DATABASE_* itself and
+      # refuses to run against anything but FleetManagementDB_IntegrationTest,
+      # so no extra guard is needed here.
+      - name: Integration tests
+        run: npm run test:integration
+        env:
+          TEST_DATABASE_SERVER: ${{ secrets.TEST_DATABASE_SERVER }}
+          TEST_DATABASE_PORT: ${{ secrets.TEST_DATABASE_PORT }}
+          TEST_DATABASE_NAME: ${{ secrets.TEST_DATABASE_NAME }}
+          TEST_DATABASE_USER: ${{ secrets.TEST_DATABASE_USER }}
+          TEST_DATABASE_PASSWORD: ${{ secrets.TEST_DATABASE_PASSWORD }}
+          TEST_DATABASE_ENCRYPT: ${{ secrets.TEST_DATABASE_ENCRYPT }}
+          TEST_DATABASE_TRUST_SERVER_CERTIFICATE: ${{ secrets.TEST_DATABASE_TRUST_SERVER_CERTIFICATE }}
+
+  # Runs Playwright against the isolated FleetManagementDB_E2ETest database
+  # on the self-hosted runner. playwright.config.ts itself refuses to start
+  # if E2E_DATABASE_* resolves to the same server/port/name as development
+  # or integration, and builds/starts the app against E2E_DATABASE_* via its
+  # webServer config, so no extra DATABASE_* mapping is needed here.
+  e2e:
+    needs: quality
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: "sqlserver://localhost:1433;database=ci;schema=dbo;user=ci;password=ci;encrypt=true;trustServerCertificate=true;"
+
+      # Browser binary only: no --with-deps, which needs sudo/apt to install
+      # OS-level shared libraries. The self-hosted runner is expected to
+      # already have those in place.
+      - name: Install Playwright Chromium browser
+        run: npx playwright install chromium
+
+      - name: E2E tests
+        run: npm run test:e2e
+        env:
+          E2E_DATABASE_SERVER: ${{ secrets.E2E_DATABASE_SERVER }}
+          E2E_DATABASE_PORT: ${{ secrets.E2E_DATABASE_PORT }}
+          E2E_DATABASE_NAME: ${{ secrets.E2E_DATABASE_NAME }}
+          E2E_DATABASE_USER: ${{ secrets.E2E_DATABASE_USER }}
+          E2E_DATABASE_PASSWORD: ${{ secrets.E2E_DATABASE_PASSWORD }}
+          E2E_DATABASE_ENCRYPT: ${{ secrets.E2E_DATABASE_ENCRYPT }}
+          E2E_DATABASE_TRUST_SERVER_CERTIFICATE: ${{ secrets.E2E_DATABASE_TRUST_SERVER_CERTIFICATE }}
