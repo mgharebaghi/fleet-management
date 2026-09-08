@@ -35,7 +35,7 @@ export function ListVehiclesFilters({
   });
 
   return (
-    <ListFilterBar>
+    <ListFilterBar pending={filters.isPending}>
       <ListSearchField
         label="جستجوی خودرو"
         name="search"
