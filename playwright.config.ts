@@ -74,12 +74,16 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command:
-      "npm run build && npm run start -- --hostname 127.0.0.1 --port 3100",
+    // output: "standalone" (see next.config.ts) means "next start" cannot
+    // serve the build; run the traced server.js instead, same as the Docker
+    // runtime image.
+    command: "npm run build && npm start",
     url: "http://127.0.0.1:3100",
     reuseExistingServer: false,
     timeout: 120_000,
     env: {
+      HOSTNAME: "127.0.0.1",
+      PORT: "3100",
       DATABASE_SERVER: e2eMssqlConfig.server,
       DATABASE_PORT: String(e2eMssqlConfig.port),
       DATABASE_NAME: e2eMssqlConfig.database,
