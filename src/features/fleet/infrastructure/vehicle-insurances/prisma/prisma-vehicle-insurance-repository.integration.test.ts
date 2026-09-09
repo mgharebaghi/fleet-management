@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { config } from "dotenv";
 import { PrismaMssql } from "@prisma/adapter-mssql";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { PrismaClient } from "../../../../../generated/prisma/client";
 import { createMssqlConfigFromEnvironment } from "../../../../../infrastructure/database/prisma/mssql-config";
 import { PrismaVehicleInsuranceRepository } from "./prisma-vehicle-insurance-repository";
@@ -22,6 +22,10 @@ const repository = new PrismaVehicleInsuranceRepository(client);
 const insuranceIds: bigint[] = [], vehicleIds: number[] = [], modelIds: number[] = [], brandIds: number[] = [], statusIds: number[] = [];
 let verified = false;
 const criteria = (search: string | null): VehicleInsuranceSearchCriteria => ({ search, isActive: null, pageNumber: 1, pageSize: 20 });
+
+// This integration file performs many sequential round trips against the
+// remote test database, so use a finite timeout with room for network jitter.
+vi.setConfig({ testTimeout: 20_000 });
 
 async function fixture(): Promise<NewVehicleInsurance & { vehicleBrandName: string; vehicleModelName: string }> {
   if (!verified) throw new Error("Test database has not been verified.");
