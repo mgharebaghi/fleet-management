@@ -70,7 +70,14 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        // CI's self-hosted runner cannot download the Playwright-managed
+        // Chromium build (cdn.playwright.dev is blocked), so CI drives the
+        // system-installed Google Chrome via Playwright's channel support
+        // instead. Local development keeps the default bundled Chromium.
+        ...(process.env.CI ? { channel: "chrome" } : {}),
+      },
     },
   ],
   webServer: {
