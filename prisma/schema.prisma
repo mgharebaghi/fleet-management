@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "sqlserver"
-  schemas  = ["driver", "fleet", "person"]
+  schemas  = ["common", "driver", "fleet", "person", "trip"]
 }
 
 model Accident {
@@ -18,6 +18,8 @@ model Accident {
   DriverFaultPercent      Decimal?                 @db.Decimal(5, 2)
   PoliceReportNo          String?                  @db.NVarChar(100)
   HasInjury               Boolean                  @default(false, map: "DF_Accident_HasInjury")
+  TripRequestId           Int?
+  TripRequest             TripRequest?             @relation(fields: [TripRequestId], references: [TripRequestId], onDelete: NoAction, onUpdate: NoAction, map: "FK_Accident_TripRequest")
   VehicleDriverAssignment VehicleDriverAssignment? @relation(fields: [VehicleAssignmentId], references: [AssignmentId], onDelete: NoAction, onUpdate: NoAction, map: "FK_Accident_VehicleDriverAssignment")
 
   @@schema("driver")
@@ -67,6 +69,7 @@ model People {
   CreatedAt      DateTime  @default(dbgenerated("sysdatetime()"), map: "DF_person_CreatedAt")
   PersonId       Int       @id(map: "PK_person") @default(autoincrement())
   Driver         Driver?
+  Trip           Trip[]
 
   @@schema("person")
 }
@@ -119,6 +122,7 @@ model VehicleDriverAssignment {
   EndOdometer      Decimal?           @db.Decimal(18, 2)
   Description      String?            @db.NVarChar(500)
   Accident         Accident[]
+  TripExecution    TripExecution[]
   Driver           Driver             @relation(fields: [DriverId], references: [DriverId], onUpdate: NoAction, map: "FK_VehicleDriverAssignment_Driver")
   Vehicle          Vehicle            @relation(fields: [VehicleId], references: [VehicleId], onUpdate: NoAction, map: "FK_VehicleDriverAssignment_Vehicle")
   VehicleViolation VehicleViolation[]
@@ -197,7 +201,146 @@ model VehicleViolation {
   Status                  String                   @default("N'Unpaid'", map: "DF_VehicleViolation_Status") @db.NVarChar(50)
   PaidDate                DateTime?                @db.Date
   Description             String?
+  TripRequestId           Int?
+  TripRequest             TripRequest?             @relation(fields: [TripRequestId], references: [TripRequestId], onDelete: NoAction, onUpdate: NoAction, map: "FK_VehicleViolation_TripRequest")
   VehicleDriverAssignment VehicleDriverAssignment? @relation(fields: [VehicleAssignmentId], references: [AssignmentId], onDelete: NoAction, onUpdate: NoAction, map: "FK_VehicleViolation_VehicleDriverAssignment")
 
   @@schema("driver")
+}
+
+model Location {
+  LocationId                                Int          @id(map: "PK_Location") @default(autoincrement())
+  LocationCode                              String?      @db.NVarChar(50)
+  LocationName                              String       @db.NVarChar(200)
+  LocationType                              String?      @db.NVarChar(100)
+  Address                                   String?
+  Latitude                                  Decimal?     @db.Decimal(9, 6)
+  Longitude                                 Decimal?     @db.Decimal(9, 6)
+  Description                               String?
+  IsActive                                  Boolean?
+  CreatedAt                                 DateTime?
+  RoutePoint                                RoutePoint[]
+  Trip_Trip_OriginLocationIdToLocation      Trip[]       @relation("Trip_OriginLocationIdToLocation")
+  Trip_Trip_DestinationLocationIdToLocation Trip[]       @relation("Trip_DestinationLocationIdToLocation")
+
+  @@schema("common")
+}
+
+model Route {
+  RouteId                 Int            @id(map: "PK_Route") @default(autoincrement())
+  TripId                  Int?
+  TripExecutionId         Int?
+  RouteName               String         @db.NVarChar(200)
+  AlternativeNo           Int?
+  DistanceKm              Decimal?       @db.Decimal(10, 2)
+  EstimatedDurationMinute Int?
+  IsSelected              Boolean        @default(false, map: "DF_Route_IsSelected")
+  Description             String?
+  CreatedAt               DateTime       @default(dbgenerated("sysdatetime()"), map: "DF_Route_CreatedAt")
+  Trip                    Trip?          @relation(fields: [TripId], references: [TripId], onDelete: NoAction, onUpdate: NoAction, map: "FK_Route_Trip")
+  TripExecution           TripExecution? @relation(fields: [TripExecutionId], references: [TripExecutionId], onDelete: NoAction, onUpdate: NoAction, map: "FK_Route_TripExecution")
+  RoutePoint              RoutePoint[]
+
+  @@schema("trip")
+}
+
+model RoutePoint {
+  RoutePointId        Int      @id(map: "PK_RoutePoint") @default(autoincrement())
+  RouteId             Int
+  LocationId          Int
+  TrafficZone         String?  @db.NVarChar(50)
+  SequenceNo          Int?
+  DistanceFromStartKm Decimal? @db.Decimal(10, 2)
+  Description         String?
+  CreatedAt           DateTime @default(dbgenerated("sysdatetime()"), map: "DF_RoutePoint_CreatedAt")
+  Location            Location @relation(fields: [LocationId], references: [LocationId], onUpdate: NoAction, map: "FK_RoutePoint_Location")
+  Route               Route    @relation(fields: [RouteId], references: [RouteId], onUpdate: NoAction, map: "FK_RoutePoint_Route")
+
+  @@schema("trip")
+}
+
+model Trip {
+  TripId                                        Int             @id(map: "PK_Trip") @default(autoincrement())
+  TripRequestId                                 Int
+  PassengerPersonId                             Int
+  OriginLocationId                              Int
+  DestinationLocationId                         Int
+  RequestedPickupDateTime                       DateTime?
+  PickupOrder                                   Int?
+  DropoffOrder                                  Int?
+  Status                                        String?         @db.NVarChar(50)
+  Description                                   String?
+  Route                                         Route[]
+  Location_Trip_OriginLocationIdToLocation      Location        @relation("Trip_OriginLocationIdToLocation", fields: [OriginLocationId], references: [LocationId], onUpdate: NoAction, map: "FK_Trip_Location")
+  Location_Trip_DestinationLocationIdToLocation Location        @relation("Trip_DestinationLocationIdToLocation", fields: [DestinationLocationId], references: [LocationId], onUpdate: NoAction, map: "FK_Trip_Location1")
+  People                                        People          @relation(fields: [PassengerPersonId], references: [PersonId], onUpdate: NoAction, map: "FK_Trip_People")
+  TripRequest                                   TripRequest     @relation(fields: [TripRequestId], references: [TripRequestId], onUpdate: NoAction, map: "FK_Trip_TripRequest")
+  TripExecution                                 TripExecution[]
+
+  @@schema("trip")
+}
+
+model TripExecution {
+  TripExecutionId           Int                     @id(map: "PK_TripExecution") @default(autoincrement())
+  TripId                    Int
+  VehicleDriverAssignmentId Int
+  ActualPickupDateTime      DateTime?
+  ActualDropoffDateTime     DateTime?
+  StartOdometer             Decimal?                @db.Decimal(18, 2)
+  EndOdometer               Decimal?                @db.Decimal(18, 2)
+  Status                    String                  @db.NVarChar(50)
+  PassengerRating           Int?
+  PassengerComment          String?
+  SurveyDateTime            DateTime?
+  Description               String?
+  CreatedAt                 DateTime?
+  Route                     Route[]
+  Trip                      Trip                    @relation(fields: [TripId], references: [TripId], onUpdate: NoAction, map: "FK_TripExecution_Trip")
+  VehicleDriverAssignment   VehicleDriverAssignment @relation(fields: [VehicleDriverAssignmentId], references: [AssignmentId], onUpdate: NoAction, map: "FK_TripExecution_VehicleDriverAssignment")
+
+  @@schema("trip")
+}
+
+model TripRequest {
+  TripRequestId           Int                @id(map: "PK_TripRequest") @default(autoincrement())
+  RequestNo               String             @db.NVarChar(50)
+  TripRequestTypeId       Int
+  RequestDateTime         DateTime
+  RequestedTravelDateTime DateTime
+  Purpose                 String?            @db.NVarChar(500)
+  Status                  String             @db.NVarChar(50)
+  Description             String?
+  CreatedAt               DateTime
+  Accident                Accident[]
+  Trip                    Trip[]
+  TripRequestType         TripRequestType    @relation(fields: [TripRequestTypeId], references: [TripRequestTypeId], onUpdate: NoAction, map: "FK_TripRequest_TripRequestType")
+  VehicleViolation        VehicleViolation[]
+
+  @@schema("trip")
+}
+
+model TripRequestType {
+  TripRequestTypeId Int           @id(map: "PK_TripRequestType")
+  TypeCode          String        @unique(map: "UQ_TripRequestType_TypeCode") @db.VarChar(50)
+  TypeName          String        @db.NVarChar(150)
+  Description       String?       @db.NVarChar(500)
+  TripRequest       TripRequest[]
+
+  @@schema("trip")
+}
+
+model VehicleTrip {
+  TripId             BigInt    @id(map: "PK_VehicleTrip") @default(autoincrement())
+  VehicleId          Int
+  DriverId           Int?
+  RouteId            Int?
+  RouteAlternativeId Int?
+  DepartureDateTime  DateTime
+  ReturnDateTime     DateTime?
+  StartOdometer      Decimal?  @db.Decimal(18, 2)
+  EndOdometer        Decimal?  @db.Decimal(18, 2)
+  Purpose            String?   @db.NVarChar(500)
+  Description        String?
+
+  @@schema("trip")
 }

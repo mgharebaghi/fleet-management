@@ -47,6 +47,11 @@ runtime instead builds the `mssql` adapter config from the separate
 `DATABASE_*` variables below, so no connection string or credential is
 hard-coded in application code.
 
+The Development database user used by `prisma db pull` must have
+`VIEW DEFINITION` permission so Prisma can introspect database-managed
+defaults and other metadata correctly. This permission is required for
+introspection only and is not a production runtime requirement.
+
 ## Getting started
 
 ```bash
@@ -102,7 +107,7 @@ development.
 - **Unit** (`*.test.ts`, `*.test.tsx`) — Application and Presentation logic,
   no database. Run with `npm run test:unit`.
 - **Integration** (`*.integration.test.ts`) — Prisma repositories against the
-  isolated `FleetManagementDB_Integrationtest`
+  isolated `FleetManagementDB_IntegrationTest`
   database, configured through `TEST_DATABASE_*`. Run with
   `npm run test:integration`; never falls back to the development database.
 - **E2E** (`e2e/*.e2e.ts`) — full UI-to-database flows against
@@ -245,7 +250,7 @@ reaches the Application. Grouping is done on the string, so a value past
 `Number.MAX_SAFE_INTEGER` keeps every digit. The stored value is the amount the
 user entered; no rial/toman conversion happens anywhere.
 
-Integration requires the isolated `FleetManagementDB_Integrationtest` configured
+Integration requires the isolated `FleetManagementDB_IntegrationTest` configured
 through `TEST_DATABASE_*`; E2E uses `FleetManagementDB_E2ETest` and
 `E2E_DATABASE_*`. Tests verify database identity before writing and clean only
 their own fixtures. They do not provision or change database structure.
