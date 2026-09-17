@@ -4,7 +4,8 @@ export type AdminNavIconName =
   | "vehicle"
   | "insurance"
   | "catalog"
-  | "drivers";
+  | "drivers"
+  | "trips";
 
 export type AdminNavChild = {
   label: string;
@@ -41,6 +42,7 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     ],
   },
   { label: "رانندگان", href: "/drivers", icon: "drivers" },
+  { label: "سفرها", href: "/trips", icon: "trips" },
 ];
 
 /** A section/link counts as active for itself and everything nested under it. */

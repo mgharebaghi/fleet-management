@@ -16,8 +16,8 @@ type AdminShellProps = {
  */
 export function AdminShell({ children }: AdminShellProps) {
   return (
-    <div className={styles.shell} lang="fa" dir="rtl">
-      <header className={styles.topBar}>
+    <div className={styles.shell} lang="fa" dir="rtl" data-admin-shell>
+      <header className={styles.topBar} data-admin-chrome>
         <div className={styles.topBarStart}>
           <AdminMobileNav />
           <BrandMark />
@@ -25,12 +25,12 @@ export function AdminShell({ children }: AdminShellProps) {
         <AdminBreadcrumb />
       </header>
 
-      <div className={styles.body}>
-        <aside className={styles.sidebar} aria-label="نوار کناری پنل مدیریت">
+      <div className={styles.body} data-admin-body>
+        <aside className={styles.sidebar} aria-label="نوار کناری پنل مدیریت" data-admin-chrome>
           <p className={styles.sidebarTitle}>بخش‌های سامانه</p>
           <AdminSidebarNav />
         </aside>
-        <div className={styles.content}>{children}</div>
+        <div className={styles.content} data-admin-content>{children}</div>
       </div>
     </div>
   );
