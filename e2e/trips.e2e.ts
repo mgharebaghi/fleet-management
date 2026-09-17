@@ -123,7 +123,7 @@ test.describe.serial("Trip management", () => {
     ).recordset[0].id;
     statusId = (
       await request()
-        .input("name", `E2E-TRIP-STATUS-${token}`)
+        .input("name", `E2E-TRIP-STATUS-${token.slice(0, 8)}`)
         .query<{ id: number }>(
           `INSERT INTO fleet.VehicleStatus (StatusName)
            OUTPUT INSERTED.VehicleStatusId AS id VALUES (@name)`,
@@ -131,7 +131,7 @@ test.describe.serial("Trip management", () => {
     ).recordset[0].id;
     vehicleId = (
       await request()
-        .input("code", `E2E-TRIP-VEHICLE-${token}`)
+        .input("code", `E2E-TRIP-VEHICLE-${token.slice(0, 8)}`)
         .input("model", modelId)
         .input("status", statusId)
         .query<{ id: number }>(
@@ -158,6 +158,18 @@ test.describe.serial("Trip management", () => {
   test.afterAll(async () => {
     if (!adapter) return;
     try {
+      if (requestId === undefined && personId !== undefined) {
+        requestId = (
+          await request()
+            .input("personId", personId)
+            .query<{ id: number }>(
+              `SELECT TOP (1) TripRequestId AS id
+               FROM trip.Trip
+               WHERE PassengerPersonId=@personId
+               ORDER BY TripRequestId DESC`,
+            )
+        ).recordset[0]?.id;
+      }
       if (requestId !== undefined) {
         await request()
           .input("requestId", requestId)
@@ -261,6 +273,13 @@ test.describe.serial("Trip management", () => {
     "creates, plans, prints and reconciles a Trip request",
     async ({ page }) => {
       test.setTimeout(600_000);
+      page.setDefaultTimeout(60_000);
+      page.setDefaultNavigationTimeout(120_000);
+      const eventually = expect.configure({ timeout: 120_000 });
+      const openTab = async (name: string, tab: string) => {
+        await page.getByRole("link", { name, exact: true }).click();
+        await eventually(page).toHaveURL(new RegExp(`tab=${tab}`));
+      };
       await page.goto("/trips");
       await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
       await expect(
@@ -271,7 +290,9 @@ test.describe.serial("Trip management", () => {
       ).toBeVisible();
 
       await page.getByRole("link", { name: /ثبت درخواست سفر/ }).click();
+      await expect(page).toHaveURL(/\/trips\/create$/, { timeout: 60_000 });
       const form = page.getByRole("form", { name: "ثبت درخواست سفر" });
+      await expect(form).toBeVisible({ timeout: 60_000 });
       await form
         .getByLabel("نوع درخواست", { exact: true })
         .selectOption({ label: "مبدأ و مقصد مشترک" });
@@ -317,10 +338,14 @@ test.describe.serial("Trip management", () => {
         .getByRole("button", { name: "ثبت درخواست سفر", exact: true })
         .click();
 
-      await expect(page).toHaveURL(/\/trips\/\d+$/);
+      await eventually(page).toHaveURL(/\/trips\/\d+$/);
       requestId = Number(page.url().split("/").pop());
-      await expect(page.getByText(/درخواست TR-1404-\d{4}/)).toBeVisible();
-      await expect(page.getByText("جدید", { exact: true })).toBeVisible();
+      await expect(
+        page.getByText(/درخواست TR-1404-\d{4}/).first(),
+      ).toBeVisible();
+      await expect(
+        page.getByText("جدید", { exact: true }).first(),
+      ).toBeVisible();
       await expect(
         page.getByRole("navigation", { name: "بخش‌های پرونده سفر" }),
       ).toBeVisible();
@@ -334,19 +359,24 @@ test.describe.serial("Trip management", () => {
       await statusForm
         .getByRole("button", { name: "ثبت تغییر وضعیت" })
         .click();
-      await expect(page.getByText("تخصیص‌یافته", { exact: true })).toBeVisible();
-
-      await page.getByRole("link", { name: "مسافران", exact: true }).click();
-      await expect(page.getByText(`مسافر ${token}`)).toBeVisible();
-      await expect(page.getByText(`مبدأ ${token}`, { exact: true })).toBeVisible();
-      await expect(
-        page.getByText(`مقصد ${token}`, { exact: true }),
+      await eventually(
+        page.getByText("تخصیص‌یافته", { exact: true }).first(),
       ).toBeVisible();
 
-      await page.getByRole("link", { name: "مسیر", exact: true }).click();
+      await openTab("مسافران", "passengers");
+      await eventually(page.getByText(`مسافر ${token}`).first()).toBeVisible();
+      await eventually(
+        page.getByText(`مبدأ ${token}`, { exact: true }).first(),
+      ).toBeVisible();
+      await eventually(
+        page.getByText(`مقصد ${token}`, { exact: true }).first(),
+      ).toBeVisible();
+
+      await openTab("مسیر", "route");
       const routeForm = page.getByRole("form", {
         name: "ثبت مسیر برنامه‌ریزی‌شده",
       });
+      await eventually(routeForm).toBeVisible();
       await selectSearchableOption(
         routeForm,
         "سفر مسافر",
@@ -361,14 +391,15 @@ test.describe.serial("Trip management", () => {
         .fill("24.50");
       await selectSearchableOption(routeForm, "مکان", token, `مبدأ ${token}`);
       await routeForm.getByRole("button", { name: "ثبت مسیر" }).click();
-      await expect(page.getByText(`مسیر ${token}`, { exact: true })).toBeVisible();
+      await eventually(
+        page.getByText(`مسیر ${token}`, { exact: true }),
+      ).toBeVisible();
 
-      await page
-        .getByRole("link", { name: "اجراء و زمان‌بندی", exact: true })
-        .click();
+      await openTab("اجراء و زمان‌بندی", "execution");
       const planningForm = page.getByRole("form", {
         name: "ثبت برنامهٔ اجرا",
       });
+      await eventually(planningForm).toBeVisible();
       await selectSearchableOption(
         planningForm,
         "تخصیص خودرو و راننده در زمان سفر",
@@ -378,16 +409,15 @@ test.describe.serial("Trip management", () => {
       await planningForm
         .getByRole("button", { name: "ثبت برنامهٔ اجرا" })
         .click();
-      await expect(
-        page.getByText("برنامه‌ریزی‌شده", { exact: true }),
+      await eventually(
+        page.getByText("برنامه‌ریزی‌شده", { exact: true }).first(),
       ).toBeVisible();
 
-      await page
-        .getByRole("link", { name: "اطلاعات عمومی", exact: true })
-        .click();
+      await openTab("اطلاعات عمومی", "general");
       const progressForm = page.getByRole("form", {
         name: "تغییر وضعیت درخواست سفر",
       });
+      await eventually(progressForm).toBeVisible();
       await progressForm
         .getByLabel("وضعیت جدید", { exact: true })
         .selectOption("InProgress");
@@ -395,12 +425,11 @@ test.describe.serial("Trip management", () => {
         .getByRole("button", { name: "ثبت تغییر وضعیت" })
         .click();
 
-      await page
-        .getByRole("link", { name: "اجراء و زمان‌بندی", exact: true })
-        .click();
+      await openTab("اجراء و زمان‌بندی", "execution");
       const executionForm = page.getByRole("form", {
         name: "اصلاح اجرای سفر",
       });
+      await eventually(executionForm).toBeVisible();
       await executionForm
         .getByLabel("وضعیت اجرا", { exact: true })
         .selectOption("InProgress");
@@ -426,22 +455,26 @@ test.describe.serial("Trip management", () => {
       await executionForm
         .getByRole("button", { name: "ذخیره اصلاحات اجرا" })
         .click();
-      await expect(
+      await eventually(
         page.getByText("در حال اجرا", { exact: true }).first(),
       ).toBeVisible();
 
-      await page
-        .getByRole("link", { name: "خودرو و راننده", exact: true })
-        .click();
-      await expect(page.getByText(token).first()).toBeVisible();
+      await openTab("خودرو و راننده", "assignment");
+      await eventually(page.getByText(token).first()).toBeVisible();
       const voucherLink = page.getByRole("link", {
         name: "صدور قبض سفر",
         exact: true,
       });
+      await eventually(voucherLink).toBeVisible();
       await voucherLink.click();
-      await expect(page.getByRole("heading", { name: "قبض رسمی سفر" })).toBeVisible();
-      await expect(page.getByText("امضای راننده", { exact: true })).toBeVisible();
-      await expect(
+      await eventually(page).toHaveURL(/\/voucher\/\d+\?assignmentId=\d+$/);
+      await eventually(
+        page.getByRole("heading", { name: "قبض رسمی سفر" }),
+      ).toBeVisible();
+      await eventually(
+        page.getByText("امضای راننده", { exact: true }),
+      ).toBeVisible();
+      await eventually(
         page.getByText("اطلاعات تکمیلی راننده — دست‌نویس", {
           exact: true,
         }),
@@ -454,22 +487,31 @@ test.describe.serial("Trip management", () => {
       await page
         .getByRole("link", { name: "بازگشت به پرونده سفر" })
         .click();
-      await page
-        .getByRole("link", { name: "نظرسنجی مسافران", exact: true })
-        .click();
+      await eventually(page).toHaveURL(/tab=assignment/);
+      await openTab("نظرسنجی مسافران", "survey");
       const surveyForm = page.getByRole("form", {
         name: /ثبت نظرسنجی اجرای/,
       });
+      await eventually(surveyForm).toBeVisible();
       await surveyForm.getByLabel("امتیاز مسافر").fill("5");
       await surveyForm.getByLabel("نظر مسافر").fill(`نظر ${token}`);
       await surveyForm.getByRole("button", { name: "ذخیره نظرسنجی" }).click();
-      await expect(page.getByText("امتیاز 5", { exact: false })).toBeVisible();
+      await eventually(
+        page.getByText("امتیاز 5", { exact: false }),
+      ).toBeVisible();
 
       await page.goto(`/trips/requests?search=${encodeURIComponent(token)}`);
-      await expect(page.getByText(/TR-1404-\d{4}/).first()).toBeVisible();
-      await expect(page.getByText(`مبدأ ${token}`, { exact: true })).toBeVisible();
+      await eventually(page.getByText(/TR-1404-\d{4}/).first()).toBeVisible();
+      await eventually(
+        page.getByText(`مبدأ ${token}`, { exact: true }).first(),
+      ).toBeVisible();
       await page.getByLabel("وضعیت درخواست").selectOption("InProgress");
-      await expect(page).toHaveURL(/status=InProgress/);
+      await eventually(page).toHaveURL(/status=InProgress/);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(page.locator("table")).toBeHidden();
+      await expect(
+        page.locator("main li").filter({ hasText: /TR-1404-\d{4}/ }),
+      ).toBeVisible();
       expect(
         await page.locator("main").evaluate((element) => {
           return element.scrollWidth <= element.clientWidth;

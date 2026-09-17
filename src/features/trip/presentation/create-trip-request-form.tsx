@@ -292,18 +292,6 @@ export function CreateTripRequestForm({
                     disabled={pending}
                   />
                 </FormField>
-                <FormField>
-                  <FieldLabel htmlFor={`${prefix}-trip-status-${index}`}>
-                    وضعیت سفر مسافر
-                  </FieldLabel>
-                  <input
-                    id={`${prefix}-trip-status-${index}`}
-                    name={`passenger.${index}.status`}
-                    className={formControlClassName}
-                    defaultValue={value(`passenger.${index}.status`)}
-                    disabled={pending}
-                  />
-                </FormField>
               </FormGrid>
               <div className={styles.dateRow}>
                 <JalaliDatePicker

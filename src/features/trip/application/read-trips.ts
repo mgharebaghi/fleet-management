@@ -1,4 +1,5 @@
 import type { TripRepository } from "./trip-repository";
+import { normalizeTripSearchText } from "./trip-search";
 import { isValidTripDate, isValidTripId } from "./trip-validation";
 
 export class ReadTrips {
@@ -9,7 +10,11 @@ export class ReadTrips {
       Number.isSafeInteger(page) && page > 0 && page <= 1_000_000
         ? page
         : 1;
-    return this.repository.list(search.trim(), status.trim(), normalizedPage);
+    return this.repository.list(
+      normalizeTripSearchText(search),
+      status.trim(),
+      normalizedPage,
+    );
   }
 
   details(id: number) {

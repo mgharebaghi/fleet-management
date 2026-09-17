@@ -469,20 +469,21 @@ class PrismaTripWriteSession implements TripWriteSession {
 
   async requestNumbers(jalaliYear: number) {
     const prefix = `TR-${String(jalaliYear).padStart(4, "0")}-`;
-    const rows = await this.client.tripRequest.findMany({
-      where: { RequestNo: { startsWith: prefix } },
-      select: { RequestNo: true },
-    });
-    return rows.map((row) => row.RequestNo);
+    const rows = await this.client.$queryRaw<Array<{ requestNo: string }>>`
+      SELECT RequestNo AS requestNo
+      FROM trip.TripRequest
+      WHERE UPPER(LTRIM(RTRIM(RequestNo))) LIKE ${`${prefix}%`}
+    `;
+    return rows.map((row) => row.requestNo);
   }
 
   async requestNoExists(requestNo: string) {
-    return (
-      (await this.client.tripRequest.findFirst({
-        where: { RequestNo: requestNo },
-        select: { TripRequestId: true },
-      })) !== null
-    );
+    const rows = await this.client.$queryRaw<Array<{ id: number }>>`
+      SELECT TOP (1) TripRequestId AS id
+      FROM trip.TripRequest
+      WHERE UPPER(LTRIM(RTRIM(RequestNo))) = ${requestNo}
+    `;
+    return rows.length > 0;
   }
 
   async assignment(id: number, activeAt: Date) {

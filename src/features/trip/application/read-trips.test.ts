@@ -22,9 +22,13 @@ describe("ReadTrips", () => {
     });
     const reader = new ReadTrips(repository);
 
-    await reader.list("  request  ", "  status  ", -1);
+    await reader.list("  درخواست ۱۲۳ كيش  ", "  status  ", -1);
 
-    expect(repository.list).toHaveBeenCalledWith("request", "status", 1);
+    expect(repository.list).toHaveBeenCalledWith(
+      "درخواست 123 کیش",
+      "status",
+      1,
+    );
   });
 
   it("does not query persistence for invalid identities or dates", async () => {

@@ -49,6 +49,13 @@
   color: var(--app-text-muted);
 }
 
+.recordLink {
+  color: var(--app-primary);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .tabs {
   display: flex;
   gap: var(--space-2);
@@ -124,6 +131,47 @@
   font-weight: 700;
 }
 
+.lifecycle {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface-subtle);
+}
+
+.lifecycleStep,
+.lifecycleCurrent,
+.lifecycleDone,
+.lifecycleCancelled {
+  display: grid;
+  min-height: 64px;
+  place-items: center;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--app-text-muted);
+  text-align: center;
+}
+
+.lifecycleCurrent {
+  color: var(--app-primary);
+  background: var(--app-info-background);
+  font-weight: 800;
+}
+
+.lifecycleDone {
+  color: var(--app-success-text);
+  background: var(--app-success-background);
+}
+
+.lifecycleCancelled {
+  grid-column: 1 / -1;
+  color: var(--app-danger-text);
+  background: var(--app-danger-background);
+  font-weight: 800;
+}
+
 .wideSummary {
   grid-column: 1 / -1;
 }
@@ -193,6 +241,10 @@
 
   .summaryGrid {
     grid-template-columns: 1fr;
+  }
+
+  .lifecycle {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .entityHeader {

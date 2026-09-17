@@ -169,7 +169,12 @@ export async function TripsPage({
               {result.requests.map((request) => (
                 <tr key={request.tripRequestId}>
                   <td>
-                    <TechnicalValue>{request.requestNo}</TechnicalValue>
+                    <Link
+                      href={`/trips/${request.tripRequestId}`}
+                      className={styles.recordLink}
+                    >
+                      <TechnicalValue>{request.requestNo}</TechnicalValue>
+                    </Link>
                   </td>
                   <td>{request.requestTypeName}</td>
                   <td>{locationSummary(request.origins, "چند مبدأ")}</td>
@@ -311,6 +316,37 @@ function TripTabs({
   );
 }
 
+function RequestLifecycle({ status }: { status: string }) {
+  if (status === "Cancelled") {
+    return (
+      <div className={styles.lifecycle} aria-label="وضعیت مراحل درخواست">
+        <span className={styles.lifecycleCancelled}>درخواست لغو شده است</span>
+      </div>
+    );
+  }
+  const statuses = ["New", "Assigned", "InProgress", "Completed"];
+  const currentIndex = statuses.indexOf(status);
+  if (currentIndex === -1) return null;
+  return (
+    <div className={styles.lifecycle} aria-label="وضعیت مراحل درخواست">
+      {statuses.map((step, index) => (
+        <span
+          key={step}
+          className={
+            index < currentIndex
+              ? styles.lifecycleDone
+              : index === currentIndex
+                ? styles.lifecycleCurrent
+                : styles.lifecycleStep
+          }
+        >
+          {requestStatusLabel(step)}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function GeneralTab({ details }: { details: TripRequestDetails }) {
   return (
     <section className={styles.tabPanel} aria-labelledby="general-heading">
@@ -356,6 +392,7 @@ function GeneralTab({ details }: { details: TripRequestDetails }) {
           <dd>{details.description ?? "ثبت نشده"}</dd>
         </div>
       </dl>
+      <RequestLifecycle status={details.status} />
       <p className={styles.muted}>
         مبدأ، مقصد و زمان سوارشدن در سطح سفر هر مسافر نگهداری می‌شود و در
         بخش «مسافران» نمایش داده شده است.
@@ -363,6 +400,14 @@ function GeneralTab({ details }: { details: TripRequestDetails }) {
       <TripRequestStatusForm
         tripRequestId={details.tripRequestId}
         status={details.status}
+        hasStartedExecution={details.passengers.some((trip) =>
+          trip.executions.some(
+            (execution) =>
+              execution.actualPickupDateTime !== null ||
+              execution.status === "InProgress" ||
+              execution.status === "Completed",
+          ),
+        )}
       />
     </section>
   );

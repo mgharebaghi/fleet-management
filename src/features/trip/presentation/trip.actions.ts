@@ -75,7 +75,7 @@ export async function createTripRequestAction(
         dropoffOrder: parseOptionalInteger(
           values[`passenger.${index}.dropoffOrder`],
         ),
-        status: values[`passenger.${index}.status`] ?? null,
+        status: null,
         description: values[`passenger.${index}.description`] ?? null,
       })),
     }),

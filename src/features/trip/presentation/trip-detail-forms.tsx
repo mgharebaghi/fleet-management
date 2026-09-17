@@ -63,16 +63,20 @@ function assignmentLabel(assignment: TripAssignmentReference) {
 export function TripRequestStatusForm({
   tripRequestId,
   status,
+  hasStartedExecution,
 }: {
   tripRequestId: number;
   status: string;
+  hasStartedExecution: boolean;
 }) {
   const [state, formAction, pending] = useActionState(
     changeTripRequestStatusAction.bind(null, tripRequestId),
     {},
   );
   const prefix = useId();
-  const targets = requestStatusTargets(status);
+  const targets = requestStatusTargets(status).filter(
+    (target) => !(target === "Cancelled" && hasStartedExecution),
+  );
   if (targets.length === 0) return null;
 
   return (
@@ -415,7 +419,16 @@ export function TripExecutionForm({
     ),
   }));
   const statusOptions = execution
-    ? [execution.status, ...executionStatusTargets(execution.status)]
+    ? [
+        execution.status,
+        ...executionStatusTargets(execution.status).filter(
+          (target) =>
+            !(
+              target === "Cancelled" &&
+              execution.actualPickupDateTime !== null
+            ),
+        ),
+      ]
     : ["Planned"];
 
   return (
