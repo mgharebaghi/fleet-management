@@ -1,9 +1,12 @@
 name: CI
 
 # `quality` needs no SQL Server: TypeScript, lint, unit tests and a
-# production build, on GitHub-hosted ubuntu-latest. `integration` and `e2e`
-# need a reachable, isolated remote SQL Server test database, so they run on
-# the self-hosted Linux runner instead.
+# production build, on GitHub-hosted ubuntu-latest.
+#
+# `integration` and `e2e` need a reachable, isolated remote SQL Server
+# test database, so they run on the self-hosted Linux runner.
+# To avoid competing with Coolify deployment resources after a merge,
+# these two heavy jobs run only for pull requests, not for pushes to main.
 on:
   push:
     branches: [main]
@@ -62,12 +65,12 @@ jobs:
           DATABASE_TRUST_SERVER_CERTIFICATE: "true"
 
   # Runs Prisma repository tests against the isolated
-  # FleetManagementDB_IntegrationTest database on the self-hosted runner,
-  # which has network access to the remote SQL Server. Depends on `quality`
-  # so a broken build/lint never consumes the self-hosted runner's DB time.
+  # FleetManagementDB_IntegrationTest database on the self-hosted runner.
+  # This job runs only for pull requests from this repository, so merging to
+  # main does not make the runner compete with Coolify's automatic deployment.
   integration:
     needs: quality
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v4
@@ -79,16 +82,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Same rationale as the quality job: generate only needs a
-      # well-formed connection string, never a reachable database.
+      # Generate only needs a well-formed connection string and does not
+      # connect to SQL Server.
       - name: Generate Prisma Client
         run: npx prisma generate
         env:
           DATABASE_URL: "sqlserver://localhost:1433;database=ci;schema=dbo;user=ci;password=ci;encrypt=true;trustServerCertificate=true;"
 
       # Each *.integration.test.ts file loads TEST_DATABASE_* itself and
-      # refuses to run against anything but FleetManagementDB_IntegrationTest,
-      # so no extra guard is needed here.
+      # refuses to run against anything but FleetManagementDB_IntegrationTest.
       - name: Integration tests
         run: npm run test:integration
         env:
@@ -101,13 +103,11 @@ jobs:
           TEST_DATABASE_TRUST_SERVER_CERTIFICATE: ${{ secrets.TEST_DATABASE_TRUST_SERVER_CERTIFICATE }}
 
   # Runs Playwright against the isolated FleetManagementDB_E2ETest database
-  # on the self-hosted runner. playwright.config.ts itself refuses to start
-  # if E2E_DATABASE_* resolves to the same server/port/name as development
-  # or integration, and builds/starts the app against E2E_DATABASE_* via its
-  # webServer config, so no extra DATABASE_* mapping is needed here.
+  # on the self-hosted runner. Like integration, this runs only for pull
+  # requests so the runner is idle while Coolify deploys a merge to main.
   e2e:
     needs: quality
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v4
