@@ -23,11 +23,15 @@ import styles from "../trip-forms.module.css";
 import {
   createRequestReview,
   gapNotice,
+  isLocationField,
+  mergePreservedLocationValues,
   passengerStepGaps,
+  preservedLocationValue,
   requestStepGaps,
   sharesDestination,
   sharesOrigin,
   shouldSubmitCreateForm,
+  wizardErrorNavigation,
   wizardStepForField,
   type CreateWizardStep,
   type TripRequestReview,
@@ -69,6 +73,9 @@ export function CreateTripRequestForm({
   const [selectedTypeId, setSelectedTypeId] = useState(
     state.values?.tripRequestTypeId ?? "",
   );
+  const [keptLocations, setKeptLocations] = useState(() =>
+    mergePreservedLocationValues({}, state.values ?? {}),
+  );
   const [typeRestoreNonce, setTypeRestoreNonce] = useState(0);
   const selectedTypeIdRef = useRef(selectedTypeId);
   useInsertionEffect(() => {
@@ -76,13 +83,31 @@ export function CreateTripRequestForm({
       selectedTypeId || state.values?.tripRequestTypeId || "";
   });
 
-  const value = (name: string) => state.values?.[name] ?? "";
   const selectedType = requestTypes.find(
     (type) => String(type.tripRequestTypeId) === selectedTypeId,
   );
+  const submittedType = requestTypes.find(
+    (type) =>
+      String(type.tripRequestTypeId) ===
+      (state.values?.tripRequestTypeId || selectedTypeId),
+  );
   const shareOrigin = sharesOrigin(selectedType?.typeCode);
   const shareDestination = sharesDestination(selectedType?.typeCode);
-  const fieldInvalid = (name: string) => state.field === name;
+  const errorFocus = wizardErrorNavigation(
+    state.error,
+    state.field,
+    state.values,
+    submittedType?.typeCode ?? selectedType?.typeCode,
+    catalogLocations,
+  );
+  const value = (name: string) =>
+    isLocationField(name)
+      ? preservedLocationValue(keptLocations, state.values, name)
+      : (state.values?.[name] ?? "");
+  const fieldInvalid = (name: string) =>
+    state.error
+      ? errorFocus.fields.includes(name)
+      : state.field === name;
   const fieldErrorId = (name: string) =>
     fieldInvalid(name) ? `${prefix}-${name}-error` : undefined;
 
@@ -120,20 +145,33 @@ export function CreateTripRequestForm({
   const [seenActionState, setSeenActionState] = useState(state);
   if (state !== seenActionState) {
     setSeenActionState(state);
+    if (state.values) {
+      setKeptLocations((current) =>
+        mergePreservedLocationValues(current, state.values ?? {}),
+      );
+    }
     if (state.error) {
       setReviewOpen(false);
-      setStep(wizardStepForField(state.field, state.error));
+      setStep(errorFocus.step);
       setStepNotice(null);
     }
   }
 
+  const focusFieldsKey = errorFocus.fields.join("|");
   useEffect(() => {
-    if (!state.field || !formRef.current) return;
-    const invalid = formRef.current.querySelector<HTMLElement>(
-      `[name="${state.field}"], #${prefix}-${state.field}`,
-    );
-    invalid?.focus();
-  }, [prefix, state.field, step]);
+    if (!state.error || !focusFieldsKey || !formRef.current) {
+      return;
+    }
+    for (const field of focusFieldsKey.split("|")) {
+      const invalid = formRef.current.querySelector<HTMLElement>(
+        `[name="${field}"], #${prefix}-${field}`,
+      );
+      if (invalid) {
+        invalid.focus();
+        return;
+      }
+    }
+  }, [focusFieldsKey, prefix, state.error, step]);
 
   function readValues() {
     const form = formRef.current;
@@ -218,7 +256,15 @@ export function CreateTripRequestForm({
           value={value}
           fieldInvalid={fieldInvalid}
           fieldErrorId={fieldErrorId}
-          onTypeChange={setSelectedTypeId}
+          onTypeChange={(typeId) => {
+            const values = readValues();
+            if (values) {
+              setKeptLocations((current) =>
+                mergePreservedLocationValues(current, values),
+              );
+            }
+            setSelectedTypeId(typeId);
+          }}
           onNext={goToPassengers}
         />
         <PassengersStep

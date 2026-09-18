@@ -139,6 +139,9 @@ export function PassengersStep({
                     )}
                     disabled={pending}
                     required
+                    invalid={fieldInvalid(
+                      `passenger.${index}.originLocationId`,
+                    )}
                   />
                 </FormField>
               )}
@@ -153,6 +156,9 @@ export function PassengersStep({
                     )}
                     disabled={pending}
                     required
+                    invalid={fieldInvalid(
+                      `passenger.${index}.destinationLocationId`,
+                    )}
                   />
                 </FormField>
               )}

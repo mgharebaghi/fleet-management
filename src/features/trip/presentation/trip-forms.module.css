@@ -130,6 +130,7 @@
 
 .review {
   display: grid;
+  min-width: 0;
   gap: var(--space-5);
 }
 
@@ -141,12 +142,14 @@
 
 .reviewList {
   display: grid;
+  min-width: 0;
   gap: var(--space-3);
   margin: 0;
 }
 
 .reviewList > div {
   display: grid;
+  min-width: 0;
   gap: 2px;
 }
 
@@ -157,12 +160,15 @@
 
 .reviewList dd {
   margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   color: var(--app-text);
   font-weight: 700;
 }
 
 .reviewPassengers {
   display: grid;
+  min-width: 0;
   gap: var(--space-3);
   margin: 0;
   padding: 0;
@@ -171,11 +177,18 @@
 
 .reviewPassengers li {
   display: grid;
+  min-width: 0;
   gap: var(--space-1);
   padding: var(--space-3);
   border: 1px solid var(--app-border);
   border-radius: var(--radius-md);
   background: var(--app-surface-subtle);
+}
+
+.reviewPassengers p,
+.reviewPassengers strong {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .reviewPassengers p {

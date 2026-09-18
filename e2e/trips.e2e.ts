@@ -17,6 +17,7 @@ const WIZARD_SCREENSHOTS = {
   desktop: `${REVIEW_MEDIA_DIR}/trip-create-wizard-desktop.png`,
   mobile: `${REVIEW_MEDIA_DIR}/trip-create-wizard-mobile.png`,
   review: `${REVIEW_MEDIA_DIR}/trip-create-wizard-review.png`,
+  reviewMobile: `${REVIEW_MEDIA_DIR}/trip-create-wizard-review-mobile.png`,
 };
 
 let adapter: E2EDatabaseAdapter;
@@ -37,6 +38,25 @@ const token = randomUUID();
 const inlineOriginName = `مبدأ اینلاین ${token}`;
 const inlineDestinationName = `مقصد اینلاین ${token}`;
 const request = () => adapter.underlyingDriver().request();
+
+async function tripRequestCountForFixturePerson() {
+  if (personId === undefined) {
+    throw new Error("E2E Person is missing.");
+  }
+  const result = await request()
+    .input("personId", personId)
+    .query<{ count: number }>(
+      `SELECT COUNT(*) AS count
+       FROM trip.TripRequest AS request
+       WHERE EXISTS (
+         SELECT 1
+         FROM trip.Trip AS trip
+         WHERE trip.TripRequestId = request.TripRequestId
+           AND trip.PassengerPersonId = @personId
+       )`,
+    );
+  return result.recordset[0].count;
+}
 
 async function saveReviewScreenshot(
   page: Page,
@@ -510,20 +530,37 @@ test.describe.serial("Trip management", () => {
       expect(reviewText).not.toMatch(
         new RegExp(`(?:^|\\D)${Number(personId)}(?:\\D|$)`),
       );
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(
+        review.getByRole("button", { name: "تأیید و ثبت درخواست", exact: true }),
+      ).toBeVisible();
+      await expect(
+        review.getByRole("button", { name: "بازگشت و ویرایش", exact: true }),
+      ).toBeVisible();
+      await expect(review.getByText("مبدأ و مقصد مشترک")).toBeVisible();
+      await expect(review.getByText(`مسافر ${token}`)).toBeVisible();
+      const reviewHasHorizontalOverflow = await review.evaluate(
+        (element) => element.scrollWidth > element.clientWidth + 1,
+      );
+      expect(reviewHasHorizontalOverflow).toBe(false);
+      const pageHasHorizontalOverflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth + 1,
+      );
+      expect(pageHasHorizontalOverflow).toBe(false);
+      await mkdir(REVIEW_MEDIA_DIR, { recursive: true });
+      await review.screenshot({
+        path: WIZARD_SCREENSHOTS.reviewMobile,
+      });
+      await page.setViewportSize({ width: 1280, height: 720 });
       await page.screenshot({
         path: WIZARD_SCREENSHOTS.review,
         fullPage: true,
       });
 
-      const notYetPersisted = await request()
-        .input("token", token)
-        .query<{ count: number }>(
-          `SELECT COUNT(*) AS count
-           FROM trip.TripRequest
-           WHERE Purpose LIKE N'%' + @token + N'%'
-              OR Purpose = @token`,
-        );
-      expect(notYetPersisted.recordset[0].count).toBe(0);
+      expect(await tripRequestCountForFixturePerson()).toBe(0);
 
       await review
         .getByRole("button", { name: "تأیید و ثبت درخواست", exact: true })
@@ -546,6 +583,7 @@ test.describe.serial("Trip management", () => {
       await expect(
         form.getByLabel("نوع درخواست", { exact: true }),
       ).toHaveValue(/.+/);
+      expect(await tripRequestCountForFixturePerson()).toBe(0);
       await form
         .getByLabel("هدف سفر (اختیاری)", { exact: true })
         .fill(`هدف ${token}`);
@@ -564,6 +602,7 @@ test.describe.serial("Trip management", () => {
 
       await eventually(page).toHaveURL(/\/trips\/\d+$/);
       requestId = Number(page.url().split("/").pop());
+      expect(await tripRequestCountForFixturePerson()).toBe(1);
       const createdLocations = await request()
         .input("requestId", requestId)
         .query<{ origin: number; destination: number }>(
