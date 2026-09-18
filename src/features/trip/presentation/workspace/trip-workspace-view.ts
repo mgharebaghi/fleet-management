@@ -33,14 +33,28 @@ export const WORKFLOW_STAGE_LABELS: Record<WorkflowStageId, string> = {
   planning: "برنامه‌ریزی",
   ready: "آماده اعزام",
   running: "اجرای سفر",
-  return: "بازگشت و تکمیل",
+  return: "تکمیل",
 };
 
 export type WorkspaceSectionId =
   | "details"
   | "planning"
   | "execution"
-  | "return";
+  | "completion";
+
+export const WORKSPACE_TAB_ORDER: WorkspaceSectionId[] = [
+  "details",
+  "planning",
+  "execution",
+  "completion",
+];
+
+export const WORKSPACE_TAB_LABELS: Record<WorkspaceSectionId, string> = {
+  details: "جزئیات سفر",
+  planning: "برنامه‌ریزی",
+  execution: "اجرا",
+  completion: "تکمیل",
+};
 
 export type TripNextActionId =
   | "plan-assignment"
@@ -128,10 +142,14 @@ export type TripListItemView = {
 const LEGACY_TAB_SECTIONS: Record<string, WorkspaceSectionId> = {
   general: "details",
   passengers: "details",
+  details: "details",
   assignment: "planning",
   route: "planning",
+  planning: "planning",
   execution: "execution",
-  survey: "return",
+  survey: "completion",
+  return: "completion",
+  completion: "completion",
 };
 
 function lifecycleSnapshot(details: TripRequestDetails) {
@@ -256,7 +274,7 @@ function nextActionFor(details: TripRequestDetails): TripNextAction {
   return {
     id: "complete-request",
     label: "تکمیل درخواست",
-    sectionId: "return",
+    sectionId: "completion",
     enabled: executionsComplete,
     hint: executionsComplete
       ? null
@@ -290,6 +308,30 @@ export function workspaceSectionForTab(
 ): WorkspaceSectionId {
   if (!tab) return "details";
   return LEGACY_TAB_SECTIONS[tab] ?? "details";
+}
+
+export function workspaceTabHref(
+  tripRequestId: number,
+  section: WorkspaceSectionId,
+): string {
+  if (section === "details") {
+    return `/trips/${tripRequestId}`;
+  }
+  return `/trips/${tripRequestId}?tab=${section}`;
+}
+
+/** First passenger still needing planning or execution work; else 0. */
+export function defaultPassengerTabIndex(
+  passengers: PassengerWorkspaceItem[],
+  mode: "planning" | "execution",
+): number {
+  if (passengers.length === 0) return 0;
+  const index = passengers.findIndex((item) => {
+    if (mode === "planning") return !item.hasPlan;
+    const status = item.executionStatus;
+    return status !== "Completed" && status !== "Cancelled";
+  });
+  return index === -1 ? 0 : index;
 }
 
 export function projectTripWorkspace(

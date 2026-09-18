@@ -4,22 +4,117 @@
   min-width: 0;
 }
 
-.summary,
-.section,
-.nextAction,
-.passengerCard,
+.identity {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.identityTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.identityTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.identityTitle h1 {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: var(--font-size-xl);
+}
+
+.summaryCards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.summaryCard {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface);
+}
+
+.summaryCardLabel {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.summaryCard strong {
+  color: var(--app-heading);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.purposeLine {
+  margin: 0;
+  color: var(--app-text);
+}
+
+.tabBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.tabLink {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--app-text-muted);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease;
+}
+
+.tabLink:hover {
+  color: var(--app-primary);
+}
+
+.tabLink[data-active="true"] {
+  border-bottom-color: var(--app-primary);
+  color: var(--app-primary);
+}
+
+.tabPanel,
 .groupCard {
   display: grid;
   min-width: 0;
-  gap: var(--space-3);
+  gap: var(--space-4);
   padding: var(--space-5);
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-group);
   background: var(--app-surface-subtle);
 }
 
-.summary {
-  gap: var(--space-4);
+.tabPanel h2,
+.tabPanel h3,
+.groupCard h3 {
+  color: var(--app-heading);
+  font-size: var(--font-size-lg);
+}
+
+.subheading {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: var(--font-size-md);
 }
 
 .summaryHeader {
@@ -30,38 +125,26 @@
   gap: var(--space-3);
 }
 
-.summaryHeader h2,
-.section h2,
-.passengerCard h3,
-.groupCard h3 {
-  color: var(--app-heading);
-  font-size: var(--font-size-lg);
-}
-
-.summaryFacts,
-.passengerFacts {
+.summaryFacts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3);
   margin: 0;
 }
 
-.summaryFacts div,
-.passengerFacts div {
+.summaryFacts div {
   display: grid;
   min-width: 0;
   gap: 2px;
 }
 
-.summaryFacts dt,
-.passengerFacts dt {
+.summaryFacts dt {
   color: var(--app-text-muted);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
-.summaryFacts dd,
-.passengerFacts dd {
+.summaryFacts dd {
   margin: 0;
   overflow-wrap: anywhere;
   color: var(--app-heading);
@@ -72,126 +155,112 @@
   grid-column: 1 / -1;
 }
 
-.progress {
+.tableWrap {
+  overflow-x: auto;
   min-width: 0;
 }
 
-.progressList {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: var(--space-2) var(--space-3);
-  margin: 0;
-  padding: var(--space-4);
-  list-style: none;
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-group);
+.passengerTable {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.passengerTable th,
+.passengerTable td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--app-border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.passengerTable th {
+  color: var(--app-text-muted);
+  font-weight: 700;
   background: var(--app-surface);
 }
 
-.progressItem {
+.passengerSwitcher {
   display: flex;
-  min-width: 0;
-  flex: 1 1 8rem;
-  align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }
 
-.marker {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 auto;
-  place-items: center;
+.passengerTab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 14px;
   border: 1px solid var(--app-border);
-  border-radius: 50%;
+  border-radius: var(--app-radius-control);
   background: var(--app-surface);
-  color: var(--app-text-muted);
+  color: var(--app-text);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
   transition:
-    background-color 180ms ease,
     border-color 180ms ease,
+    background-color 180ms ease,
     color 180ms ease;
 }
 
-.label {
-  min-width: 0;
-  color: var(--app-text-muted);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-}
-
-.progressItem[data-state="current"] .marker {
-  border-color: var(--app-primary);
-  background: var(--app-primary);
-  color: var(--app-on-primary);
-}
-
-.progressItem[data-state="current"] .label {
-  color: var(--app-heading);
-}
-
-.progressItem[data-state="complete"] .marker {
+.passengerTab[data-selected="true"] {
   border-color: var(--app-primary);
   background: var(--app-info-background);
   color: var(--app-primary);
 }
 
-.progressItem[data-state="complete"] .label {
-  color: var(--app-text);
+.passengerTabBadge {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
 }
 
-.progressItem[data-state="cancelled"] .marker,
-.progressItem[data-state="cancelled"] .label {
-  color: var(--app-danger-text);
+.passengerTab[data-selected="true"] .passengerTabBadge {
+  color: var(--app-primary);
 }
 
-.progressItem[data-state="cancelled"] .marker {
-  border-color: var(--app-danger-text);
-  background: var(--app-danger-background);
+.passengerPanel {
+  display: grid;
+  gap: var(--space-4);
 }
 
-.nextAction {
+.passengerPanelBody {
+  min-width: 0;
+}
+
+.statusControl,
+.statusControlCompact {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-group);
   background: var(--app-surface);
 }
 
-.nextCopy {
-  display: grid;
-  gap: var(--space-1);
+.statusCopy h3 {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: var(--font-size-md);
 }
 
-.nextCopy p {
+.statusCopy p {
+  margin: 0;
   color: var(--app-text-muted);
 }
 
-.sectionNav {
+.statusActions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-}
-
-.sectionNav a {
-  padding: 8px 12px;
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-control);
-  color: var(--app-text);
-  font-weight: 700;
-  font-size: var(--font-size-sm);
-  background: var(--app-surface);
-  transition:
-    border-color 180ms ease,
-    color 180ms ease;
-}
-
-.sectionNav a:hover {
-  border-color: var(--app-accent);
-  color: var(--app-primary);
+  align-items: center;
 }
 
 .disclosure {
   min-width: 0;
-  padding: var(--space-3) 0 0;
+  padding: var(--space-2) 0 0;
 }
 
 .disclosure > summary {
@@ -208,41 +277,77 @@
   color: var(--app-text-muted);
 }
 
-.readiness {
+.readiness,
+.completionSummary {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
 
-.passengerList,
+.infoBanner {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--app-radius-control);
+  background: var(--app-info-background);
+  color: var(--app-text);
+  font-size: var(--font-size-sm);
+}
+
 .stack {
   display: grid;
   gap: var(--space-4);
 }
 
-.passengerCard,
 .groupCard {
   background: var(--app-surface);
 }
 
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 900px) {
+  .summaryCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 760px) {
-  .summary,
-  .section,
-  .nextAction,
-  .passengerCard,
-  .groupCard {
+  .summaryCards {
+    grid-template-columns: 1fr;
+  }
+
+  .tabPanel,
+  .groupCard,
+  .statusControl {
     padding: var(--space-4);
   }
 
-  .summaryFacts,
-  .passengerFacts {
+  .summaryFacts {
     grid-template-columns: 1fr;
+  }
+
+  .tabBar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .tabLink {
+    flex: 0 0 auto;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .marker,
-  .sectionNav a {
+  .tabLink,
+  .passengerTab {
     transition: none;
   }
 }

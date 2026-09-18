@@ -10,14 +10,16 @@ import type { TripRequestDetails } from "../../application/trip-records";
 import { changeTripRequestStatusAction } from "../trip.actions";
 import { tripMessages } from "../trip-form-data";
 import styles from "./trip-workspace.module.css";
-import type { TripWorkspaceView } from "./trip-workspace-view";
+import type { TripNextAction, TripWorkspaceView } from "./trip-workspace-view";
 
-export function TripNextActionBar({
+export function TripRequestStatusControl({
   details,
   view,
+  compact = false,
 }: {
   details: TripRequestDetails;
   view: TripWorkspaceView;
+  compact?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(
     changeTripRequestStatusAction.bind(null, details.tripRequestId),
@@ -35,18 +37,32 @@ export function TripNextActionBar({
           ? "Completed"
           : null;
 
+  const showPrimary =
+    statusValue !== null ||
+    action.id === "plan-assignment" ||
+    action.id === "record-departure" ||
+    action.id === "record-return" ||
+    action.id === "view-details";
+
+  if (!showPrimary && !view.canCancel) return null;
+
   return (
-    <section className={styles.nextAction} aria-labelledby={`${prefix}-next`}>
-      <div className={styles.nextCopy}>
-        <h2 id={`${prefix}-next`}>اقدام بعدی</h2>
-        {action.hint && <p>{action.hint}</p>}
-      </div>
+    <div
+      className={compact ? styles.statusControlCompact : styles.statusControl}
+      aria-labelledby={`${prefix}-status`}
+    >
+      {!compact && (
+        <div className={styles.statusCopy}>
+          <h3 id={`${prefix}-status`}>اقدام درخواست</h3>
+          {action.hint && <p>{action.hint}</p>}
+        </div>
+      )}
       {state.error && (
         <InlineNotice tone="danger" role="alert">
           {tripMessages[state.error]}
         </InlineNotice>
       )}
-      <div className={styles.readiness}>
+      <div className={styles.statusActions}>
         {statusValue ? (
           <form action={formAction}>
             <input type="hidden" name="requestStatus" value={statusValue} />
@@ -59,23 +75,11 @@ export function TripNextActionBar({
             </ActionButton>
           </form>
         ) : (
-          <ActionButton
-            type="button"
-            disabled={pending}
-            onClick={() => {
-              const section = document.getElementById(action.sectionId);
-              if (action.id === "view-details") {
-                const disclosure = section?.querySelector<HTMLDetailsElement>(
-                  'details[data-workspace-disclosure="details"]',
-                );
-                if (disclosure) disclosure.open = true;
-              }
-              section?.scrollIntoView({ block: "start" });
-              section?.querySelector<HTMLElement>("h2")?.focus();
-            }}
-          >
-            {action.label}
-          </ActionButton>
+          action.id !== "plan-assignment" &&
+          action.id !== "record-departure" &&
+          action.id !== "record-return" && (
+            <p className={styles.muted}>{action.label}</p>
+          )
         )}
         {view.canCancel && (
           <>
@@ -120,6 +124,22 @@ export function TripNextActionBar({
           </>
         )}
       </div>
-    </section>
+    </div>
   );
+}
+
+export function shouldShowStatusControl(
+  action: TripNextAction,
+  section: "planning" | "execution" | "completion",
+): boolean {
+  switch (section) {
+    case "planning":
+      return action.id === "mark-assigned";
+    case "execution":
+      return action.id === "mark-in-progress";
+    case "completion":
+      return action.id === "complete-request" || action.id === "view-details";
+    default:
+      return false;
+  }
 }

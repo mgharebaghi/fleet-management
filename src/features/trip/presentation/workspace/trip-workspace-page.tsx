@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 
 import { BackLink } from "@/components/ui/back-link/back-link";
-import { PageHeader } from "@/components/ui/page-header/page-header";
 import { PageShell } from "@/components/ui/page-shell/page-shell";
 import { StatusBadge } from "@/components/ui/status-badge/status-badge";
 import { TechnicalValue } from "@/components/ui/technical-value/technical-value";
@@ -13,7 +12,6 @@ import type {
 import { makeReadTrips } from "../../composition/trip.factory";
 import { TripAssignmentPlanner } from "../trip-assignment-form";
 import { TripExecutionForm } from "../trip-execution-form";
-import { TripIncidentForms } from "../incident/incident-forms";
 import { TripRouteForm } from "../trip-route-form";
 import { PassengerSurveyForm } from "../trip-survey-form";
 import {
@@ -22,14 +20,20 @@ import {
 } from "../trip-execution-current";
 import { formatTripDateTime } from "../trip-format";
 import { executionStatusLabel } from "../trip-status";
-import { TripNextActionBar } from "./trip-next-action-bar";
-import { TripWorkflowProgress } from "./trip-workflow-progress";
 import { TripWorkspaceFocus } from "./trip-workspace-focus";
+import { TripWorkspacePassengerPanel } from "./trip-workspace-passenger-panel";
+import {
+  shouldShowStatusControl,
+  TripRequestStatusControl,
+} from "./trip-request-status-control";
+import { TripWorkspaceTabs } from "./trip-workspace-tabs";
 import styles from "./trip-workspace.module.css";
 import {
+  defaultPassengerTabIndex,
   projectTripWorkspace,
   workspaceSectionForTab,
   type TripWorkspaceView,
+  type WorkspaceSectionId,
 } from "./trip-workspace-view";
 
 function RouteCard({ route, label }: { route: TripRoute; label: string }) {
@@ -68,46 +72,52 @@ function RouteCard({ route, label }: { route: TripRoute; label: string }) {
   );
 }
 
-function WorkspaceSummary({ view }: { view: TripWorkspaceView }) {
+function WorkspaceIdentity({
+  view,
+  backHref,
+}: {
+  view: TripWorkspaceView;
+  backHref: string;
+}) {
   return (
-    <section className={styles.summary} aria-labelledby="trip-summary-heading">
-      <div className={styles.summaryHeader}>
-        <h2 id="trip-summary-heading" tabIndex={-1}>
-          {view.requestNo}
-        </h2>
-        <StatusBadge label={view.statusLabel} tone="info" />
+    <header className={styles.identity}>
+      <div className={styles.identityTop}>
+        <BackLink href={backHref} label="بازگشت به لیست" />
+        <div className={styles.identityTitle}>
+          <h1>{view.requestNo}</h1>
+          <StatusBadge label={view.statusLabel} tone="info" />
+        </div>
       </div>
-      <dl className={styles.summaryFacts}>
-        <div>
-          <dt>نوع درخواست</dt>
-          <dd>{view.requestTypeName}</dd>
-        </div>
-        <div>
-          <dt>زمان برنامه‌ریزی‌شده</dt>
-          <dd>{formatTripDateTime(view.plannedAt)}</dd>
-        </div>
-        <div>
-          <dt>تعداد مسافران</dt>
-          <dd>{view.passengerCount}</dd>
-        </div>
-        <div>
-          <dt>مبدأ</dt>
-          <dd>{view.originSummary}</dd>
-        </div>
-        <div>
-          <dt>مقصد</dt>
-          <dd>{view.destinationSummary}</dd>
-        </div>
-        <div className={styles.wide}>
-          <dt>هدف سفر</dt>
-          <dd>{view.purpose ?? "ثبت نشده"}</dd>
-        </div>
-      </dl>
-    </section>
+      <div className={styles.summaryCards}>
+        <article className={styles.summaryCard}>
+          <span className={styles.summaryCardLabel}>مسیر</span>
+          <strong>
+            {view.originSummary} → {view.destinationSummary}
+          </strong>
+        </article>
+        <article className={styles.summaryCard}>
+          <span className={styles.summaryCardLabel}>زمان سفر</span>
+          <strong>{formatTripDateTime(view.plannedAt)}</strong>
+        </article>
+        <article className={styles.summaryCard}>
+          <span className={styles.summaryCardLabel}>نوع درخواست</span>
+          <strong>{view.requestTypeName}</strong>
+        </article>
+        <article className={styles.summaryCard}>
+          <span className={styles.summaryCardLabel}>مسافران</span>
+          <strong>{view.passengerCount} نفر</strong>
+        </article>
+      </div>
+      {view.purpose && (
+        <p className={styles.purposeLine}>
+          <span className={styles.muted}>هدف سفر:</span> {view.purpose}
+        </p>
+      )}
+    </header>
   );
 }
 
-function DetailsSection({
+function DetailsTab({
   details,
   view,
 }: {
@@ -116,110 +126,460 @@ function DetailsSection({
 }) {
   return (
     <section
-      id="details"
-      className={styles.section}
+      id="workspace-tab-details"
+      className={styles.tabPanel}
       aria-labelledby="details-heading"
     >
       <h2 id="details-heading" tabIndex={-1}>
-        جزئیات سفر و مسافران
+        اطلاعات درخواست
       </h2>
-      <div className={styles.passengerList}>
-        {view.passengers.map((item) => (
-          <article className={styles.passengerCard} key={item.tripId}>
-            <div className={styles.summaryHeader}>
-              <h3>{item.personName}</h3>
-              <StatusBadge
-                label={
-                  item.executionStatus
-                    ? executionStatusLabel(item.executionStatus)
-                    : item.hasPlan
-                      ? "برنامه ثبت شده"
-                      : "نیازمند برنامه‌ریزی"
-                }
-                tone={item.hasPlan ? "positive" : "warning"}
-              />
-            </div>
-            <dl className={styles.passengerFacts}>
-              <div>
-                <dt>شمارهٔ پرسنلی</dt>
-                <dd>
-                  <TechnicalValue>{item.personnelNo ?? "—"}</TechnicalValue>
-                </dd>
-              </div>
-              <div>
-                <dt>موبایل</dt>
-                <dd>
-                  <TechnicalValue>{item.mobile ?? "—"}</TechnicalValue>
-                </dd>
-              </div>
-              <div>
-                <dt>مبدأ</dt>
-                <dd>{item.originName}</dd>
-              </div>
-              <div>
-                <dt>مقصد</dt>
-                <dd>{item.destinationName}</dd>
-              </div>
-              <div>
-                <dt>زمان سوارشدن</dt>
-                <dd>{formatTripDateTime(item.pickupAt)}</dd>
-              </div>
-              <div>
-                <dt>ترتیب سوار / پیاده</dt>
-                <dd>
-                  {item.pickupOrder ?? "—"} / {item.dropoffOrder ?? "—"}
-                </dd>
-              </div>
-              <div>
-                <dt>وضعیت مسافر</dt>
-                <dd>{item.passengerStatus ?? "ثبت نشده"}</dd>
-              </div>
-              {item.description && (
-                <div className={styles.wide}>
-                  <dt>توضیحات</dt>
-                  <dd>{item.description}</dd>
-                </div>
-              )}
-            </dl>
-          </article>
-        ))}
+      <dl className={styles.summaryFacts}>
+        <div>
+          <dt>شمارهٔ درخواست</dt>
+          <dd>
+            <TechnicalValue>{details.requestNo}</TechnicalValue>
+          </dd>
+        </div>
+        <div>
+          <dt>وضعیت</dt>
+          <dd>{view.statusLabel}</dd>
+        </div>
+        <div>
+          <dt>نوع درخواست</dt>
+          <dd>{details.requestType.typeName}</dd>
+        </div>
+        <div>
+          <dt>زمان ثبت درخواست</dt>
+          <dd>{formatTripDateTime(details.requestDateTime)}</dd>
+        </div>
+        <div>
+          <dt>زمان برنامه‌ریزی‌شده</dt>
+          <dd>{formatTripDateTime(details.requestedTravelDateTime)}</dd>
+        </div>
+        <div>
+          <dt>هدف سفر</dt>
+          <dd>{details.purpose ?? "ثبت نشده"}</dd>
+        </div>
+        <div className={styles.wide}>
+          <dt>توضیحات درخواست</dt>
+          <dd>{details.description ?? "ثبت نشده"}</dd>
+        </div>
+      </dl>
+
+      <h3 className={styles.subheading}>
+        مسافران ({view.passengerCount} نفر)
+      </h3>
+      <div className={styles.tableWrap}>
+        <table className={styles.passengerTable}>
+          <caption className={styles.srOnly}>فهرست مسافران سفر</caption>
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">نام مسافر</th>
+              <th scope="col">مبدأ</th>
+              <th scope="col">مقصد</th>
+              <th scope="col">زمان سوارشدن</th>
+              <th scope="col">ترتیب سوار</th>
+              <th scope="col">ترتیب پیاده</th>
+              <th scope="col">وضعیت</th>
+              <th scope="col">توضیحات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {view.passengers.map((item, index) => (
+              <tr key={item.tripId}>
+                <td>{index + 1}</td>
+                <td>{item.personName}</td>
+                <td>{item.originName}</td>
+                <td>{item.destinationName}</td>
+                <td>{formatTripDateTime(item.pickupAt)}</td>
+                <td>{item.pickupOrder ?? "—"}</td>
+                <td>{item.dropoffOrder ?? "—"}</td>
+                <td>
+                  <StatusBadge
+                    label={
+                      item.executionStatus
+                        ? executionStatusLabel(item.executionStatus)
+                        : item.hasPlan
+                          ? "برنامه ثبت شده"
+                          : "نیازمند برنامه‌ریزی"
+                    }
+                    tone={item.hasPlan ? "positive" : "warning"}
+                  />
+                </td>
+                <td>{item.description ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-      <details
-        className={styles.disclosure}
-        data-workspace-disclosure="details"
-      >
-        <summary>مشاهده جزئیات کامل</summary>
-        <dl className={styles.summaryFacts}>
-          <div>
-            <dt>شمارهٔ درخواست</dt>
-            <dd>
-              <TechnicalValue>{details.requestNo}</TechnicalValue>
-            </dd>
-          </div>
-          <div>
-            <dt>زمان ثبت درخواست</dt>
-            <dd>{formatTripDateTime(details.requestDateTime)}</dd>
-          </div>
-          <div>
-            <dt>نوع درخواست</dt>
-            <dd>{details.requestType.typeName}</dd>
-          </div>
-          <div>
-            <dt>وضعیت</dt>
-            <dd>{view.statusLabel}</dd>
-          </div>
-          <div className={styles.wide}>
-            <dt>هدف سفر</dt>
-            <dd>{details.purpose ?? "ثبت نشده"}</dd>
-          </div>
-          <div className={styles.wide}>
-            <dt>توضیحات درخواست</dt>
-            <dd>{details.description ?? "ثبت نشده"}</dd>
-          </div>
-        </dl>
-      </details>
     </section>
   );
+}
+
+function PlanningTab({
+  details,
+  view,
+  assignments,
+  locations,
+  requestIsTerminal,
+}: {
+  details: TripRequestDetails;
+  view: TripWorkspaceView;
+  assignments: Map<number, TripAssignmentReference[]>;
+  locations: Awaited<ReturnType<ReturnType<typeof makeReadTrips>["availableLocations"]>>;
+  requestIsTerminal: boolean;
+}) {
+  const switcherItems = view.passengers.map((item, index) => ({
+    tripId: item.tripId,
+    label: `مسافر ${index + 1}`,
+    badge: item.hasPlan ? "ثبت شده" : "نیازمند",
+  }));
+
+  return (
+    <section
+      id="workspace-tab-planning"
+      className={styles.tabPanel}
+      aria-labelledby="planning-heading"
+    >
+      <h2 id="planning-heading" tabIndex={-1}>
+        برنامه‌ریزی سفر
+      </h2>
+      <div className={styles.readiness}>
+        <StatusBadge
+          label={
+            view.routeReadiness === "recorded"
+              ? "مسیر: ثبت شده"
+              : "مسیر: ثبت نشده — اختیاری"
+          }
+          tone={view.routeReadiness === "recorded" ? "positive" : "info"}
+        />
+        <StatusBadge
+          label={
+            view.assignmentReadiness === "recorded"
+              ? "خودرو و راننده: ثبت شده"
+              : "خودرو و راننده: نیازمند اقدام"
+          }
+          tone={
+            view.assignmentReadiness === "recorded" ? "positive" : "warning"
+          }
+        />
+        <StatusBadge
+          label={
+            view.voucherReadiness === "ready"
+              ? "برگه مأموریت: آماده صدور"
+              : "برگه مأموریت: پس از تخصیص قابل صدور"
+          }
+          tone={view.voucherReadiness === "ready" ? "positive" : "info"}
+        />
+      </div>
+
+      {shouldShowStatusControl(view.nextAction, "planning") && (
+        <TripRequestStatusControl details={details} view={view} />
+      )}
+
+      <TripWorkspacePassengerPanel
+        items={switcherItems}
+        defaultIndex={defaultPassengerTabIndex(view.passengers, "planning")}
+        ariaLabel="مسافر برای برنامه‌ریزی"
+        renderPanel={(index) => {
+          const trip = details.passengers[index];
+          if (!trip) return null;
+          return (
+            <TripAssignmentPlanner
+              tripRequestId={details.tripRequestId}
+              trip={trip}
+              assignments={assignments.get(trip.tripId) ?? []}
+              scheduledDateTime={
+                trip.requestedPickupDateTime ?? details.requestedTravelDateTime
+              }
+              execution={persistedPlanningExecution(trip.executions)}
+              requestIsTerminal={requestIsTerminal}
+            />
+          );
+        }}
+      />
+
+      {details.passengers.flatMap((trip) => [
+        ...trip.routes.map((route) => (
+          <RouteCard
+            key={`trip-${route.routeId}`}
+            route={route}
+            label={`مسیر برنامه‌ریزی‌شدهٔ ${trip.passenger.firstName} ${trip.passenger.lastName}`}
+          />
+        )),
+        ...trip.executions.flatMap((item) =>
+          item.routes.map((route) => (
+            <RouteCard
+              key={`execution-${route.routeId}`}
+              route={route}
+              label={`مسیر برگشتی موجود برای ${trip.passenger.firstName} ${trip.passenger.lastName} — فقط نمایش`}
+            />
+          )),
+        ),
+      ])}
+
+      {!requestIsTerminal && (
+        <details className={styles.disclosure}>
+          <summary>ثبت مسیر برنامه‌ریزی‌شده (اختیاری)</summary>
+          <TripRouteForm
+            tripRequestId={details.tripRequestId}
+            passengers={details.passengers}
+            locations={locations}
+          />
+        </details>
+      )}
+
+      <p className={styles.infoBanner}>
+        پس از تکمیل برنامه‌ریزی، سفر آماده اجرا خواهد شد. لطفاً تمامی اطلاعات
+        ضروری را تکمیل کنید.
+      </p>
+    </section>
+  );
+}
+
+function ExecutionTab({
+  details,
+  view,
+  requestIsTerminal,
+}: {
+  details: TripRequestDetails;
+  view: TripWorkspaceView;
+  requestIsTerminal: boolean;
+}) {
+  const switcherItems = view.passengers.map((item, index) => ({
+    tripId: item.tripId,
+    label: `مسافر ${index + 1}`,
+    badge: item.executionStatus
+      ? executionStatusLabel(item.executionStatus)
+      : "بدون اجرا",
+  }));
+
+  return (
+    <section
+      id="workspace-tab-execution"
+      className={styles.tabPanel}
+      aria-labelledby="execution-heading"
+    >
+      <h2 id="execution-heading" tabIndex={-1}>
+        اجرای سفر
+      </h2>
+      <p className={styles.muted}>
+        پس از حرکت و بازگشت، زمان و کیلومتر واقعی را از برگهٔ کاغذی ثبت کنید.
+      </p>
+
+      {shouldShowStatusControl(view.nextAction, "execution") && (
+        <TripRequestStatusControl details={details} view={view} />
+      )}
+
+      <TripWorkspacePassengerPanel
+        items={switcherItems}
+        defaultIndex={defaultPassengerTabIndex(view.passengers, "execution")}
+        ariaLabel="مسافر برای اجرا"
+        renderPanel={(index) => {
+          const trip = details.passengers[index];
+          const item = view.passengers[index];
+          if (!trip || !item) return null;
+          const active = currentNonTerminalExecution(trip.executions);
+          return (
+            <article className={styles.groupCard}>
+              <h3>{item.personName}</h3>
+              {trip.executions.length === 0 ? (
+                <p className={styles.muted}>
+                  ابتدا خودرو و راننده را در بخش برنامه‌ریزی سفر ثبت کنید.
+                </p>
+              ) : (
+                trip.executions.map((execution) => (
+                  <p className={styles.muted} key={execution.tripExecutionId}>
+                    {executionStatusLabel(execution.status)} — حرکت:{" "}
+                    {formatTripDateTime(execution.actualPickupDateTime)} —
+                    بازگشت: {formatTripDateTime(execution.actualDropoffDateTime)}{" "}
+                    — کیلومتر: {execution.startOdometer ?? "—"} تا{" "}
+                    {execution.endOdometer ?? "—"}
+                  </p>
+                ))
+              )}
+              {active &&
+                !requestIsTerminal &&
+                (details.status === "Assigned" ||
+                  details.status === "InProgress") && (
+                  <TripExecutionForm
+                    tripRequestId={details.tripRequestId}
+                    trip={trip}
+                    execution={active}
+                  />
+                )}
+              {active && details.status === "New" && (
+                <p className={styles.muted}>
+                  پس از ثبت تخصیص‌یافته، زمان واقعی حرکت اینجا وارد می‌شود.
+                </p>
+              )}
+            </article>
+          );
+        }}
+      />
+    </section>
+  );
+}
+
+function CompletionTab({
+  details,
+  view,
+  requestIsTerminal,
+}: {
+  details: TripRequestDetails;
+  view: TripWorkspaceView;
+  requestIsTerminal: boolean;
+}) {
+  const surveyedCount = view.passengers.filter((item) => {
+    const trip = details.passengers.find(
+      (passenger) => passenger.tripId === item.tripId,
+    );
+    return trip?.executions.some(
+      (execution) =>
+        execution.status === "Completed" &&
+        execution.passengerRating !== null,
+    );
+  }).length;
+  const completedExecutions = view.passengers.filter((item) =>
+    item.executionStatus === "Completed",
+  ).length;
+
+  return (
+    <section
+      id="workspace-tab-completion"
+      className={styles.tabPanel}
+      aria-labelledby="completion-heading"
+    >
+      <h2 id="completion-heading" tabIndex={-1}>
+        تکمیل درخواست
+      </h2>
+      <div className={styles.completionSummary}>
+        <StatusBadge label={view.statusLabel} tone="info" />
+        <StatusBadge
+          label={
+            completedExecutions === view.passengerCount
+              ? "همه اجراها انجام شده"
+              : "اجرای همه مسافران تکمیل نشده"
+          }
+          tone={
+            completedExecutions === view.passengerCount ? "positive" : "warning"
+          }
+        />
+      </div>
+
+      {shouldShowStatusControl(view.nextAction, "completion") && (
+        <TripRequestStatusControl details={details} view={view} />
+      )}
+
+      <h3 className={styles.subheading}>نظرسنجی مسافران</h3>
+      <p className={styles.muted}>
+        {surveyedCount} از {view.passengerCount} مسافر — برای تکمیل نهایی،
+        نظرسنجی مسافران را ثبت کنید.
+      </p>
+
+      <div className={styles.stack}>
+        {view.passengers.map((item) => {
+          const trip = details.passengers.find(
+            (passenger) => passenger.tripId === item.tripId,
+          );
+          if (!trip) return null;
+          const completed = trip.executions.filter(
+            (execution) => execution.status === "Completed",
+          );
+          return (
+            <article className={styles.groupCard} key={item.tripId}>
+              <div className={styles.summaryHeader}>
+                <h3>{item.personName}</h3>
+                <StatusBadge
+                  label={
+                    completed.some((e) => e.passengerRating !== null)
+                      ? "نظرسنجی ثبت شده"
+                      : "نظرسنجی ثبت نشده"
+                  }
+                  tone={
+                    completed.some((e) => e.passengerRating !== null)
+                      ? "positive"
+                      : "warning"
+                  }
+                />
+              </div>
+              {completed.length === 0 ? (
+                <p className={styles.muted}>
+                  پس از تکمیل اجرای این مسافر، نظرسنجی اینجا ثبت می‌شود.
+                </p>
+              ) : (
+                completed.map((execution) => (
+                  <div className={styles.stack} key={execution.tripExecutionId}>
+                    <p className={styles.muted}>
+                      امتیاز:{" "}
+                      {execution.passengerRating === null
+                        ? "ثبت نشده"
+                        : execution.passengerRating}{" "}
+                      — {formatTripDateTime(execution.surveyDateTime)}
+                    </p>
+                    {item.canSurvey && !requestIsTerminal && (
+                      <PassengerSurveyForm
+                        tripRequestId={details.tripRequestId}
+                        execution={execution}
+                      />
+                    )}
+                  </div>
+                ))
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function ActiveTabPanel({
+  section,
+  details,
+  view,
+  assignments,
+  locations,
+  requestIsTerminal,
+}: {
+  section: WorkspaceSectionId;
+  details: TripRequestDetails;
+  view: TripWorkspaceView;
+  assignments: Map<number, TripAssignmentReference[]>;
+  locations: Awaited<ReturnType<ReturnType<typeof makeReadTrips>["availableLocations"]>>;
+  requestIsTerminal: boolean;
+}) {
+  switch (section) {
+    case "planning":
+      return (
+        <PlanningTab
+          details={details}
+          view={view}
+          assignments={assignments}
+          locations={locations}
+          requestIsTerminal={requestIsTerminal}
+        />
+      );
+    case "execution":
+      return (
+        <ExecutionTab
+          details={details}
+          view={view}
+          requestIsTerminal={requestIsTerminal}
+        />
+      );
+    case "completion":
+      return (
+        <CompletionTab
+          details={details}
+          view={view}
+          requestIsTerminal={requestIsTerminal}
+        />
+      );
+    default:
+      return <DetailsTab details={details} view={view} />;
+  }
 }
 
 export async function TripWorkspacePage({
@@ -234,14 +594,6 @@ export async function TripWorkspacePage({
   if (!details) notFound();
   const view = projectTripWorkspace(details);
   const section = workspaceSectionForTab(requestedTab);
-  const disclosure =
-    requestedTab === "route"
-      ? "route"
-      : requestedTab === "survey"
-        ? "survey"
-        : requestedTab === "general"
-          ? "details"
-          : undefined;
   const assignmentEntries = await Promise.all(
     details.passengers.map(
       async (trip) =>
@@ -262,230 +614,21 @@ export async function TripWorkspacePage({
 
   return (
     <PageShell>
-      <PageHeader
-        eyebrow="پروندهٔ سفر"
-        title={`سفر ${details.requestNo}`}
-        description={`${details.requestType.typeName} — ${formatTripDateTime(details.requestedTravelDateTime)}`}
-        action={<BackLink href="/trips/requests" label="بازگشت به سفرها" />}
-        compactAction
-      />
-      <TripWorkspaceFocus sectionId={section} disclosure={disclosure} />
+      <TripWorkspaceFocus sectionId={section} />
       <div className={styles.workspace}>
-        <WorkspaceSummary view={view} />
-        <TripWorkflowProgress stages={view.stages} />
-        <TripNextActionBar details={details} view={view} />
-        <nav className={styles.sectionNav} aria-label="بخش‌های پرونده سفر">
-          <a href="#details">جزئیات سفر و مسافران</a>
-          <a href="#planning">برنامه‌ریزی سفر</a>
-          <a href="#execution">اجرای سفر</a>
-          <a href="#return">بازگشت و تکمیل</a>
-        </nav>
-
-        <DetailsSection details={details} view={view} />
-
-        <section
-          id="planning"
-          className={styles.section}
-          aria-labelledby="planning-heading"
-        >
-          <h2 id="planning-heading" tabIndex={-1}>
-            برنامه‌ریزی سفر
-          </h2>
-          <div className={styles.readiness}>
-            <StatusBadge
-              label={
-                view.routeReadiness === "recorded"
-                  ? "مسیر: ثبت شده"
-                  : "مسیر: ثبت نشده — اختیاری"
-              }
-              tone={view.routeReadiness === "recorded" ? "positive" : "info"}
-            />
-            <StatusBadge
-              label={
-                view.assignmentReadiness === "recorded"
-                  ? "خودرو و راننده: ثبت شده"
-                  : "خودرو و راننده: نیازمند اقدام"
-              }
-              tone={
-                view.assignmentReadiness === "recorded" ? "positive" : "warning"
-              }
-            />
-            <StatusBadge
-              label={
-                view.voucherReadiness === "ready"
-                  ? "برگه مأموریت: آماده صدور"
-                  : "برگه مأموریت: پس از تخصیص قابل صدور"
-              }
-              tone={view.voucherReadiness === "ready" ? "positive" : "info"}
-            />
-          </div>
-          <div className={styles.stack}>
-            {details.passengers.map((trip) => (
-              <TripAssignmentPlanner
-                key={trip.tripId}
-                tripRequestId={details.tripRequestId}
-                trip={trip}
-                assignments={assignments.get(trip.tripId) ?? []}
-                scheduledDateTime={
-                  trip.requestedPickupDateTime ??
-                  details.requestedTravelDateTime
-                }
-                execution={persistedPlanningExecution(trip.executions)}
-                requestIsTerminal={requestIsTerminal}
-              />
-            ))}
-          </div>
-          {details.passengers.flatMap((trip) => [
-            ...trip.routes.map((route) => (
-              <RouteCard
-                key={`trip-${route.routeId}`}
-                route={route}
-                label={`مسیر برنامه‌ریزی‌شدهٔ ${trip.passenger.firstName} ${trip.passenger.lastName}`}
-              />
-            )),
-            ...trip.executions.flatMap((item) =>
-              item.routes.map((route) => (
-                <RouteCard
-                  key={`execution-${route.routeId}`}
-                  route={route}
-                  label={`مسیر برگشتی موجود برای ${trip.passenger.firstName} ${trip.passenger.lastName} — فقط نمایش`}
-                />
-              )),
-            ),
-          ])}
-          {!requestIsTerminal && (
-            <details
-              className={styles.disclosure}
-              data-workspace-disclosure="route"
-            >
-              <summary>ثبت مسیر برنامه‌ریزی‌شده (اختیاری)</summary>
-              <TripRouteForm
-                tripRequestId={details.tripRequestId}
-                passengers={details.passengers}
-                locations={locations}
-              />
-            </details>
-          )}
-        </section>
-
-        <section
-          id="execution"
-          className={styles.section}
-          aria-labelledby="execution-heading"
-        >
-          <h2 id="execution-heading" tabIndex={-1}>
-            اجرای سفر
-          </h2>
-          <p className={styles.muted}>
-            پس از حرکت و بازگشت، زمان و کیلومتر واقعی را از برگهٔ کاغذی ثبت
-            کنید.
-          </p>
-          <div className={styles.stack}>
-            {details.passengers.map((trip) => {
-              const active = currentNonTerminalExecution(trip.executions);
-              return (
-                <article className={styles.groupCard} key={trip.tripId}>
-                  <h3>
-                    {trip.passenger.firstName} {trip.passenger.lastName}
-                  </h3>
-                  {trip.executions.length === 0 ? (
-                    <p className={styles.muted}>
-                      ابتدا خودرو و راننده را در بخش برنامه‌ریزی سفر ثبت کنید.
-                    </p>
-                  ) : (
-                    trip.executions.map((item) => (
-                      <p className={styles.muted} key={item.tripExecutionId}>
-                        {executionStatusLabel(item.status)} — حرکت:{" "}
-                        {formatTripDateTime(item.actualPickupDateTime)} —
-                        بازگشت: {formatTripDateTime(item.actualDropoffDateTime)}{" "}
-                        — کیلومتر: {item.startOdometer ?? "—"} تا{" "}
-                        {item.endOdometer ?? "—"}
-                      </p>
-                    ))
-                  )}
-                  {active &&
-                    !requestIsTerminal &&
-                    (details.status === "Assigned" ||
-                      details.status === "InProgress") && (
-                    <TripExecutionForm
-                      tripRequestId={details.tripRequestId}
-                      trip={trip}
-                      execution={active}
-                    />
-                  )}
-                  {active && details.status === "New" && (
-                    <p className={styles.muted}>
-                      پس از ثبت تخصیص‌یافته، زمان واقعی حرکت اینجا وارد می‌شود.
-                    </p>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        </section>
-
-        <section
-          id="return"
-          className={styles.section}
-          aria-labelledby="return-heading"
-        >
-          <h2 id="return-heading" tabIndex={-1}>
-            بازگشت و تکمیل
-          </h2>
-          <div className={styles.stack}>
-            {view.passengers.map((item) => {
-              const trip = details.passengers.find(
-                (passenger) => passenger.tripId === item.tripId,
-              );
-              if (!trip) return null;
-              const completed = trip.executions.filter(
-                (execution) => execution.status === "Completed",
-              );
-              return (
-                <article className={styles.groupCard} key={item.tripId}>
-                  <h3>{item.personName}</h3>
-                  {completed.length === 0 ? (
-                    <p className={styles.muted}>
-                      پس از تکمیل اجرای این مسافر، تصادف، تخلف و نظرسنجی اینجا
-                      ثبت می‌شود.
-                    </p>
-                  ) : (
-                    completed.map((execution) => (
-                      <div className={styles.stack} key={execution.tripExecutionId}>
-                        <p className={styles.muted}>
-                          امتیاز:{" "}
-                          {execution.passengerRating === null
-                            ? "ثبت نشده"
-                            : execution.passengerRating}{" "}
-                          — {formatTripDateTime(execution.surveyDateTime)}
-                        </p>
-                        <details className={styles.disclosure}>
-                          <summary>ثبت تصادف یا تخلف</summary>
-                          <TripIncidentForms
-                            tripRequestId={details.tripRequestId}
-                            execution={execution}
-                          />
-                        </details>
-                        {item.canSurvey && (
-                          <details
-                            className={styles.disclosure}
-                            data-workspace-disclosure="survey"
-                          >
-                            <summary>ثبت نظرسنجی مسافر</summary>
-                            <PassengerSurveyForm
-                              tripRequestId={details.tripRequestId}
-                              execution={execution}
-                            />
-                          </details>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        </section>
+        <WorkspaceIdentity view={view} backHref="/trips/requests" />
+        <TripWorkspaceTabs
+          tripRequestId={details.tripRequestId}
+          activeSection={section}
+        />
+        <ActiveTabPanel
+          section={section}
+          details={details}
+          view={view}
+          assignments={assignments}
+          locations={locations}
+          requestIsTerminal={requestIsTerminal}
+        />
       </div>
     </PageShell>
   );

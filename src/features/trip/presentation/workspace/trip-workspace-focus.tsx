@@ -6,22 +6,13 @@ import type { WorkspaceSectionId } from "./trip-workspace-view";
 
 export function TripWorkspaceFocus({
   sectionId,
-  disclosure,
 }: {
   sectionId: WorkspaceSectionId;
-  disclosure?: "details" | "route" | "survey";
 }) {
   useEffect(() => {
-    const section = document.getElementById(sectionId);
-    if (!section) return;
-    if (disclosure) {
-      const target = section.querySelector<HTMLDetailsElement>(
-        `details[data-workspace-disclosure="${disclosure}"]`,
-      );
-      if (target) target.open = true;
-    }
-    section.scrollIntoView({ block: "start" });
-    section.querySelector<HTMLElement>("h2")?.focus();
-  }, [sectionId, disclosure]);
+    const panel = document.getElementById(`workspace-tab-${sectionId}`);
+    if (!panel) return;
+    panel.querySelector<HTMLElement>("h2, h3")?.focus({ preventScroll: true });
+  }, [sectionId]);
   return null;
 }
