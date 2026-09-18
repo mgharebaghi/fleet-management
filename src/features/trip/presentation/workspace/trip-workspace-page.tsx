@@ -24,6 +24,12 @@ import { TripWorkspaceFocus } from "./trip-workspace-focus";
 import { TripWorkspacePassengerPanel } from "./trip-workspace-passenger-panel";
 import { TripRequestStatusControl } from "./trip-request-status-control";
 import { TripWorkspaceTabs } from "./trip-workspace-tabs";
+import {
+  completionSurveyProgressLine,
+  hasExecutionDescription,
+  presentPlanningExecutionStatusLabel,
+  presentTripPassengerStatus,
+} from "./trip-workspace-passenger-display";
 import styles from "./trip-workspace.module.css";
 import {
   defaultPassengerTabIndex,
@@ -179,7 +185,8 @@ function DetailsTab({
               <th scope="col">زمان سوارشدن</th>
               <th scope="col">ترتیب سوار</th>
               <th scope="col">ترتیب پیاده</th>
-              <th scope="col">وضعیت</th>
+              <th scope="col">وضعیت مسافر</th>
+              <th scope="col">وضعیت برنامه‌ریزی / اجرا</th>
               <th scope="col">توضیحات</th>
             </tr>
           </thead>
@@ -187,22 +194,48 @@ function DetailsTab({
             {view.passengers.map((item, index) => (
               <tr key={item.tripId}>
                 <td>{index + 1}</td>
-                <td>{item.personName}</td>
+                <td>
+                  <span className={styles.passengerName}>{item.personName}</span>
+                  {(item.personnelNo || item.mobile) && (
+                    <span className={styles.passengerIdentity}>
+                      {item.personnelNo && (
+                        <>
+                          <span className={styles.passengerIdentityLabel}>
+                            پرسنلی
+                          </span>{" "}
+                          <TechnicalValue>{item.personnelNo}</TechnicalValue>
+                        </>
+                      )}
+                      {item.personnelNo && item.mobile && (
+                        <span className={styles.passengerIdentitySep}> · </span>
+                      )}
+                      {item.mobile && (
+                        <>
+                          <span className={styles.passengerIdentityLabel}>
+                            موبایل
+                          </span>{" "}
+                          <TechnicalValue>{item.mobile}</TechnicalValue>
+                        </>
+                      )}
+                    </span>
+                  )}
+                </td>
                 <td>{item.originName}</td>
                 <td>{item.destinationName}</td>
                 <td>{formatTripDateTime(item.pickupAt)}</td>
                 <td>{item.pickupOrder ?? "—"}</td>
                 <td>{item.dropoffOrder ?? "—"}</td>
+                <td>{presentTripPassengerStatus(item.passengerStatus)}</td>
                 <td>
                   <StatusBadge
-                    label={
+                    label={presentPlanningExecutionStatusLabel(item)}
+                    tone={
                       item.executionStatus
-                        ? executionStatusLabel(item.executionStatus)
+                        ? "info"
                         : item.hasPlan
-                          ? "برنامه ثبت شده"
-                          : "نیازمند برنامه‌ریزی"
+                          ? "positive"
+                          : "warning"
                     }
-                    tone={item.hasPlan ? "positive" : "warning"}
                   />
                 </td>
                 <td>{item.description ?? "—"}</td>
@@ -386,13 +419,25 @@ function ExecutionTab({
                 </p>
               ) : (
                 trip.executions.map((execution) => (
-                  <p className={styles.muted} key={execution.tripExecutionId}>
-                    {executionStatusLabel(execution.status)} — حرکت:{" "}
-                    {formatTripDateTime(execution.actualPickupDateTime)} —
-                    بازگشت: {formatTripDateTime(execution.actualDropoffDateTime)}{" "}
-                    — کیلومتر: {execution.startOdometer ?? "—"} تا{" "}
-                    {execution.endOdometer ?? "—"}
-                  </p>
+                  <div
+                    className={styles.executionRecord}
+                    key={execution.tripExecutionId}
+                  >
+                    <p className={styles.muted}>
+                      {executionStatusLabel(execution.status)} — حرکت:{" "}
+                      {formatTripDateTime(execution.actualPickupDateTime)} —
+                      بازگشت:{" "}
+                      {formatTripDateTime(execution.actualDropoffDateTime)} —
+                      کیلومتر: {execution.startOdometer ?? "—"} تا{" "}
+                      {execution.endOdometer ?? "—"}
+                    </p>
+                    {hasExecutionDescription(execution.description) && (
+                      <p className={styles.muted}>
+                        <span className={styles.inlineLabel}>توضیحات اجرا:</span>{" "}
+                        {execution.description}
+                      </p>
+                    )}
+                  </div>
                 ))
               )}
               {active &&
@@ -470,8 +515,7 @@ function CompletionTab({
 
       <h3 className={styles.subheading}>نظرسنجی مسافران</h3>
       <p className={styles.muted}>
-        {surveyedCount} از {view.passengerCount} مسافر — برای تکمیل نهایی،
-        نظرسنجی مسافران را ثبت کنید.
+        {completionSurveyProgressLine(surveyedCount, view.passengerCount)}
       </p>
 
       <div className={styles.stack}>
