@@ -1,5 +1,6 @@
 import { formatGregorianDateAsJalali } from "../../../../components/ui/date-picker/jalali-date";
 import type {
+  TripLocationInputFailure,
   TripLocationReference,
   TripPersonReference,
   TripRequestTypeReference,
@@ -60,6 +61,20 @@ export function wizardStepForField(
   return 1;
 }
 
+export function wizardFieldForLocationFailure(
+  typeCode: string | undefined,
+  failedLocation: TripLocationInputFailure,
+): string {
+  if (failedLocation.locationRole === "origin") {
+    return sharesOrigin(typeCode)
+      ? "commonOriginLocationId"
+      : `passenger.${failedLocation.passengerIndex}.originLocationId`;
+  }
+  return sharesDestination(typeCode)
+    ? "commonDestinationLocationId"
+    : `passenger.${failedLocation.passengerIndex}.destinationLocationId`;
+}
+
 export function isLocationField(name: string) {
   return (
     name === "commonOriginLocationId" ||
@@ -89,99 +104,37 @@ export function preservedLocationValue(
   return submitted?.[name] ?? "";
 }
 
-type LocationCatalogEntry = {
-  locationId: number;
-  isActive: boolean | null;
-};
-
 export type WizardErrorFocus = {
   step: CreateWizardStep;
   fields: string[];
 };
 
-function locationIdLooksInvalid(
-  error: "LOCATION_NOT_FOUND" | "LOCATION_INACTIVE",
-  id: string | undefined,
-  locations: LocationCatalogEntry[],
-) {
-  if (!id) return false;
-  const match = locations.find((item) => String(item.locationId) === id);
-  if (error === "LOCATION_NOT_FOUND") return !match;
-  return !match || match.isActive === false;
-}
-
-function wizardLocationCandidates(
-  typeCode: string | undefined,
-  values: Record<string, string> | undefined,
-): { name: string; step: CreateWizardStep }[] {
-  const candidates: { name: string; step: CreateWizardStep }[] = [];
-  if (sharesOrigin(typeCode)) {
-    candidates.push({ name: "commonOriginLocationId", step: 1 });
-  }
-  if (sharesDestination(typeCode)) {
-    candidates.push({ name: "commonDestinationLocationId", step: 1 });
-  }
-
-  const indexes = consecutiveFormIndexes(
-    values ?? {},
-    (index) => `passenger.${index}.personId`,
-  );
-  const passengerIndexes = indexes.length > 0 ? indexes : [0];
-  for (const index of passengerIndexes) {
-    if (!sharesOrigin(typeCode)) {
-      candidates.push({
-        name: `passenger.${index}.originLocationId`,
-        step: 2,
-      });
-    }
-    if (!sharesDestination(typeCode)) {
-      candidates.push({
-        name: `passenger.${index}.destinationLocationId`,
-        step: 2,
-      });
-    }
-  }
-  return candidates;
-}
-
 export function wizardLocationErrorFocus(
   error: string | undefined,
-  values: Record<string, string> | undefined,
   typeCode: string | undefined,
-  locations: LocationCatalogEntry[],
+  failedLocation: TripLocationInputFailure | undefined,
 ): WizardErrorFocus | null {
-  if (error !== "LOCATION_NOT_FOUND" && error !== "LOCATION_INACTIVE") {
+  if (
+    (error !== "LOCATION_NOT_FOUND" && error !== "LOCATION_INACTIVE") ||
+    !failedLocation
+  ) {
     return null;
   }
-
-  const candidates = wizardLocationCandidates(typeCode, values);
-  const suspicious = candidates.filter((candidate) =>
-    locationIdLooksInvalid(error, values?.[candidate.name], locations),
-  );
-  const targets = suspicious.length > 0 ? suspicious : candidates;
-  const step: CreateWizardStep = targets.some((target) => target.step === 1)
-    ? 1
-    : 2;
-  const fields = [
-    ...new Set([
-      ...targets
-        .filter((target) => target.step === step)
-        .map((target) => target.name),
-      ...suspicious.map((candidate) => candidate.name),
-    ]),
-  ];
-  return { step, fields };
+  const field = wizardFieldForLocationFailure(typeCode, failedLocation);
+  return {
+    step: wizardStepForField(field, error),
+    fields: [field],
+  };
 }
 
 export function wizardErrorNavigation(
   error: string | undefined,
   field: string | undefined,
-  values: Record<string, string> | undefined,
   typeCode: string | undefined,
-  locations: LocationCatalogEntry[],
+  failedLocation: TripLocationInputFailure | undefined,
 ): WizardErrorFocus {
   return (
-    wizardLocationErrorFocus(error, values, typeCode, locations) ?? {
+    wizardLocationErrorFocus(error, typeCode, failedLocation) ?? {
       step: wizardStepForField(field, error),
       fields: field ? [field] : [],
     }

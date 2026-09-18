@@ -1,8 +1,12 @@
-import type { TripFailure } from "../application/trip-records";
+import type {
+  TripFailure,
+  TripLocationInputFailure,
+} from "../application/trip-records";
 
 export type TripActionState = {
   error?: TripFailure | "INVALID_FORM" | "UNEXPECTED";
   field?: string;
+  failedLocation?: TripLocationInputFailure;
   values?: Record<string, string>;
 };
 

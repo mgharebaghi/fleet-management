@@ -13,6 +13,7 @@ import {
   tripFormValues,
   type TripActionState,
 } from "./trip-form-data";
+import { wizardFieldForLocationFailure } from "./create-request/create-wizard";
 
 async function run(
   values: Record<string, string>,
@@ -28,7 +29,10 @@ async function run(
     ? { id: result.id }
     : {
         error: result.error,
-        field: result.field ?? tripErrorFields[result.error],
+        field: result.failedLocation
+          ? undefined
+          : result.field ?? tripErrorFields[result.error],
+        failedLocation: result.failedLocation,
         values,
       };
 }
@@ -85,7 +89,16 @@ export async function createTripRequestAction(
     }),
   );
 
-  if (!("id" in result)) return result;
+  if (!("id" in result)) {
+    if (!result.failedLocation) return result;
+    return {
+      ...result,
+      field: wizardFieldForLocationFailure(
+        values.requestTypeCode,
+        result.failedLocation,
+      ),
+    };
+  }
   revalidatePath("/trips", "layout");
   redirect(`/trips/${result.id}`);
 }

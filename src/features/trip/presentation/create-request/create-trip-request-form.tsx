@@ -96,9 +96,8 @@ export function CreateTripRequestForm({
   const errorFocus = wizardErrorNavigation(
     state.error,
     state.field,
-    state.values,
     submittedType?.typeCode ?? selectedType?.typeCode,
-    catalogLocations,
+    state.failedLocation,
   );
   const value = (name: string) =>
     isLocationField(name)

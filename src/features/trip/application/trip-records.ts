@@ -253,6 +253,18 @@ export type TripFailure =
   | "ODOMETER_DECREASE"
   | "INVALID_RATING";
 
+export type TripLocationInputRole = "origin" | "destination";
+
+export type TripLocationInputFailure = {
+  passengerIndex: number;
+  locationRole: TripLocationInputRole;
+};
+
 export type TripResult =
   | { success: true; id: number }
-  | { success: false; error: TripFailure; field?: string };
+  | {
+      success: false;
+      error: TripFailure;
+      field?: string;
+      failedLocation?: TripLocationInputFailure;
+    };

@@ -100,6 +100,12 @@ export function RequestStep({
             />
           )}
         </FormField>
+        <input
+          type="hidden"
+          name="requestTypeCode"
+          value={selectedType?.typeCode ?? ""}
+          readOnly
+        />
         <FormField>
           <FieldLabel htmlFor={`${prefix}-purpose`}>
             هدف سفر (اختیاری)

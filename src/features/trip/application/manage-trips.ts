@@ -5,6 +5,8 @@ import type {
   SavePassengerSurveyInput,
   SaveTripExecutionInput,
   TripFailure,
+  TripLocationInputFailure,
+  TripLocationInputRole,
   TripResult,
 } from "./trip-records";
 import {
@@ -40,6 +42,18 @@ const failure = (error: TripFailure, field?: string): TripResult => ({
   error,
   ...(field ? { field } : {}),
 });
+
+function locationInputFailure(
+  error: "LOCATION_NOT_FOUND" | "LOCATION_INACTIVE",
+  passengerIndex: number,
+  locationRole: TripLocationInputRole,
+): TripResult {
+  const failedLocation: TripLocationInputFailure = {
+    passengerIndex,
+    locationRole,
+  };
+  return { success: false, error, failedLocation };
+}
 
 function assignmentFailure(
   assignment: {
@@ -97,18 +111,43 @@ export class ManageTrips {
         );
         if (groupingError) return failure(groupingError);
 
-        for (const passenger of value.passengers) {
+        for (const [passengerIndex, passenger] of value.passengers.entries()) {
           const person = await session.person(passenger.passengerPersonId);
           if (!person) return failure("PERSON_NOT_FOUND");
           if (!person.isActive) return failure("PERSON_INACTIVE");
 
-          for (const locationId of [
-            passenger.originLocationId,
+          const origin = await session.location(passenger.originLocationId);
+          if (!origin) {
+            return locationInputFailure(
+              "LOCATION_NOT_FOUND",
+              passengerIndex,
+              "origin",
+            );
+          }
+          if (origin.isActive === false) {
+            return locationInputFailure(
+              "LOCATION_INACTIVE",
+              passengerIndex,
+              "origin",
+            );
+          }
+
+          const destination = await session.location(
             passenger.destinationLocationId,
-          ]) {
-            const location = await session.location(locationId);
-            if (!location) return failure("LOCATION_NOT_FOUND");
-            if (location.isActive === false) return failure("LOCATION_INACTIVE");
+          );
+          if (!destination) {
+            return locationInputFailure(
+              "LOCATION_NOT_FOUND",
+              passengerIndex,
+              "destination",
+            );
+          }
+          if (destination.isActive === false) {
+            return locationInputFailure(
+              "LOCATION_INACTIVE",
+              passengerIndex,
+              "destination",
+            );
           }
         }
 

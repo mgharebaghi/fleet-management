@@ -11,6 +11,7 @@ import {
   shouldSubmitCreateForm,
   typeExplanation,
   wizardErrorNavigation,
+  wizardFieldForLocationFailure,
   wizardLocationErrorFocus,
   wizardStepForField,
 } from "./create-wizard";
@@ -254,113 +255,105 @@ describe("Trip create wizard presentation", () => {
     ).toBe("");
   });
 
-  it("maps server Location errors to the visible wizard field for the request type", () => {
-    const catalog = [
+  it("maps Application Location failure context to the visible wizard field", () => {
+    expect(
+      wizardFieldForLocationFailure("COMMON_ORIGIN", {
+        passengerIndex: 0,
+        locationRole: "origin",
+      }),
+    ).toBe("commonOriginLocationId");
+    expect(
+      wizardFieldForLocationFailure("COMMON_ORIGIN", {
+        passengerIndex: 0,
+        locationRole: "destination",
+      }),
+    ).toBe("passenger.0.destinationLocationId");
+    expect(
+      wizardFieldForLocationFailure("COMMON_DESTINATION", {
+        passengerIndex: 1,
+        locationRole: "destination",
+      }),
+    ).toBe("commonDestinationLocationId");
+    expect(
+      wizardFieldForLocationFailure("COMMON_DESTINATION", {
+        passengerIndex: 1,
+        locationRole: "origin",
+      }),
+    ).toBe("passenger.1.originLocationId");
+    expect(
+      wizardFieldForLocationFailure("COMMON_ORIGIN_DESTINATION", {
+        passengerIndex: 0,
+        locationRole: "origin",
+      }),
+    ).toBe("commonOriginLocationId");
+    expect(
+      wizardFieldForLocationFailure("COMMON_ORIGIN_DESTINATION", {
+        passengerIndex: 0,
+        locationRole: "destination",
+      }),
+    ).toBe("commonDestinationLocationId");
+    expect(
+      wizardFieldForLocationFailure("PER_PASSENGER", {
+        passengerIndex: 2,
+        locationRole: "origin",
+      }),
+    ).toBe("passenger.2.originLocationId");
+    expect(
+      wizardFieldForLocationFailure("PER_PASSENGER", {
+        passengerIndex: 2,
+        locationRole: "destination",
+      }),
+    ).toBe("passenger.2.destinationLocationId");
+
+    expect(
+      wizardLocationErrorFocus("LOCATION_NOT_FOUND", "COMMON_ORIGIN", {
+        passengerIndex: 0,
+        locationRole: "origin",
+      }),
+    ).toEqual({ step: 1, fields: ["commonOriginLocationId"] });
+    expect(
+      wizardLocationErrorFocus("LOCATION_INACTIVE", "COMMON_ORIGIN", {
+        passengerIndex: 0,
+        locationRole: "destination",
+      }),
+    ).toEqual({
+      step: 2,
+      fields: ["passenger.0.destinationLocationId"],
+    });
+    expect(
+      wizardErrorNavigation(
+        "LOCATION_NOT_FOUND",
+        "passenger.0.originLocationId",
+        "COMMON_ORIGIN_DESTINATION",
+        { passengerIndex: 0, locationRole: "destination" },
+      ).fields,
+    ).toEqual(["commonDestinationLocationId"]);
+    expect(
+      wizardErrorNavigation(
+        "PURPOSE_TOO_LONG",
+        "purpose",
+        "COMMON_ORIGIN_DESTINATION",
+        undefined,
+      ),
+    ).toEqual({ step: 1, fields: ["purpose"] });
+  });
+
+  it("does not let a stale active catalog choose the failed Location field", () => {
+    const staleActiveCatalog = [
       { locationId: 80, isActive: true },
       { locationId: 81, isActive: true },
     ];
-
+    expect(staleActiveCatalog.every((item) => item.isActive)).toBe(true);
     expect(
-      wizardLocationErrorFocus(
-        "LOCATION_NOT_FOUND",
-        {
-          commonOriginLocationId: "80",
-          commonDestinationLocationId: "81",
-          "passenger.0.personId": "44",
-        },
-        "COMMON_ORIGIN_DESTINATION",
-        catalog,
-      ),
-    ).toEqual({
-      step: 1,
-      fields: ["commonOriginLocationId", "commonDestinationLocationId"],
-    });
-
-    expect(
-      wizardLocationErrorFocus(
-        "LOCATION_NOT_FOUND",
-        {
-          commonOriginLocationId: "999",
-          "passenger.0.personId": "44",
-          "passenger.0.destinationLocationId": "81",
-        },
-        "COMMON_ORIGIN",
-        catalog,
-      ),
-    ).toEqual({
-      step: 1,
-      fields: ["commonOriginLocationId"],
-    });
-
-    expect(
-      wizardLocationErrorFocus(
+      wizardErrorNavigation(
         "LOCATION_INACTIVE",
-        {
-          commonOriginLocationId: "80",
-          "passenger.0.personId": "44",
-          "passenger.0.destinationLocationId": "81",
-        },
+        "passenger.0.originLocationId",
         "COMMON_ORIGIN",
-        [{ locationId: 80, isActive: true }, { locationId: 81, isActive: false }],
+        { passengerIndex: 0, locationRole: "destination" },
       ),
     ).toEqual({
       step: 2,
       fields: ["passenger.0.destinationLocationId"],
     });
-
-    expect(
-      wizardLocationErrorFocus(
-        "LOCATION_NOT_FOUND",
-        {
-          commonDestinationLocationId: "81",
-          "passenger.0.personId": "44",
-          "passenger.0.originLocationId": "999",
-        },
-        "COMMON_DESTINATION",
-        catalog,
-      ),
-    ).toEqual({
-      step: 2,
-      fields: ["passenger.0.originLocationId"],
-    });
-
-    expect(
-      wizardLocationErrorFocus(
-        "LOCATION_NOT_FOUND",
-        {
-          commonDestinationLocationId: "999",
-          "passenger.0.personId": "44",
-          "passenger.0.originLocationId": "80",
-        },
-        "COMMON_DESTINATION",
-        catalog,
-      ),
-    ).toEqual({
-      step: 1,
-      fields: ["commonDestinationLocationId"],
-    });
-
-    expect(
-      wizardErrorNavigation(
-        "LOCATION_NOT_FOUND",
-        "passenger.0.originLocationId",
-        {
-          commonOriginLocationId: "80",
-          commonDestinationLocationId: "81",
-          "passenger.0.personId": "44",
-        },
-        "COMMON_ORIGIN_DESTINATION",
-        catalog,
-      ).fields,
-    ).not.toContain("passenger.0.originLocationId");
-    expect(
-      wizardErrorNavigation(
-        "PURPOSE_TOO_LONG",
-        "purpose",
-        { purpose: "x".repeat(501) },
-        "COMMON_ORIGIN_DESTINATION",
-        catalog,
-      ),
-    ).toEqual({ step: 1, fields: ["purpose"] });
   });
 });

@@ -302,6 +302,70 @@ describe("create Trip request", () => {
     expect(await manage.createRequest(createInput)).toEqual({
       success: false,
       error: "LOCATION_INACTIVE",
+      failedLocation: { passengerIndex: 0, locationRole: "origin" },
+    });
+  });
+
+  it("identifies which passenger origin or destination failed Location lookup", async () => {
+    session.location.mockImplementation(async (id: number) =>
+      id === 1 ? null : { ...location, locationId: id },
+    );
+    expect(await manage.createRequest(createInput)).toEqual({
+      success: false,
+      error: "LOCATION_NOT_FOUND",
+      failedLocation: { passengerIndex: 0, locationRole: "origin" },
+    });
+
+    session.location.mockImplementation(async (id: number) =>
+      id === 2 ? null : { ...location, locationId: id },
+    );
+    expect(await manage.createRequest(createInput)).toEqual({
+      success: false,
+      error: "LOCATION_NOT_FOUND",
+      failedLocation: { passengerIndex: 0, locationRole: "destination" },
+    });
+
+    session.location.mockImplementation(async (id: number) => ({
+      ...location,
+      locationId: id,
+      isActive: id !== 1,
+    }));
+    expect(await manage.createRequest(createInput)).toEqual({
+      success: false,
+      error: "LOCATION_INACTIVE",
+      failedLocation: { passengerIndex: 0, locationRole: "origin" },
+    });
+
+    session.location.mockImplementation(async (id: number) => ({
+      ...location,
+      locationId: id,
+      isActive: id !== 2,
+    }));
+    expect(await manage.createRequest(createInput)).toEqual({
+      success: false,
+      error: "LOCATION_INACTIVE",
+      failedLocation: { passengerIndex: 0, locationRole: "destination" },
+    });
+
+    session.location.mockImplementation(async (id: number) =>
+      id === 3 ? null : { ...location, locationId: id },
+    );
+    expect(
+      await manage.createRequest({
+        ...createInput,
+        passengers: [
+          createInput.passengers[0],
+          {
+            ...createInput.passengers[0],
+            passengerPersonId: 2,
+            destinationLocationId: 3,
+          },
+        ],
+      }),
+    ).toEqual({
+      success: false,
+      error: "LOCATION_NOT_FOUND",
+      failedLocation: { passengerIndex: 1, locationRole: "destination" },
     });
   });
 });
