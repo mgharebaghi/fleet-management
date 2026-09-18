@@ -1,0 +1,147 @@
+.listPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+
+.listSummary {
+  color: var(--app-text-muted);
+  font-size: var(--app-font-size-sm);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.35fr)
+    minmax(0, 2fr)
+    auto
+    minmax(7.5rem, 1fr)
+    auto;
+  gap: var(--space-4) var(--space-5);
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface);
+}
+
+.scheduleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.travelDay {
+  font-size: var(--app-font-size-sm);
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.travelTime {
+  font-size: var(--app-font-size-sm);
+  color: var(--app-text-muted);
+}
+
+.routeBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.routeLine {
+  font-size: var(--app-font-size-md);
+  font-weight: 600;
+  color: var(--app-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metaLine {
+  font-size: var(--app-font-size-sm);
+  color: var(--app-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metaSeparator {
+  margin-inline: var(--space-2);
+  opacity: 0.55;
+}
+
+.idBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.requestNo {
+  font-size: var(--app-font-size-sm);
+  font-weight: 700;
+}
+
+.shortDate {
+  font-size: var(--app-font-size-xs);
+  color: var(--app-text-muted);
+}
+
+.statusCell {
+  justify-self: center;
+}
+
+.detailsAction {
+  justify-self: end;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .row {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "id status"
+      "schedule schedule"
+      "route route"
+      "action action";
+    gap: var(--space-3);
+  }
+
+  .idBlock {
+    grid-area: id;
+  }
+
+  .statusCell {
+    grid-area: status;
+    justify-self: end;
+  }
+
+  .scheduleBlock {
+    grid-area: schedule;
+  }
+
+  .routeBlock {
+    grid-area: route;
+  }
+
+  .detailsAction {
+    grid-area: action;
+    justify-self: stretch;
+  }
+
+  .detailsAction a {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+}

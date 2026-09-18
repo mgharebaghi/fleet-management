@@ -27,7 +27,7 @@ export function TripFilters({
       <ListSearchField
         name="search"
         label="جستجوی سفرها"
-        placeholder="شماره، نوع، وضعیت، مسافر، مبدأ یا مقصد"
+        placeholder="جستجو در شماره درخواست، مبدأ، مقصد و …"
         value={filters.values.search}
         onChange={filters.changeSearch}
       />
