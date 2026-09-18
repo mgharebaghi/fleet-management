@@ -5,7 +5,7 @@ import type {
 
 export type IncidentRequestOwnership = {
   status: string;
-  assignmentIds: number[];
+  completedAssignmentIds: number[];
 };
 
 export interface IncidentWriteSession {

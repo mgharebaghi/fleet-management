@@ -60,7 +60,10 @@ Request numbers are generated as `TR-{JalaliYear}-{Sequence}`:
 - The sequence is four digits, starts at `0001`, and resets each Jalali year.
 - Allocation takes a year-scoped application lock
   (`FleetManagement.Trip.RequestNo.{year}`) inside the create transaction.
-  Other Trip writes are not globally serialized.
+  Other Trip writes are not globally serialized by that lock. All Trip write
+  transactions still use Serializable isolation because RequestNo, one
+  non-terminal execution per Trip, and one selected planned Route have no
+  unique SQL constraints. Weakening that isolation was not done speculatively.
 - Application still pre-checks duplicates before insertion.
 
 SQL Server has no unique constraint for `TripRequest.RequestNo`. An external
@@ -121,10 +124,14 @@ handwriting areas for actual times/odometer, stops, delay/deviation,
 incidents, accident/violation details, operational notes, and signatures/stamp.
 Those handwriting fields are not persisted. After return, staff reconcile
 supported values into TripExecution; accident and violation rows may also be
-recorded against the request and persisted assignment. Violation amount is
-required when recording electronically; unknown amounts stay on paper rather
-than being stored as zero. `VehicleViolation.Status` is written as `Unpaid`
-to match the intended SQL default (`N'Unpaid'` in Prisma introspection).
+recorded against the request and an assignment proven to belong to a Completed
+TripExecution of that request. Planned, Cancelled, and foreign assignments are
+rejected in Application. Violation amount is required when recording
+electronically; unknown amounts stay on paper rather than being stored as zero.
+`VehicleViolation.Status` is written as `Unpaid` because SQL Server
+`DF_VehicleViolation_Status` is `(N'Unpaid')` (the value Unpaid) while Prisma
+introspection `@default("N'Unpaid'")` is injected on omit and would persist
+the characters `N'Unpaid'`.
 
 Print uses browser `window.print()` and print CSS. No PDF dependency.
 
@@ -139,8 +146,8 @@ Seeded type codes:
 The form inherits those shared locations. Distinct origin/destination rules
 for other types are not invented. Optional passenger pickup falls back to the
 request time. Pickup/drop-off order is de-emphasized for a single passenger.
-The 50-passenger and 50-route-point limits are technical form guards, not
-domain laws.
+Passenger and route-point rows are parsed from consecutive submitted form
+keys; there is no approved product maximum.
 
 ## Tests
 

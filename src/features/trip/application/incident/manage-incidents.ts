@@ -5,7 +5,6 @@ import type {
   RecordAccidentCommand,
   RecordViolationCommand,
 } from "./incident-records";
-import { isTerminalTripRequestStatus } from "../trip-lifecycle";
 import { isValidTripDate, isValidTripId } from "../trip-validation";
 
 const failure = (error: IncidentFailure): IncidentResult => ({
@@ -99,19 +98,19 @@ async function assertRequestOwnership(
   session: {
     requestOwnership(
       tripRequestId: number,
-    ): Promise<{ status: string; assignmentIds: number[] } | null>;
+    ): Promise<{ status: string; completedAssignmentIds: number[] } | null>;
   },
   tripRequestId: number,
   vehicleAssignmentId: number | null,
 ): Promise<IncidentFailure | null> {
   const ownership = await session.requestOwnership(tripRequestId);
   if (!ownership) return "REQUEST_NOT_FOUND";
-  if (isTerminalTripRequestStatus(ownership.status) && ownership.status === "Cancelled") {
+  if (ownership.status === "Cancelled") {
     return "REQUEST_TERMINAL";
   }
   if (
-    vehicleAssignmentId !== null &&
-    !ownership.assignmentIds.includes(vehicleAssignmentId)
+    vehicleAssignmentId === null ||
+    !ownership.completedAssignmentIds.includes(vehicleAssignmentId)
   ) {
     return "ASSIGNMENT_NOT_ON_REQUEST";
   }

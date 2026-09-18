@@ -24,6 +24,7 @@ class PrismaIncidentWriteSession implements IncidentWriteSession {
         Trip: {
           select: {
             TripExecution: {
+              where: { Status: "Completed" },
               select: { VehicleDriverAssignmentId: true },
             },
           },
@@ -33,7 +34,7 @@ class PrismaIncidentWriteSession implements IncidentWriteSession {
     return row
       ? {
           status: row.Status,
-          assignmentIds: [
+          completedAssignmentIds: [
             ...new Set(
               row.Trip.flatMap((trip) =>
                 trip.TripExecution.map(
@@ -71,6 +72,8 @@ class PrismaIncidentWriteSession implements IncidentWriteSession {
   }
 
   async createViolation(input: RecordViolationCommand) {
+    // Prisma's introspected @default("N'Unpaid'") is injected on omit and
+    // persists the characters N'Unpaid'. SQL Server DF is (N'Unpaid') = Unpaid.
     const row = await this.client.vehicleViolation.create({
       data: {
         TripRequestId: input.tripRequestId,

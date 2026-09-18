@@ -444,6 +444,19 @@ describe.sequential("Trip SQL Server integration", () => {
         }),
       );
       expect(
+        await incidents.recordAccident({
+          tripRequestId: fixture.requestId,
+          vehicleAssignmentId: assignment.AssignmentId,
+          accidentDateTime: fixture.requestedTravelDateTime,
+          location: "جاده",
+          description: null,
+          damageAmount: "10.00",
+          driverFaultPercent: "0",
+          policeReportNo: null,
+          hasInjury: false,
+        }),
+      ).toEqual({ success: false, error: "ASSIGNMENT_NOT_ON_REQUEST" });
+      expect(
         await manage.changeRequestStatus(fixture.requestId, "Assigned"),
       ).toEqual({ success: true, id: fixture.requestId });
       expect(
@@ -528,6 +541,39 @@ describe.sequential("Trip SQL Server integration", () => {
           hasInjury: false,
         }),
       ).toMatchObject({ success: true });
+
+      const [statusDefault] = await client.$queryRaw<
+        Array<{ constraintName: string; defaultDefinition: string | null }>
+      >`SELECT
+          dc.name AS constraintName,
+          dc.definition AS defaultDefinition
+        FROM sys.default_constraints dc
+        JOIN sys.columns c ON c.default_object_id = dc.object_id
+        JOIN sys.tables t ON t.object_id = dc.parent_object_id
+        JOIN sys.schemas s ON s.schema_id = t.schema_id
+        WHERE s.name = N'driver'
+          AND t.name = N'VehicleViolation'
+          AND c.name = N'Status'`;
+      expect(statusDefault.constraintName).toBe("DF_VehicleViolation_Status");
+
+      const violation = await incidents.recordViolation({
+        tripRequestId: fixture.requestId,
+        vehicleAssignmentId: assignment.AssignmentId,
+        violationDateTime: fixture.requestedTravelDateTime,
+        violationType: "سرعت غیرمجاز",
+        location: null,
+        amount: "250000.00",
+        referenceNo: null,
+        description: null,
+      });
+      expect(violation).toMatchObject({ success: true });
+      if (!violation.success) throw new Error(violation.error);
+      const [persistedViolation] = await client.$queryRaw<
+        Array<{ status: string }>
+      >`SELECT CONVERT(nvarchar(50), Status) AS status
+        FROM driver.VehicleViolation
+        WHERE ViolationId = ${violation.id}`;
+      expect(persistedViolation.status).toBe("Unpaid");
     },
     600_000,
   );

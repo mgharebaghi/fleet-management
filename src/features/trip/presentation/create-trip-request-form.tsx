@@ -16,7 +16,6 @@ import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
 import { SearchableSelect } from "@/components/ui/searchable-select/searchable-select";
 import { TechnicalValue } from "@/components/ui/technical-value/technical-value";
 import { TimeSelect } from "@/components/ui/time-select/time-select";
-import { TECHNICAL_PASSENGER_LIMIT } from "../application/trip-validation";
 import type {
   TripLocationReference,
   TripPersonReference,
@@ -299,7 +298,7 @@ export function CreateTripRequestForm({
             type="button"
             variant="secondary"
             size="sm"
-            disabled={pending || passengerCount >= TECHNICAL_PASSENGER_LIMIT}
+            disabled={pending}
             onClick={() => setPassengerCount((count) => count + 1)}
           >
             افزودن مسافر
@@ -307,8 +306,7 @@ export function CreateTripRequestForm({
         </div>
         <p className={styles.hint}>
           اگر زمان سوارشدن هر مسافر خالی بماند، همان زمان برنامه‌ریزی‌شدهٔ
-          درخواست استفاده می‌شود. حداکثر {TECHNICAL_PASSENGER_LIMIT} مسافر در
-          هر ارسال فرم یک محدودیت فنی است، نه قانون کسب‌وکار.
+          درخواست استفاده می‌شود.
         </p>
 
         <input

@@ -12,7 +12,6 @@ import {
 import { FormGrid } from "@/components/ui/form-grid/form-grid";
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
 import { SearchableSelect } from "@/components/ui/searchable-select/searchable-select";
-import { TECHNICAL_ROUTE_POINT_LIMIT } from "../application/trip-validation";
 import type {
   TripLocationReference,
   TripPassengerRecord,
@@ -173,7 +172,7 @@ export function TripRouteForm({
           type="button"
           variant="secondary"
           size="sm"
-          disabled={pending || pointCount >= TECHNICAL_ROUTE_POINT_LIMIT}
+          disabled={pending}
           onClick={() => setPointCount((count) => count + 1)}
         >
           افزودن نقطه

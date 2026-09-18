@@ -20,6 +20,17 @@ export function tripFormValues(
   return values;
 }
 
+export function consecutiveFormIndexes(
+  values: Record<string, string>,
+  keyForIndex: (index: number) => string,
+): number[] {
+  const indexes: number[] = [];
+  for (let index = 0; keyForIndex(index) in values; index += 1) {
+    indexes.push(index);
+  }
+  return indexes;
+}
+
 export function parseOptionalInteger(value: string | undefined): number | null {
   if (!value?.trim()) return null;
   return /^-?\d+$/.test(value.trim()) ? Number(value) : Number.NaN;

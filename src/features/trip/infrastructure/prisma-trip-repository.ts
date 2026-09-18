@@ -53,6 +53,10 @@ export class PrismaTripRepository implements TripRepository {
         return work(new PrismaTripWriteSession(transaction));
       },
       {
+        // SQL Server has no unique constraint for RequestNo, one non-terminal
+        // execution per Trip, or one selected planned Route. Serializable keeps
+        // those Application check-then-write invariants. The year-scoped
+        // RequestNo applock is additional and does not replace this isolation.
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         maxWait: 15_000,
         timeout: 30_000,

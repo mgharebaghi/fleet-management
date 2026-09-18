@@ -10,11 +10,6 @@ import type {
 const SQL_INT_MIN = -2_147_483_648;
 const SQL_INT_MAX = 2_147_483_647;
 
-/** Presentation form guard only; not a domain passenger limit. */
-export const TECHNICAL_PASSENGER_LIMIT = 50;
-/** Presentation form guard only; not a domain waypoint limit. */
-export const TECHNICAL_ROUTE_POINT_LIMIT = 50;
-
 export function isValidTripId(value: number): boolean {
   return Number.isInteger(value) && value > 0 && value <= SQL_INT_MAX;
 }

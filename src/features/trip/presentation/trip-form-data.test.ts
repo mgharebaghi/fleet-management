@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  consecutiveFormIndexes,
   parseOptionalInteger,
   parseTehranDateTime,
   tripFormValues,
@@ -34,5 +35,21 @@ describe("Trip form parsing", () => {
     duplicate.append("status", "New");
     duplicate.append("status", "Assigned");
     expect(tripFormValues(duplicate)).toBeNull();
+  });
+
+  it("derives consecutive submitted indexes without a product maximum", () => {
+    expect(
+      consecutiveFormIndexes(
+        {
+          "passenger.0.personId": "1",
+          "passenger.1.personId": "2",
+          "passenger.3.personId": "4",
+        },
+        (index) => `passenger.${index}.personId`,
+      ),
+    ).toEqual([0, 1]);
+    expect(
+      consecutiveFormIndexes({}, (index) => `point.${index}.locationId`),
+    ).toEqual([]);
   });
 });

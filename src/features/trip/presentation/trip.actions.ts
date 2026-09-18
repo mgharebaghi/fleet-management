@@ -6,24 +6,13 @@ import { redirect } from "next/navigation";
 import { makeManageTrips } from "../composition/trip.factory";
 import type { TripResult } from "../application/trip-records";
 import {
-  TECHNICAL_PASSENGER_LIMIT,
-  TECHNICAL_ROUTE_POINT_LIMIT,
-} from "../application/trip-validation";
-import {
+  consecutiveFormIndexes,
   parseOptionalInteger,
   parseTehranDateTime,
   tripErrorFields,
   tripFormValues,
   type TripActionState,
 } from "./trip-form-data";
-
-function validCount(value: string | undefined, maximum: number): number | null {
-  if (!value || !/^\d+$/.test(value)) return null;
-  const count = Number(value);
-  return Number.isInteger(count) && count >= 0 && count <= maximum
-    ? count
-    : null;
-}
 
 async function run(
   values: Record<string, string>,
@@ -50,13 +39,10 @@ export async function createTripRequestAction(
 ): Promise<TripActionState> {
   const values = tripFormValues(data);
   if (!values) return { error: "INVALID_FORM" };
-  const passengerCount = validCount(
-    values.passengerCount,
-    TECHNICAL_PASSENGER_LIMIT,
+  const passengerIndexes = consecutiveFormIndexes(
+    values,
+    (index) => `passenger.${index}.personId`,
   );
-  if (passengerCount === null) {
-    return { error: "INVALID_FORM", values };
-  }
 
   const commonOrigin = values.commonOriginLocationId;
   const commonDestination = values.commonDestinationLocationId;
@@ -74,7 +60,7 @@ export async function createTripRequestAction(
         ) ?? new Date(Number.NaN),
       purpose: values.purpose ?? null,
       description: values.requestDescription ?? null,
-      passengers: Array.from({ length: passengerCount }, (_, index) => ({
+      passengers: passengerIndexes.map((index) => ({
         passengerPersonId: Number(values[`passenger.${index}.personId`]),
         originLocationId: Number(
           commonOrigin || values[`passenger.${index}.originLocationId`],
@@ -130,11 +116,10 @@ export async function addTripRouteAction(
 ): Promise<TripActionState> {
   const values = tripFormValues(data);
   if (!values) return { error: "INVALID_FORM" };
-  const pointCount = validCount(
-    values.pointCount,
-    TECHNICAL_ROUTE_POINT_LIMIT,
+  const pointIndexes = consecutiveFormIndexes(
+    values,
+    (index) => `point.${index}.locationId`,
   );
-  if (pointCount === null) return { error: "INVALID_FORM", values };
 
   const result = await run(values, () =>
     makeManageTrips().addRoute({
@@ -148,7 +133,7 @@ export async function addTripRouteAction(
       ),
       isSelected: values.isSelected === "true",
       description: values.routeDescription ?? null,
-      points: Array.from({ length: pointCount }, (_, index) => ({
+      points: pointIndexes.map((index) => ({
         locationId: Number(values[`point.${index}.locationId`]),
         trafficZone: values[`point.${index}.trafficZone`] ?? null,
         sequenceNo: parseOptionalInteger(
