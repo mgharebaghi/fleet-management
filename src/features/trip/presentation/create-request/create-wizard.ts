@@ -320,3 +320,104 @@ export function reviewContainsRawId(
   const blob = JSON.stringify(review);
   return ids.some((id) => blob.includes(String(id)));
 }
+
+export type TripRequestSummaryPreview = {
+  requestTypeName: string | null;
+  purpose: string | null;
+  requestAt: string | null;
+  travelAt: string | null;
+  originName: string | null;
+  destinationName: string | null;
+  passengerCount: number;
+};
+
+export function passengerIndexFromField(field: string | undefined): number | null {
+  const match = field?.match(/^passenger\.(\d+)\./);
+  return match ? Number(match[1]) : null;
+}
+
+const passengerFieldSuffixes = [
+  "personId",
+  "originLocationId",
+  "destinationLocationId",
+  "pickupDay",
+  "pickupTime",
+  "pickupOrder",
+  "dropoffOrder",
+  "description",
+] as const;
+
+export function passengerFieldNames(index: number) {
+  return passengerFieldSuffixes.map(
+    (suffix) => `passenger.${index}.${suffix}` as const,
+  );
+}
+
+export function extractPassengerSnapshot(
+  values: Record<string, string>,
+  index: number,
+): Record<string, string> {
+  const snapshot: Record<string, string> = {};
+  for (const name of passengerFieldNames(index)) {
+    if (name in values) snapshot[name] = values[name];
+  }
+  return snapshot;
+}
+
+export function mergePassengerSnapshots(
+  current: Record<number, Record<string, string>>,
+  values: Record<string, string>,
+  passengerCount: number,
+): Record<number, Record<string, string>> {
+  const next: Record<number, Record<string, string>> = {};
+  for (let index = 0; index < passengerCount; index += 1) {
+    next[index] = {
+      ...(current[index] ?? {}),
+      ...extractPassengerSnapshot(values, index),
+    };
+  }
+  return next;
+}
+
+export function dropPassengerSnapshot(
+  snapshots: Record<number, Record<string, string>>,
+  removedIndex: number,
+): Record<number, Record<string, string>> {
+  const next = { ...snapshots };
+  delete next[removedIndex];
+  return next;
+}
+
+export function createRequestSummaryPreview(
+  values: Record<string, string>,
+  passengerCount: number,
+  catalogs: {
+    requestTypes: TripRequestTypeReference[];
+    locations: TripLocationReference[];
+  },
+): TripRequestSummaryPreview {
+  const requestType = catalogs.requestTypes.find(
+    (type) => String(type.tripRequestTypeId) === values.tripRequestTypeId,
+  );
+  const locations = catalogs.locations.map((location) => ({
+    id: String(location.locationId),
+    name: location.locationName,
+  }));
+  const originId = sharesOrigin(requestType?.typeCode)
+    ? values.commonOriginLocationId
+    : values["passenger.0.originLocationId"];
+  const destinationId = sharesDestination(requestType?.typeCode)
+    ? values.commonDestinationLocationId
+    : values["passenger.0.destinationLocationId"];
+
+  return {
+    requestTypeName: requestType?.typeName ?? null,
+    purpose: optional(values.purpose),
+    requestAt: jalaliWhen(values.requestDay, values.requestTime) || null,
+    travelAt:
+      jalaliWhen(values.requestedTravelDay, values.requestedTravelTime) || null,
+    originName: displayName(locations, originId) || null,
+    destinationName: displayName(locations, destinationId) || null,
+    passengerCount,
+  };
+}

@@ -2,8 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   createRequestReview,
+  createRequestSummaryPreview,
+  dropPassengerSnapshot,
+  extractPassengerSnapshot,
   gapNotice,
+  mergePassengerSnapshots,
   mergePreservedLocationValues,
+  passengerIndexFromField,
   passengerStepGaps,
   preservedLocationValue,
   requestStepGaps,
@@ -336,6 +341,41 @@ describe("Trip create wizard presentation", () => {
         undefined,
       ),
     ).toEqual({ step: 1, fields: ["purpose"] });
+  });
+
+  it("keeps inactive passenger snapshots when switching editors", () => {
+    const merged = mergePassengerSnapshots(
+      {},
+      {
+        "passenger.0.personId": "44",
+        "passenger.1.personId": "44",
+      },
+      2,
+    );
+    expect(merged[0]["passenger.0.personId"]).toBe("44");
+    expect(merged[1]["passenger.1.personId"]).toBe("44");
+    expect(extractPassengerSnapshot(merged[0], 0)).toEqual({
+      "passenger.0.personId": "44",
+    });
+    expect(passengerIndexFromField("passenger.2.originLocationId")).toBe(2);
+    expect(
+      dropPassengerSnapshot(merged, 1)[1],
+    ).toBeUndefined();
+    expect(
+      createRequestSummaryPreview(
+        {
+          tripRequestTypeId: "3",
+          requestDay: "2025-03-21",
+          requestTime: "08:00",
+          requestedTravelDay: "2025-03-22",
+          requestedTravelTime: "09:00",
+          commonOriginLocationId: "80",
+          commonDestinationLocationId: "81",
+        },
+        2,
+        { requestTypes, locations },
+      ).passengerCount,
+    ).toBe(2);
   });
 
   it("does not let a stale active catalog choose the failed Location field", () => {

@@ -3,7 +3,6 @@ import { JalaliDatePicker } from "../../../../components/ui/date-picker/jalali-d
 import {
   FieldErrors,
   FieldLabel,
-  FormActions,
   FormField,
   formControlClassName,
 } from "../../../../components/ui/form-field/form-field";
@@ -15,7 +14,7 @@ import type {
 } from "../../application/trip-records";
 import { tripMessages, type TripActionState } from "../trip-form-data";
 import { LocationPicker } from "../location/location-picker";
-import styles from "../trip-forms.module.css";
+import styles from "./create-trip.module.css";
 import { typeExplanation } from "./create-wizard";
 
 export function RequestStep({
@@ -35,6 +34,7 @@ export function RequestStep({
   fieldErrorId,
   onTypeChange,
   onNext,
+  onCancel,
 }: {
   hidden: boolean;
   prefix: string;
@@ -52,24 +52,25 @@ export function RequestStep({
   fieldErrorId: (name: string) => string | undefined;
   onTypeChange: (typeId: string) => void;
   onNext: () => void;
+  onCancel?: () => void;
 }) {
   return (
     <section
-      className={styles.section}
+      className={styles.createSurface}
       hidden={hidden}
       aria-labelledby={`${prefix}-request`}
     >
-      <div className={styles.sectionHeading}>
+      <div className={styles.createSurfaceHeading}>
         <div>
-          <h2 id={`${prefix}-request`}>اطلاعات درخواست</h2>
+          <h2 id={`${prefix}-request`}>اطلاعات اصلی</h2>
+          <p>شمارهٔ درخواست خودکار و وضعیت اولیه «جدید» است.</p>
         </div>
-        <p>شمارهٔ درخواست خودکار و وضعیت اولیه «جدید» است.</p>
       </div>
 
       <FormGrid>
         <FormField>
           <FieldLabel htmlFor={`${prefix}-request-type`} required>
-            نوع درخواست
+            نوع درخواست سفر
           </FieldLabel>
           <select
             key={typeRestoreNonce}
@@ -83,7 +84,7 @@ export function RequestStep({
             aria-describedby={fieldErrorId("tripRequestTypeId")}
             onChange={(event) => onTypeChange(event.target.value)}
           >
-            <option value="">انتخاب نوع درخواست</option>
+            <option value="">لطفاً انتخاب کنید</option>
             {requestTypes.map((type) => (
               <option
                 key={type.tripRequestTypeId}
@@ -107,9 +108,7 @@ export function RequestStep({
           readOnly
         />
         <FormField>
-          <FieldLabel htmlFor={`${prefix}-purpose`}>
-            هدف سفر (اختیاری)
-          </FieldLabel>
+          <FieldLabel htmlFor={`${prefix}-purpose`}>هدف سفر (اختیاری)</FieldLabel>
           <input
             id={`${prefix}-purpose`}
             name="purpose"
@@ -135,14 +134,14 @@ export function RequestStep({
         <div className={styles.dateRow}>
           <JalaliDatePicker
             name="requestDay"
-            label="تاریخ ثبت درخواست (شمسی)"
+            label="تاریخ درخواست (شمسی)"
             defaultValue={value("requestDay")}
             disabled={pending}
           />
           <TimeSelect
             id={`${prefix}-request-time`}
             name="requestTime"
-            label="ساعت ثبت"
+            label="ساعت درخواست"
             defaultValue={value("requestTime")}
             disabled={pending}
           />
@@ -150,14 +149,14 @@ export function RequestStep({
         <div className={styles.dateRow}>
           <JalaliDatePicker
             name="requestedTravelDay"
-            label="تاریخ برنامه‌ریزی‌شده (شمسی)"
+            label="تاریخ پیشنهادی سفر (شمسی)"
             defaultValue={value("requestedTravelDay")}
             disabled={pending}
           />
           <TimeSelect
             id={`${prefix}-travel-time`}
             name="requestedTravelTime"
-            label="ساعت برنامه‌ریزی‌شده"
+            label="ساعت پیشنهادی سفر"
             defaultValue={value("requestedTravelTime")}
             disabled={pending}
           />
@@ -170,7 +169,7 @@ export function RequestStep({
             <FormField>
               <LocationPicker
                 name="commonOriginLocationId"
-                label="مبدأ مشترک"
+                label="مبدأ"
                 locations={locations}
                 defaultValue={value("commonOriginLocationId")}
                 disabled={pending}
@@ -184,7 +183,7 @@ export function RequestStep({
             <FormField>
               <LocationPicker
                 name="commonDestinationLocationId"
-                label="مقصد مشترک"
+                label="مقصد"
                 locations={locations}
                 defaultValue={value("commonDestinationLocationId")}
                 disabled={pending}
@@ -199,7 +198,7 @@ export function RequestStep({
 
       <FormField>
         <FieldLabel htmlFor={`${prefix}-request-description`}>
-          توضیحات درخواست (اختیاری)
+          توضیحات (اختیاری)
         </FieldLabel>
         <textarea
           id={`${prefix}-request-description`}
@@ -211,11 +210,25 @@ export function RequestStep({
         />
       </FormField>
 
-      <FormActions separated>
-        <ActionButton type="button" disabled={pending} onClick={onNext}>
-          بعدی
-        </ActionButton>
-      </FormActions>
+      <div className={styles.createActions}>
+        {onCancel ? (
+          <ActionButton
+            type="button"
+            variant="secondary"
+            disabled={pending}
+            onClick={onCancel}
+          >
+            انصراف
+          </ActionButton>
+        ) : (
+          <span />
+        )}
+        <div className={styles.createActionsEnd}>
+          <ActionButton type="button" disabled={pending} onClick={onNext}>
+            بعدی
+          </ActionButton>
+        </div>
+      </div>
     </section>
   );
 }

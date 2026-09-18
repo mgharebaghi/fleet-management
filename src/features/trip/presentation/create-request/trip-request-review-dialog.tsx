@@ -1,7 +1,7 @@
 import { ActionButton } from "../../../../components/ui/action-button/action-button";
 import { Dialog } from "../../../../components/ui/dialog/dialog";
 import { FormActions } from "../../../../components/ui/form-field/form-field";
-import styles from "../trip-forms.module.css";
+import styles from "./create-trip.module.css";
 import type { TripRequestReview } from "./create-wizard";
 
 export function TripRequestReviewDialog({
@@ -26,8 +26,8 @@ export function TripRequestReviewDialog({
         if (!pending) onClose();
       }}
       titleId={titleId}
-      title="مرور و تأیید درخواست"
-      description="پس از تأیید، درخواست سفر ثبت می‌شود."
+      title="مرور و تأیید درخواست سفر"
+      description="اطلاعات واردشده را بررسی کنید و در صورت صحت، درخواست را ثبت کنید."
       size="wide"
     >
       {review && (
@@ -35,36 +35,38 @@ export function TripRequestReviewDialog({
           <section>
             <h3>اطلاعات درخواست</h3>
             <dl className={styles.reviewList}>
-              <div>
-                <dt>نوع درخواست</dt>
-                <dd>{review.requestTypeName || "—"}</dd>
-              </div>
-              <div>
-                <dt>هدف سفر</dt>
-                <dd>{review.purpose ?? "—"}</dd>
-              </div>
-              <div>
-                <dt>زمان ثبت</dt>
-                <dd>{review.requestAt || "—"}</dd>
-              </div>
-              <div>
-                <dt>زمان برنامه‌ریزی‌شده</dt>
-                <dd>{review.travelAt || "—"}</dd>
-              </div>
-              {review.commonOriginName && (
+              <div className={styles.reviewGrid}>
                 <div>
-                  <dt>مبدأ مشترک</dt>
-                  <dd>{review.commonOriginName}</dd>
+                  <dt>نوع درخواست</dt>
+                  <dd>{review.requestTypeName || "—"}</dd>
                 </div>
-              )}
-              {review.commonDestinationName && (
                 <div>
-                  <dt>مقصد مشترک</dt>
-                  <dd>{review.commonDestinationName}</dd>
+                  <dt>هدف سفر</dt>
+                  <dd>{review.purpose ?? "—"}</dd>
                 </div>
-              )}
+                <div>
+                  <dt>زمان ثبت</dt>
+                  <dd>{review.requestAt || "—"}</dd>
+                </div>
+                <div>
+                  <dt>زمان برنامه‌ریزی‌شده</dt>
+                  <dd>{review.travelAt || "—"}</dd>
+                </div>
+                {review.commonOriginName && (
+                  <div>
+                    <dt>مبدأ</dt>
+                    <dd>{review.commonOriginName}</dd>
+                  </div>
+                )}
+                {review.commonDestinationName && (
+                  <div>
+                    <dt>مقصد</dt>
+                    <dd>{review.commonDestinationName}</dd>
+                  </div>
+                )}
+              </div>
               {review.description && (
-                <div>
+                <div className={styles.reviewDescription}>
                   <dt>توضیحات</dt>
                   <dd>{review.description}</dd>
                 </div>
@@ -74,25 +76,32 @@ export function TripRequestReviewDialog({
 
           <section>
             <h3>مسافران</h3>
-            <ol className={styles.reviewPassengers}>
-              {review.passengers.map((passenger, index) => (
-                <li key={`${passenger.personName}-${index}`}>
-                  <strong>{passenger.personName || "مسافر انتخاب‌نشده"}</strong>
-                  <p>
-                    {passenger.originName || "—"} ←{" "}
-                    {passenger.destinationName || "—"}
-                  </p>
-                  {passenger.pickup && <p>سوارشدن: {passenger.pickup}</p>}
-                  {passenger.pickupOrder && (
-                    <p>ترتیب سوارشدن: {passenger.pickupOrder}</p>
-                  )}
-                  {passenger.dropoffOrder && (
-                    <p>ترتیب پیاده‌شدن: {passenger.dropoffOrder}</p>
-                  )}
-                  {passenger.description && <p>{passenger.description}</p>}
-                </li>
-              ))}
-            </ol>
+            <div className={styles.reviewTableWrap}>
+              <table className={styles.reviewTable}>
+                <thead>
+                  <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">نام مسافر</th>
+                    <th scope="col">تاریخ و ساعت سوارشدن</th>
+                    <th scope="col">ترتیب سوارشدن</th>
+                    <th scope="col">ترتیب پیاده‌شدن</th>
+                    <th scope="col">توضیحات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {review.passengers.map((passenger, index) => (
+                    <tr key={`${passenger.personName}-${index}`}>
+                      <td>{index + 1}</td>
+                      <td>{passenger.personName || "مسافر انتخاب‌نشده"}</td>
+                      <td>{passenger.pickup ?? (review.travelAt || "—")}</td>
+                      <td>{passenger.pickupOrder ?? "—"}</td>
+                      <td>{passenger.dropoffOrder ?? "—"}</td>
+                      <td>{passenger.description ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
         </div>
       )}

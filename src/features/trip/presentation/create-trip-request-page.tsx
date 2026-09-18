@@ -18,7 +18,6 @@ export async function CreateTripRequestPage() {
       <PageHeader
         eyebrow="مدیریت سفر"
         title="ثبت درخواست سفر"
-        description="اطلاعات درخواست و مسافران را مرحله‌به‌مرحله وارد کنید و پس از مرور تأیید کنید. اگر مکان مبدأ یا مقصد در فهرست نیست، همان‌جا مکان جدید بسازید."
         action={<BackLink href="/trips/requests" label="بازگشت به سفرها" />}
         compactAction
       />

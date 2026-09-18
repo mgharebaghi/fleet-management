@@ -37,7 +37,8 @@ describe("Trip create review dialog", () => {
       />,
     );
 
-    expect(markup).toContain("مرور و تأیید درخواست");
+    expect(markup).toContain("مرور و تأیید درخواست سفر");
+    expect(markup).toContain("<table");
     expect(markup).toContain("علی رضایی");
     expect(markup).toContain("تهران");
     expect(markup).toContain("قم");
