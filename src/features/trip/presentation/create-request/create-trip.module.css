@@ -151,6 +151,18 @@
   opacity: 0.6;
 }
 
+.passengerTabBadge {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--app-surface-subtle);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.passengerTab[data-selected] .passengerTabBadge {
+  background: color-mix(in srgb, var(--app-primary) 12%, transparent);
+}
+
 .passengerStepHeader {
   display: grid;
   gap: var(--space-4);

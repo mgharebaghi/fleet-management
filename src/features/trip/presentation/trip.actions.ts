@@ -161,7 +161,7 @@ export async function addTripRouteAction(
 
   if (!("id" in result)) return result;
   revalidatePath(`/trips/${tripRequestId}`);
-  redirect(`/trips/${tripRequestId}#planning`);
+  redirect(`/trips/${tripRequestId}?tab=planning`);
 }
 
 export async function saveTripExecutionAction(
@@ -199,7 +199,7 @@ export async function saveTripExecutionAction(
   if (!("id" in result)) return result;
   revalidatePath(`/trips/${tripRequestId}`);
   redirect(
-    `/trips/${tripRequestId}#${tripExecutionId === null ? "planning" : "execution"}`,
+    `/trips/${tripRequestId}?tab=${tripExecutionId === null ? "planning" : "execution"}`,
   );
 }
 
@@ -226,5 +226,5 @@ export async function savePassengerSurveyAction(
 
   if (!("id" in result)) return result;
   revalidatePath(`/trips/${tripRequestId}`);
-  redirect(`/trips/${tripRequestId}#return`);
+  redirect(`/trips/${tripRequestId}?tab=completion`);
 }

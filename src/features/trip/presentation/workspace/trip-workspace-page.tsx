@@ -22,15 +22,13 @@ import { formatTripDateTime } from "../trip-format";
 import { executionStatusLabel } from "../trip-status";
 import { TripWorkspaceFocus } from "./trip-workspace-focus";
 import { TripWorkspacePassengerPanel } from "./trip-workspace-passenger-panel";
-import {
-  shouldShowStatusControl,
-  TripRequestStatusControl,
-} from "./trip-request-status-control";
+import { TripRequestStatusControl } from "./trip-request-status-control";
 import { TripWorkspaceTabs } from "./trip-workspace-tabs";
 import styles from "./trip-workspace.module.css";
 import {
   defaultPassengerTabIndex,
   projectTripWorkspace,
+  shouldShowStatusControl,
   workspaceSectionForTab,
   type TripWorkspaceView,
   type WorkspaceSectionId,
@@ -282,23 +280,21 @@ function PlanningTab({
         items={switcherItems}
         defaultIndex={defaultPassengerTabIndex(view.passengers, "planning")}
         ariaLabel="مسافر برای برنامه‌ریزی"
-        renderPanel={(index) => {
-          const trip = details.passengers[index];
-          if (!trip) return null;
-          return (
-            <TripAssignmentPlanner
-              tripRequestId={details.tripRequestId}
-              trip={trip}
-              assignments={assignments.get(trip.tripId) ?? []}
-              scheduledDateTime={
-                trip.requestedPickupDateTime ?? details.requestedTravelDateTime
-              }
-              execution={persistedPlanningExecution(trip.executions)}
-              requestIsTerminal={requestIsTerminal}
-            />
-          );
-        }}
-      />
+      >
+        {details.passengers.map((trip) => (
+          <TripAssignmentPlanner
+            key={trip.tripId}
+            tripRequestId={details.tripRequestId}
+            trip={trip}
+            assignments={assignments.get(trip.tripId) ?? []}
+            scheduledDateTime={
+              trip.requestedPickupDateTime ?? details.requestedTravelDateTime
+            }
+            execution={persistedPlanningExecution(trip.executions)}
+            requestIsTerminal={requestIsTerminal}
+          />
+        ))}
+      </TripWorkspacePassengerPanel>
 
       {details.passengers.flatMap((trip) => [
         ...trip.routes.map((route) => (
@@ -376,13 +372,13 @@ function ExecutionTab({
         items={switcherItems}
         defaultIndex={defaultPassengerTabIndex(view.passengers, "execution")}
         ariaLabel="مسافر برای اجرا"
-        renderPanel={(index) => {
-          const trip = details.passengers[index];
+      >
+        {details.passengers.map((trip, index) => {
           const item = view.passengers[index];
-          if (!trip || !item) return null;
+          if (!item) return null;
           const active = currentNonTerminalExecution(trip.executions);
           return (
-            <article className={styles.groupCard}>
+            <article className={styles.groupCard} key={trip.tripId}>
               <h3>{item.personName}</h3>
               {trip.executions.length === 0 ? (
                 <p className={styles.muted}>
@@ -416,8 +412,8 @@ function ExecutionTab({
               )}
             </article>
           );
-        }}
-      />
+        })}
+      </TripWorkspacePassengerPanel>
     </section>
   );
 }

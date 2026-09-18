@@ -149,40 +149,55 @@ request time. Pickup/drop-off order is de-emphasized for a single passenger.
 Passenger and route-point rows are parsed from consecutive submitted form
 keys; there is no approved product maximum.
 
-`/trips/create` is a Presentation-only wizard: request info, then passengers,
-then a review Dialog. Nothing is written to TripRequest/Trip until
-«تأیید و ثبت درخواست». Inline Location creation remains an independent catalog
-write. Server validation returns to the relevant step without wiping values.
+`/trips/create` is a Presentation-only **progressive wizard** (thin step
+chrome, optional sidebar خلاصه درخواست on wide viewports):
+
+1. **اطلاعات درخواست** — request type, shared locations, schedule, purpose.
+2. **مسافران** — `TripPassengerSwitcher` tabs with one mounted passenger
+   editor; inactive passengers stay in hidden snapshot fields.
+3. **مرور** — review `Dialog` with a passenger table; primary CTA on step 2
+   is «بعدی» (not a separate «مرور و ثبت» control).
+
+Nothing is written to TripRequest/Trip until «تأیید و ثبت درخواست». Inline
+Location creation remains an independent catalog write. Server validation
+returns to the relevant step (including passenger tab focus from field
+errors) without wiping values.
 
 ## Staff workspace
 
-`/trips/{id}` is a Presentation-only administrative workspace. It answers
-what this trip is, which stage it is in, what is already recorded, what
-remains, and what the next allowed action is. Users do not need
-TripRequest / Trip / TripExecution table names to operate it.
+`/trips/{id}` is a Presentation-only administrative workspace with a
+compact identity strip (بازگشت به لیست, request number, status, summary
+cards) and **four URL-driven tabs**. Only the active tab body is rendered.
 
-Visible workflow stages are Presentation projections, not persisted fields
-and not a second lifecycle:
+| Tab (UI) | URL |
+|----------|-----|
+| جزئیات سفر | `/trips/{id}` |
+| برنامه‌ریزی | `?tab=planning` |
+| اجرا | `?tab=execution` |
+| تکمیل | `?tab=completion` |
 
-```
-ثبت درخواست → برنامه‌ریزی → آماده اعزام → اجرای سفر → بازگشت و تکمیل
-```
+- **جزئیات سفر** — request facts and passenger table (read-only overview).
+- **برنامه‌ریزی** — per-passenger assignment (`TripPassengerSwitcher` when
+  multiple passengers), optional planned route disclosure, voucher link after
+  a persisted plan; readiness badges for route / assignment / voucher.
+- **اجرا** — per-passenger execution reconciliation from the paper sheet.
+- **تکمیل** — passenger surveys and request completion when executions are
+  done.
 
-They are derived from the existing TripRequest and TripExecution statuses
-and from whether a non-cancelled plan and actual start exist. Underlying
-lifecycles are unchanged.
+Request-level status actions (تخصیص‌یافته، شروع درخواست، تکمیل درخواست،
+لغو) live in `TripRequestStatusControl` on the tab that matches the next
+allowed action. The stacked workflow stepper and next-action bar are removed.
 
-Operational sections:
+Legacy `?tab=` values (`general`, `passengers`, `details`, `assignment`,
+`route`, `execution`, `survey`, `return`) map onto the four tabs above.
+Incident forms are not mounted in the workspace UI (paper + separate flows
+unchanged at Application level). Time labels no longer append `(تهران)`;
+Tehran timezone behavior is unchanged.
 
-- جزئیات سفر و مسافران
-- برنامه‌ریزی سفر — vehicle and driver, optional route, voucher after a
-  persisted plan (`ثبت نشده — اختیاری` / `ثبت شده` for route)
-- اجرای سفر — actual departure and return from the paper sheet
-- بازگشت و تکمیل — accident, violation, survey, and request completion
+## Trip list
 
-Legacy `?tab=` values (`general`, `passengers`, `assignment`, `route`,
-`execution`, `survey`) map onto those sections. Time labels no longer
-append `(تهران)`; Tehran timezone behavior is unchanged.
+`/trips/requests` uses a compact row layout (schedule, route, meta, status,
+request id) with «مشاهده جزئیات» — not the former wide `DataTable`.
 
 ## Tests
 

@@ -7,10 +7,13 @@ export type TripPassengerSwitcherProps = {
   passengerCount: number;
   activeIndex: number;
   onSelect: (index: number) => void;
-  onAdd: () => void;
+  onAdd?: () => void;
   disabled?: boolean;
   addLabel?: string;
   tabLabel?: (index: number) => string;
+  tabBadge?: (index: number) => string | null | undefined;
+  tabId?: (index: number) => string | undefined;
+  tabPanelId?: (index: number) => string | undefined;
   ariaLabel?: string;
 };
 
@@ -22,18 +25,28 @@ export function TripPassengerSwitcher({
   disabled = false,
   addLabel = "افزودن مسافر",
   tabLabel = (index) => `مسافر ${index + 1}`,
+  tabBadge,
+  tabId,
+  tabPanelId,
   ariaLabel = "انتخاب مسافر",
 }: TripPassengerSwitcherProps) {
+  if (passengerCount <= 0) return null;
+
   return (
     <div className={styles.passengerSwitcher} role="tablist" aria-label={ariaLabel}>
       <div className={styles.passengerTabs}>
         {Array.from({ length: passengerCount }, (_, index) => {
           const selected = index === activeIndex;
+          const badge = tabBadge?.(index);
+          const id = tabId?.(index);
+          const controls = tabPanelId?.(index);
           return (
             <button
-              key={index}
+              key={id ?? index}
               type="button"
               role="tab"
+              id={id}
+              aria-controls={controls}
               className={styles.passengerTab}
               data-selected={selected ? "" : undefined}
               aria-selected={selected}
@@ -41,19 +54,22 @@ export function TripPassengerSwitcher({
               disabled={disabled}
               onClick={() => onSelect(index)}
             >
-              {tabLabel(index)}
+              <span>{tabLabel(index)}</span>
+              {badge && <span className={styles.passengerTabBadge}>{badge}</span>}
             </button>
           );
         })}
-        <ActionButton
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={disabled}
-          onClick={onAdd}
-        >
-          {addLabel}
-        </ActionButton>
+        {onAdd && (
+          <ActionButton
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={disabled}
+            onClick={onAdd}
+          >
+            {addLabel}
+          </ActionButton>
+        )}
       </div>
     </div>
   );

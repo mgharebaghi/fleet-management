@@ -127,19 +127,3 @@ export function TripRequestStatusControl({
     </div>
   );
 }
-
-export function shouldShowStatusControl(
-  action: TripNextAction,
-  section: "planning" | "execution" | "completion",
-): boolean {
-  switch (section) {
-    case "planning":
-      return action.id === "mark-assigned";
-    case "execution":
-      return action.id === "mark-in-progress";
-    case "completion":
-      return action.id === "complete-request" || action.id === "view-details";
-    default:
-      return false;
-  }
-}
