@@ -2,6 +2,7 @@ import type { TripFailure } from "../application/trip-records";
 
 export type TripActionState = {
   error?: TripFailure | "INVALID_FORM" | "UNEXPECTED";
+  field?: string;
   values?: Record<string, string>;
 };
 
@@ -22,6 +23,30 @@ export function tripFormValues(
 export function parseOptionalInteger(value: string | undefined): number | null {
   if (!value?.trim()) return null;
   return /^-?\d+$/.test(value.trim()) ? Number(value) : Number.NaN;
+}
+
+export function tehranDateTimeInputs(date: Date | null): {
+  day: string;
+  time: string;
+} {
+  if (!date) return { day: "", time: "" };
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Tehran",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(date)
+      .map((part) => [part.type, part.value]),
+  );
+  return {
+    day: `${parts.year}-${parts.month}-${parts.day}`,
+    time: `${parts.hour}:${parts.minute}`,
+  };
 }
 
 function parseDate(value: string | undefined): Date | null {
@@ -120,7 +145,33 @@ export const tripMessages: Record<
     "تخصیص انتخاب‌شده در زمان برنامه‌ریزی‌شدهٔ این سفر فعال نیست.",
   NO_ELIGIBLE_LICENSE:
     "راننده در روز سفر گواهینامهٔ فعال و معتبر ندارد.",
-  EXECUTION_NOT_FOUND: "رکورد اجرای سفر موجود نیست یا به این سفر تعلق ندارد.",
+  DRIVER_INACTIVE: "راننده غیرفعال است و قابل تخصیص نیست.",
+  VEHICLE_INACTIVE: "خودرو غیرفعال است و قابل تخصیص نیست.",
+  ASSIGNMENT_IMMUTABLE:
+    "پس از شروع واقعی سفر، تخصیص خودرو و راننده تغییر نمی‌کند.",
+  ACTIVE_EXECUTION_EXISTS:
+    "برای این مسافر یک برنامه یا اجرای ناتمام وجود دارد.",
+  EXECUTION_STATE_DATA: "اطلاعات واقعی با وضعیت انتخاب‌شده هم‌خوان نیست.",
+  MISSING_ACTUAL_PICKUP: "برای شروع اجرا، زمان واقعی حرکت را وارد کنید.",
+  MISSING_ACTUAL_DROPOFF: "برای تکمیل اجرا، زمان واقعی بازگشت را وارد کنید.",
+  UNEXPECTED_ACTUAL_DROPOFF:
+    "تا وقتی اجرا در حال انجام است، زمان بازگشت واقعی ثبت نمی‌شود.",
+  UNEXPECTED_ACTUAL_START:
+    "برنامه یا اجرای لغوشده نباید زمان یا کیلومتر واقعی داشته باشد.",
+  MISSING_START_ODOMETER:
+    "ثبت کیلومتر پایان بدون کیلومتر شروع ممکن نیست.",
+  REQUEST_TERMINAL:
+    "این درخواست تکمیل یا لغو شده و دیگر قابل تغییر برنامه‌ریزی نیست.",
+  PLANNING_REQUIRED:
+    "ابتدا خودرو و راننده را برای همهٔ مسافران ثبت کنید.",
+  EXECUTION_NOT_STARTED:
+    "شروع درخواست فقط پس از ثبت زمان واقعی حرکت ممکن است.",
+  EXECUTIONS_INCOMPLETE:
+    "تکمیل درخواست فقط وقتی ممکن است که اجرای همهٔ مسافران تکمیل شده باشد.",
+  SURVEY_NOT_ALLOWED: "نظرسنجی فقط پس از تکمیل اجرا ثبت می‌شود.",
+  ROUTE_OWNER_CONFLICT: "مسیر نمی‌تواند همزمان به برنامه و اجرای واقعی وصل باشد.",
+  EXECUTION_NOT_FOUND:
+    "سابقهٔ اجرای این سفر موجود نیست یا به این مسافر تعلق ندارد.",
   INVALID_EXECUTION_STATUS: "وضعیت اجرای سفر معتبر نیست.",
   INVALID_EXECUTION_TRANSITION:
     "این تغییر وضعیت اجرا مجاز نیست؛ بازگشت به عقب یا لغو پس از شروع ممکن نیست.",
@@ -132,4 +183,50 @@ export const tripMessages: Record<
   INVALID_RATING: "امتیاز باید عدد صحیح معتبر باشد.",
   INVALID_FORM: "اطلاعات فرم قابل پردازش نیست.",
   UNEXPECTED: "ثبت انجام نشد. دوباره تلاش کنید.",
+};
+
+export const assignmentIneligibilityMessages: Record<
+  | "INACTIVE_DRIVER"
+  | "INACTIVE_VEHICLE"
+  | "INACTIVE_TIME_RANGE"
+  | "INVALID_LICENSE",
+  string
+> = {
+  INACTIVE_DRIVER: "راننده غیرفعال است",
+  INACTIVE_VEHICLE: "خودرو غیرفعال است",
+  INACTIVE_TIME_RANGE: "بازهٔ تخصیص در زمان این سفر فعال نیست",
+  INVALID_LICENSE: "گواهینامه در روز سفر معتبر نیست",
+};
+
+export const tripErrorFields: Partial<
+  Record<TripFailure | "INVALID_FORM" | "UNEXPECTED", string>
+> = {
+  PURPOSE_TOO_LONG: "purpose",
+  INVALID_DATE: "requestDay",
+  REQUEST_TYPE_NOT_FOUND: "tripRequestTypeId",
+  PERSON_NOT_FOUND: "passenger.0.personId",
+  PERSON_INACTIVE: "passenger.0.personId",
+  LOCATION_NOT_FOUND: "passenger.0.originLocationId",
+  LOCATION_INACTIVE: "passenger.0.originLocationId",
+  COMMON_ORIGIN_REQUIRED: "commonOriginLocationId",
+  COMMON_DESTINATION_REQUIRED: "commonDestinationLocationId",
+  INVALID_ORDER: "passenger.0.pickupOrder",
+  ROUTE_NAME_REQUIRED: "routeName",
+  ROUTE_NAME_TOO_LONG: "routeName",
+  INVALID_DISTANCE: "distanceKm",
+  INVALID_DURATION: "estimatedDurationMinute",
+  INVALID_SEQUENCE: "point.0.sequenceNo",
+  ASSIGNMENT_NOT_FOUND: "assignmentId",
+  ASSIGNMENT_NOT_ACTIVE: "assignmentId",
+  NO_ELIGIBLE_LICENSE: "assignmentId",
+  DRIVER_INACTIVE: "assignmentId",
+  VEHICLE_INACTIVE: "assignmentId",
+  MISSING_ACTUAL_PICKUP: "actualPickupDay",
+  MISSING_ACTUAL_DROPOFF: "actualDropoffDay",
+  UNEXPECTED_ACTUAL_DROPOFF: "actualDropoffDay",
+  UNEXPECTED_ACTUAL_START: "actualPickupDay",
+  INVALID_EXECUTION_PERIOD: "actualDropoffDay",
+  INVALID_ODOMETER: "startOdometer",
+  ODOMETER_DECREASE: "endOdometer",
+  MISSING_START_ODOMETER: "startOdometer",
 };

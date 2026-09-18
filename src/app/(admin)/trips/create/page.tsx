@@ -1,4 +1,4 @@
-import { CreateTripRequestPage } from "@/features/trip/presentation/trip-pages";
+import { CreateTripRequestPage } from "@/features/trip/presentation/create-trip-request-page";
 
 export const metadata = { title: "ثبت درخواست سفر" };
 export const dynamic = "force-dynamic";

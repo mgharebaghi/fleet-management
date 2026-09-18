@@ -82,6 +82,7 @@ export type TripVehicleReference = {
   modelName: string;
   vehicleTypeName: string | null;
   vehicleStatusName: string;
+  isActive: boolean;
 };
 
 export type TripAssignmentReference = {
@@ -169,6 +170,7 @@ export type NewTripRoutePoint = {
 
 export type NewTripRoute = {
   tripId: number;
+  tripExecutionId: number | null;
   routeName: string;
   alternativeNo: number | null;
   distanceKm: string | null;
@@ -227,6 +229,22 @@ export type TripFailure =
   | "ASSIGNMENT_NOT_FOUND"
   | "ASSIGNMENT_NOT_ACTIVE"
   | "NO_ELIGIBLE_LICENSE"
+  | "DRIVER_INACTIVE"
+  | "VEHICLE_INACTIVE"
+  | "ASSIGNMENT_IMMUTABLE"
+  | "ACTIVE_EXECUTION_EXISTS"
+  | "EXECUTION_STATE_DATA"
+  | "MISSING_ACTUAL_PICKUP"
+  | "MISSING_ACTUAL_DROPOFF"
+  | "UNEXPECTED_ACTUAL_DROPOFF"
+  | "UNEXPECTED_ACTUAL_START"
+  | "MISSING_START_ODOMETER"
+  | "REQUEST_TERMINAL"
+  | "PLANNING_REQUIRED"
+  | "EXECUTION_NOT_STARTED"
+  | "EXECUTIONS_INCOMPLETE"
+  | "SURVEY_NOT_ALLOWED"
+  | "ROUTE_OWNER_CONFLICT"
   | "EXECUTION_NOT_FOUND"
   | "INVALID_EXECUTION_STATUS"
   | "INVALID_EXECUTION_TRANSITION"
@@ -237,4 +255,4 @@ export type TripFailure =
 
 export type TripResult =
   | { success: true; id: number }
-  | { success: false; error: TripFailure };
+  | { success: false; error: TripFailure; field?: string };

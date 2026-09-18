@@ -1,0 +1,53 @@
+.picker {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.createButton {
+  width: fit-content;
+  border: 0;
+  color: var(--app-primary);
+  background: transparent;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.createButton:hover {
+  color: var(--app-accent-strong);
+}
+
+.createButton:disabled {
+  cursor: not-allowed;
+  opacity: var(--app-disabled-opacity);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.fieldError {
+  color: var(--app-danger-text);
+  font-size: var(--font-size-xs);
+}
+
+.similar {
+  padding: var(--space-3);
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-sm);
+  color: var(--app-text);
+  background: var(--app-surface-subtle);
+}
+
+.similar ul {
+  margin-top: var(--space-2);
+  padding-right: var(--space-5);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--app-border);
+}

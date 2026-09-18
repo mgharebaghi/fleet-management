@@ -6,8 +6,13 @@ import { redirect } from "next/navigation";
 import { makeManageTrips } from "../composition/trip.factory";
 import type { TripResult } from "../application/trip-records";
 import {
+  TECHNICAL_PASSENGER_LIMIT,
+  TECHNICAL_ROUTE_POINT_LIMIT,
+} from "../application/trip-validation";
+import {
   parseOptionalInteger,
   parseTehranDateTime,
+  tripErrorFields,
   tripFormValues,
   type TripActionState,
 } from "./trip-form-data";
@@ -32,7 +37,11 @@ async function run(
   }
   return result.success
     ? { id: result.id }
-    : { error: result.error, values };
+    : {
+        error: result.error,
+        field: result.field ?? tripErrorFields[result.error],
+        values,
+      };
 }
 
 export async function createTripRequestAction(
@@ -41,10 +50,16 @@ export async function createTripRequestAction(
 ): Promise<TripActionState> {
   const values = tripFormValues(data);
   if (!values) return { error: "INVALID_FORM" };
-  const passengerCount = validCount(values.passengerCount, 50);
+  const passengerCount = validCount(
+    values.passengerCount,
+    TECHNICAL_PASSENGER_LIMIT,
+  );
   if (passengerCount === null) {
     return { error: "INVALID_FORM", values };
   }
+
+  const commonOrigin = values.commonOriginLocationId;
+  const commonDestination = values.commonDestinationLocationId;
 
   const result = await run(values, () =>
     makeManageTrips().createRequest({
@@ -61,9 +76,12 @@ export async function createTripRequestAction(
       description: values.requestDescription ?? null,
       passengers: Array.from({ length: passengerCount }, (_, index) => ({
         passengerPersonId: Number(values[`passenger.${index}.personId`]),
-        originLocationId: Number(values[`passenger.${index}.originLocationId`]),
+        originLocationId: Number(
+          commonOrigin || values[`passenger.${index}.originLocationId`],
+        ),
         destinationLocationId: Number(
-          values[`passenger.${index}.destinationLocationId`],
+          commonDestination ||
+            values[`passenger.${index}.destinationLocationId`],
         ),
         requestedPickupDateTime: parseTehranDateTime(
           values[`passenger.${index}.pickupDay`],
@@ -112,12 +130,16 @@ export async function addTripRouteAction(
 ): Promise<TripActionState> {
   const values = tripFormValues(data);
   if (!values) return { error: "INVALID_FORM" };
-  const pointCount = validCount(values.pointCount, 50);
+  const pointCount = validCount(
+    values.pointCount,
+    TECHNICAL_ROUTE_POINT_LIMIT,
+  );
   if (pointCount === null) return { error: "INVALID_FORM", values };
 
   const result = await run(values, () =>
     makeManageTrips().addRoute({
       tripId: Number(values.tripId),
+      tripExecutionId: null,
       routeName: values.routeName ?? "",
       alternativeNo: parseOptionalInteger(values.alternativeNo),
       distanceKm: values.distanceKm?.trim() || null,
@@ -178,7 +200,9 @@ export async function saveTripExecutionAction(
 
   if (!("id" in result)) return result;
   revalidatePath(`/trips/${tripRequestId}`);
-  redirect(`/trips/${tripRequestId}?tab=execution`);
+  redirect(
+    `/trips/${tripRequestId}?tab=${tripExecutionId === null ? "assignment" : "execution"}`,
+  );
 }
 
 export async function savePassengerSurveyAction(

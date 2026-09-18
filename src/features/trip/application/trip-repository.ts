@@ -11,35 +11,39 @@ import type {
   TripRequestList,
   TripRequestTypeReference,
 } from "./trip-records";
-import type { TripRequestStatus } from "./trip-lifecycle";
+import type {
+  TripRequestLifecycleSnapshot,
+  TripRequestStatus,
+} from "./trip-lifecycle";
+
+export type TripPassengerWriteRecord = TripPassengerRecord & {
+  requestedTravelDateTime: Date;
+  requestId: number;
+  requestStatus: string;
+};
+
+export type TripExecutionWriteRecord = {
+  tripExecutionId: number;
+  tripId: number;
+  status: string;
+  actualPickupDateTime: Date | null;
+  actualDropoffDateTime: Date | null;
+  vehicleDriverAssignmentId: number;
+  requestId: number;
+  requestStatus: string;
+};
+
+export type TripWriteOptions = {
+  requestNoYear?: number;
+};
 
 export interface TripWriteSession {
   requestType(id: number): Promise<TripRequestTypeReference | null>;
   person(id: number): Promise<TripPersonReference | null>;
   location(id: number): Promise<TripLocationReference | null>;
-  trip(
-    id: number,
-  ): Promise<
-    | (TripPassengerRecord & { requestedTravelDateTime: Date })
-    | null
-  >;
-  execution(
-    id: number,
-  ): Promise<
-    | {
-        tripExecutionId: number;
-        tripId: number;
-        status: string;
-        actualPickupDateTime: Date | null;
-      }
-    | null
-  >;
-  requestLifecycle(
-    id: number,
-  ): Promise<
-    | { status: string; hasStartedExecution: boolean }
-    | null
-  >;
+  trip(id: number): Promise<TripPassengerWriteRecord | null>;
+  execution(id: number): Promise<TripExecutionWriteRecord | null>;
+  requestLifecycle(id: number): Promise<TripRequestLifecycleSnapshot | null>;
   requestNumbers(jalaliYear: number): Promise<string[]>;
   requestNoExists(requestNo: string): Promise<boolean>;
   assignment(
@@ -48,14 +52,24 @@ export interface TripWriteSession {
   ): Promise<TripAssignmentReference | null>;
   createRequest(input: CreateTripRequestInput): Promise<number>;
   updateRequestStatus(id: number, status: TripRequestStatus): Promise<void>;
+  cancelPlannedExecutions(tripRequestId: number): Promise<void>;
   createRoute(input: NewTripRoute): Promise<number>;
+  deselectOtherSelectedRoutes(input: {
+    tripId: number | null;
+    tripExecutionId: number | null;
+  }): Promise<void>;
   createExecution(input: SaveTripExecutionInput): Promise<number>;
-  updateExecution(input: SaveTripExecutionInput & { tripExecutionId: number }): Promise<void>;
+  updateExecution(
+    input: SaveTripExecutionInput & { tripExecutionId: number },
+  ): Promise<void>;
   updateSurvey(input: SavePassengerSurveyInput): Promise<void>;
 }
 
 export interface TripRepository {
-  atomic<T>(work: (session: TripWriteSession) => Promise<T>): Promise<T>;
+  atomic<T>(
+    work: (session: TripWriteSession) => Promise<T>,
+    options?: TripWriteOptions,
+  ): Promise<T>;
   list(
     search: string,
     status: string,

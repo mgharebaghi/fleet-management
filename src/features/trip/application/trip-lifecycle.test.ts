@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   canTransitionTripExecution,
   canTransitionTripRequest,
+  everyPassengerExecutionCompleted,
+  everyPassengerHasPersistedPlan,
   jalaliYearOf,
   nextTripRequestNo,
 } from "./trip-lifecycle";
@@ -79,5 +81,70 @@ describe("Trip RequestNo sequence", () => {
   it("starts each year at one and reports exhaustion", () => {
     expect(nextTripRequestNo(1405, ["TR-1404-9999"])).toBe("TR-1405-0001");
     expect(nextTripRequestNo(1404, ["TR-1404-9999"])).toBeNull();
+  });
+});
+
+describe("Trip request planning completeness", () => {
+  it("requires a non-cancelled execution per passenger before Assigned", () => {
+    expect(
+      everyPassengerHasPersistedPlan({
+        status: "New",
+        passengers: [{ tripId: 1, executions: [] }],
+      }),
+    ).toBe(false);
+    expect(
+      everyPassengerHasPersistedPlan({
+        status: "New",
+        passengers: [
+          {
+            tripId: 1,
+            executions: [
+              {
+                tripExecutionId: 1,
+                status: "Planned",
+                actualPickupDateTime: null,
+              },
+            ],
+          },
+        ],
+      }),
+    ).toBe(true);
+  });
+
+  it("requires remaining child executions to be Completed", () => {
+    expect(
+      everyPassengerExecutionCompleted({
+        status: "InProgress",
+        passengers: [
+          {
+            tripId: 1,
+            executions: [
+              {
+                tripExecutionId: 1,
+                status: "InProgress",
+                actualPickupDateTime: new Date(),
+              },
+            ],
+          },
+        ],
+      }),
+    ).toBe(false);
+    expect(
+      everyPassengerExecutionCompleted({
+        status: "InProgress",
+        passengers: [
+          {
+            tripId: 1,
+            executions: [
+              {
+                tripExecutionId: 1,
+                status: "Completed",
+                actualPickupDateTime: new Date(),
+              },
+            ],
+          },
+        ],
+      }),
+    ).toBe(true);
   });
 });

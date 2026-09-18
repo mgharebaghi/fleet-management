@@ -1,4 +1,4 @@
-import { TripRequestDetailsPage } from "@/features/trip/presentation/trip-pages";
+import { TripRequestDetailsPage } from "@/features/trip/presentation/trip-request-details-page";
 
 export const metadata = { title: "پرونده سفر" };
 

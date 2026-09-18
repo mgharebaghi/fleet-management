@@ -10,10 +10,16 @@ import type {
 import {
   canTransitionTripExecution,
   canTransitionTripRequest,
+  everyPassengerExecutionCompleted,
+  everyPassengerHasPersistedPlan,
+  executionHasStarted,
+  isNonTerminalTripExecutionStatus,
+  isTerminalTripRequestStatus,
   isTripExecutionStatus,
   isTripRequestStatus,
   jalaliYearOf,
   nextTripRequestNo,
+  requestHasStartedExecution,
   type TripRequestStatus,
 } from "./trip-lifecycle";
 import {
@@ -24,14 +30,38 @@ import {
   normalizeTripRoute,
   requestTypeGroupingError,
   tripExecutionError,
+  tripExecutionStateError,
   tripRequestError,
   tripRouteError,
 } from "./trip-validation";
 
-const failure = (error: TripFailure): TripResult => ({
+const failure = (error: TripFailure, field?: string): TripResult => ({
   success: false,
   error,
+  ...(field ? { field } : {}),
 });
+
+function assignmentFailure(
+  assignment: {
+    driverIsActive: boolean;
+    vehicle: { isActive: boolean };
+    hasEligibleLicense: boolean;
+  },
+  activeAt: Date,
+  fromDateTime: Date,
+  toDateTime: Date | null,
+): TripFailure | null {
+  if (!assignment.driverIsActive) return "DRIVER_INACTIVE";
+  if (!assignment.vehicle.isActive) return "VEHICLE_INACTIVE";
+  if (
+    fromDateTime > activeAt ||
+    (toDateTime !== null && activeAt >= toDateTime)
+  ) {
+    return "ASSIGNMENT_NOT_ACTIVE";
+  }
+  if (!assignment.hasEligibleLicense) return "NO_ELIGIBLE_LICENSE";
+  return null;
+}
 
 export class ManageTrips {
   constructor(private readonly repository: TripRepository) {}
@@ -39,52 +69,60 @@ export class ManageTrips {
   async createRequest(input: CreateTripRequestCommand): Promise<TripResult> {
     const value = normalizeTripRequest(input);
     const validationError = tripRequestError(value);
-    if (validationError) return failure(validationError);
-
-    return this.repository.atomic(async (session) => {
-      const jalaliYear = jalaliYearOf(value.requestDateTime);
-      const requestNo = nextTripRequestNo(
-        jalaliYear,
-        await session.requestNumbers(jalaliYear),
+    if (validationError) {
+      return failure(
+        validationError,
+        validationError === "PURPOSE_TOO_LONG" ? "purpose" : undefined,
       );
-      if (!requestNo) return failure("REQUEST_SEQUENCE_EXHAUSTED");
-      if (await session.requestNoExists(requestNo)) {
-        return failure("REQUEST_NO_DUPLICATE");
-      }
+    }
 
-      const requestType = await session.requestType(value.tripRequestTypeId);
-      if (!requestType) return failure("REQUEST_TYPE_NOT_FOUND");
-
-      const groupingError = requestTypeGroupingError(
-        requestType,
-        value.passengers,
-      );
-      if (groupingError) return failure(groupingError);
-
-      for (const passenger of value.passengers) {
-        const person = await session.person(passenger.passengerPersonId);
-        if (!person) return failure("PERSON_NOT_FOUND");
-        if (!person.isActive) return failure("PERSON_INACTIVE");
-
-        for (const locationId of [
-          passenger.originLocationId,
-          passenger.destinationLocationId,
-        ]) {
-          const location = await session.location(locationId);
-          if (!location) return failure("LOCATION_NOT_FOUND");
-          if (location.isActive === false) return failure("LOCATION_INACTIVE");
+    const jalaliYear = jalaliYearOf(value.requestDateTime);
+    return this.repository.atomic(
+      async (session) => {
+        const requestNo = nextTripRequestNo(
+          jalaliYear,
+          await session.requestNumbers(jalaliYear),
+        );
+        if (!requestNo) return failure("REQUEST_SEQUENCE_EXHAUSTED");
+        if (await session.requestNoExists(requestNo)) {
+          return failure("REQUEST_NO_DUPLICATE");
         }
-      }
 
-      return {
-        success: true,
-        id: await session.createRequest({
-          ...value,
-          requestNo,
-          status: "New",
-        }),
-      };
-    });
+        const requestType = await session.requestType(value.tripRequestTypeId);
+        if (!requestType) return failure("REQUEST_TYPE_NOT_FOUND");
+
+        const groupingError = requestTypeGroupingError(
+          requestType,
+          value.passengers,
+        );
+        if (groupingError) return failure(groupingError);
+
+        for (const passenger of value.passengers) {
+          const person = await session.person(passenger.passengerPersonId);
+          if (!person) return failure("PERSON_NOT_FOUND");
+          if (!person.isActive) return failure("PERSON_INACTIVE");
+
+          for (const locationId of [
+            passenger.originLocationId,
+            passenger.destinationLocationId,
+          ]) {
+            const location = await session.location(locationId);
+            if (!location) return failure("LOCATION_NOT_FOUND");
+            if (location.isActive === false) return failure("LOCATION_INACTIVE");
+          }
+        }
+
+        return {
+          success: true,
+          id: await session.createRequest({
+            ...value,
+            requestNo,
+            status: "New",
+          }),
+        };
+      },
+      { requestNoYear: jalaliYear },
+    );
   }
 
   async changeRequestStatus(
@@ -102,14 +140,33 @@ export class ManageTrips {
       if (!isTripRequestStatus(current.status)) {
         return failure("INVALID_REQUEST_STATUS");
       }
+      const hasStartedExecution = requestHasStartedExecution(current);
       if (
         !canTransitionTripRequest(
           current.status,
           targetStatus,
-          current.hasStartedExecution,
+          hasStartedExecution,
         )
       ) {
         return failure("INVALID_REQUEST_TRANSITION");
+      }
+      if (
+        targetStatus === "Assigned" &&
+        !everyPassengerHasPersistedPlan(current)
+      ) {
+        return failure("PLANNING_REQUIRED");
+      }
+      if (targetStatus === "InProgress" && !hasStartedExecution) {
+        return failure("EXECUTION_NOT_STARTED");
+      }
+      if (
+        targetStatus === "Completed" &&
+        !everyPassengerExecutionCompleted(current)
+      ) {
+        return failure("EXECUTIONS_INCOMPLETE");
+      }
+      if (targetStatus === "Cancelled") {
+        await session.cancelPlannedExecutions(tripRequestId);
       }
       await session.updateRequestStatus(
         tripRequestId,
@@ -120,19 +177,37 @@ export class ManageTrips {
   }
 
   async addRoute(input: NewTripRoute): Promise<TripResult> {
-    const value = normalizeTripRoute(input);
+    const value = normalizeTripRoute({
+      ...input,
+      tripExecutionId: input.tripExecutionId ?? null,
+    });
     const validationError = tripRouteError(value);
     if (validationError) return failure(validationError);
 
     return this.repository.atomic(async (session) => {
-      if (!(await session.trip(value.tripId))) {
-        return failure("TRIP_NOT_FOUND");
+      const trip = await session.trip(value.tripId);
+      if (!trip) return failure("TRIP_NOT_FOUND");
+      if (isTerminalTripRequestStatus(trip.requestStatus)) {
+        return failure("REQUEST_TERMINAL");
+      }
+      if (value.tripExecutionId !== null) {
+        const execution = await session.execution(value.tripExecutionId);
+        if (!execution || execution.tripId !== value.tripId) {
+          return failure("EXECUTION_NOT_FOUND");
+        }
       }
 
       for (const point of value.points) {
         const location = await session.location(point.locationId);
         if (!location) return failure("LOCATION_NOT_FOUND");
         if (location.isActive === false) return failure("LOCATION_INACTIVE");
+      }
+
+      if (value.isSelected) {
+        await session.deselectOtherSelectedRoutes({
+          tripId: value.tripExecutionId === null ? value.tripId : null,
+          tripExecutionId: value.tripExecutionId,
+        });
       }
 
       return {
@@ -142,9 +217,7 @@ export class ManageTrips {
     });
   }
 
-  async saveExecution(
-    input: SaveTripExecutionInput,
-  ): Promise<TripResult> {
+  async saveExecution(input: SaveTripExecutionInput): Promise<TripResult> {
     const normalized = normalizeTripExecution(input);
     const value = {
       ...normalized,
@@ -157,11 +230,24 @@ export class ManageTrips {
     if (!isTripExecutionStatus(targetStatus)) {
       return failure("INVALID_EXECUTION_STATUS");
     }
+    const stateError = tripExecutionStateError(value);
+    if (stateError) return failure(stateError);
 
     return this.repository.atomic(async (session) => {
       const trip = await session.trip(value.tripId);
       if (!trip) return failure("TRIP_NOT_FOUND");
+      if (isTerminalTripRequestStatus(trip.requestStatus)) {
+        return failure("REQUEST_TERMINAL");
+      }
 
+      const activeExecutions = trip.executions.filter((execution) =>
+        isNonTerminalTripExecutionStatus(execution.status),
+      );
+      if (value.tripExecutionId === null && activeExecutions.length > 0) {
+        return failure("ACTIVE_EXECUTION_EXISTS");
+      }
+
+      let alreadyStarted = false;
       if (value.tripExecutionId !== null) {
         const execution = await session.execution(value.tripExecutionId);
         if (!execution || execution.tripId !== value.tripId) {
@@ -170,15 +256,29 @@ export class ManageTrips {
         if (!isTripExecutionStatus(execution.status)) {
           return failure("INVALID_EXECUTION_STATUS");
         }
+        alreadyStarted = executionHasStarted(execution);
         if (
           !canTransitionTripExecution(
             execution.status,
             targetStatus,
-            execution.actualPickupDateTime !== null ||
-              value.actualPickupDateTime !== null,
+            alreadyStarted || value.actualPickupDateTime !== null,
           )
         ) {
           return failure("INVALID_EXECUTION_TRANSITION");
+        }
+        if (
+          alreadyStarted &&
+          execution.vehicleDriverAssignmentId !==
+            value.vehicleDriverAssignmentId
+        ) {
+          return failure("ASSIGNMENT_IMMUTABLE");
+        }
+        if (
+          activeExecutions.some(
+            (active) => active.tripExecutionId !== value.tripExecutionId,
+          )
+        ) {
+          return failure("ACTIVE_EXECUTION_EXISTS");
         }
       }
 
@@ -189,16 +289,14 @@ export class ManageTrips {
         scheduledDateTime,
       );
       if (!assignment) return failure("ASSIGNMENT_NOT_FOUND");
-
-      if (
-        assignment.fromDateTime > scheduledDateTime ||
-        (assignment.toDateTime !== null &&
-          scheduledDateTime >= assignment.toDateTime)
-      ) {
-        return failure("ASSIGNMENT_NOT_ACTIVE");
-      }
-      if (!assignment.hasEligibleLicense) {
-        return failure("NO_ELIGIBLE_LICENSE");
+      if (!alreadyStarted) {
+        const eligibilityError = assignmentFailure(
+          assignment,
+          scheduledDateTime,
+          assignment.fromDateTime,
+          assignment.toDateTime,
+        );
+        if (eligibilityError) return failure(eligibilityError);
       }
 
       if (value.tripExecutionId === null) {
@@ -243,6 +341,12 @@ export class ManageTrips {
     return this.repository.atomic(async (session) => {
       const execution = await session.execution(value.tripExecutionId);
       if (!execution) return failure("EXECUTION_NOT_FOUND");
+      if (execution.status !== "Completed") {
+        return failure("SURVEY_NOT_ALLOWED");
+      }
+      if (execution.requestStatus === "Cancelled") {
+        return failure("REQUEST_TERMINAL");
+      }
       await session.updateSurvey(value);
       return { success: true, id: value.tripExecutionId };
     });

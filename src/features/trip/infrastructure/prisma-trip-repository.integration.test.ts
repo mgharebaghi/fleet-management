@@ -5,7 +5,9 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaClient } from "../../../generated/prisma/client";
 import { createMssqlConfigFromEnvironment } from "../../../infrastructure/database/prisma/mssql-config";
+import { ManageIncidents } from "../application/incident/manage-incidents";
 import { ManageTrips } from "../application/manage-trips";
+import { PrismaIncidentRepository } from "./incident/prisma-incident-repository";
 import { PrismaTripRepository } from "./prisma-trip-repository";
 
 const development = {
@@ -34,6 +36,7 @@ const client = new PrismaClient({
 });
 const repository = new PrismaTripRepository(client);
 const manage = new ManageTrips(repository);
+const incidents = new ManageIncidents(new PrismaIncidentRepository(client));
 const requestIds: number[] = [];
 const personIds: number[] = [];
 const locationIds: number[] = [];
@@ -231,6 +234,12 @@ describe.sequential("Trip SQL Server integration", () => {
     const executionIds = executions.map(
       (execution) => execution.TripExecutionId,
     );
+    await client.accident.deleteMany({
+      where: { TripRequestId: { in: requestIds } },
+    });
+    await client.vehicleViolation.deleteMany({
+      where: { TripRequestId: { in: requestIds } },
+    });
     await client.routePoint.deleteMany({
       where: {
         Route: {
@@ -331,6 +340,7 @@ describe.sequential("Trip SQL Server integration", () => {
       const routeId = successfulId(
         await manage.addRoute({
           tripId: fixture.tripId,
+          tripExecutionId: null,
           routeName: "مسیر آزمون",
           alternativeNo: 1,
           distanceKm: "99999999.99",
@@ -356,6 +366,51 @@ describe.sequential("Trip SQL Server integration", () => {
         }),
       );
       expect(routeId).toBeGreaterThan(0);
+      const secondRouteId = successfulId(
+        await manage.addRoute({
+          tripId: fixture.tripId,
+          tripExecutionId: null,
+          routeName: "مسیر جایگزین",
+          alternativeNo: 2,
+          distanceKm: "10.00",
+          estimatedDurationMinute: 20,
+          isSelected: true,
+          description: null,
+          points: [
+            {
+              locationId: fixture.origin.LocationId,
+              trafficZone: null,
+              sequenceNo: 1,
+              distanceFromStartKm: "0",
+              description: null,
+            },
+          ],
+        }),
+      );
+      const afterRoutes = await repository.details(fixture.requestId);
+      expect(
+        afterRoutes?.passengers[0].routes.map((route) => ({
+          routeId: route.routeId,
+          isSelected: route.isSelected,
+          tripId: route.tripId,
+          tripExecutionId: route.tripExecutionId,
+        })),
+      ).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            routeId,
+            isSelected: false,
+            tripId: fixture.tripId,
+            tripExecutionId: null,
+          }),
+          expect.objectContaining({
+            routeId: secondRouteId,
+            isSelected: true,
+            tripId: fixture.tripId,
+            tripExecutionId: null,
+          }),
+        ]),
+      );
 
       const assignment = await createAssignmentFixture(
         fixture.token,
@@ -370,13 +425,11 @@ describe.sequential("Trip SQL Server integration", () => {
           expect.objectContaining({
             assignmentId: assignment.AssignmentId,
             hasEligibleLicense: true,
+            vehicle: expect.objectContaining({ isActive: true }),
           }),
         ]),
       );
 
-      expect(
-        await manage.changeRequestStatus(fixture.requestId, "Assigned"),
-      ).toEqual({ success: true, id: fixture.requestId });
       const executionId = successfulId(
         await manage.saveExecution({
           tripId: fixture.tripId,
@@ -391,7 +444,7 @@ describe.sequential("Trip SQL Server integration", () => {
         }),
       );
       expect(
-        await manage.changeRequestStatus(fixture.requestId, "InProgress"),
+        await manage.changeRequestStatus(fixture.requestId, "Assigned"),
       ).toEqual({ success: true, id: fixture.requestId });
       expect(
         await manage.saveExecution({
@@ -406,6 +459,9 @@ describe.sequential("Trip SQL Server integration", () => {
           description: "Started",
         }),
       ).toEqual({ success: true, id: executionId });
+      expect(
+        await manage.changeRequestStatus(fixture.requestId, "InProgress"),
+      ).toEqual({ success: true, id: fixture.requestId });
       expect(
         await manage.saveExecution({
           tripId: fixture.tripId,
@@ -434,32 +490,103 @@ describe.sequential("Trip SQL Server integration", () => {
       ).toEqual({ success: true, id: executionId });
 
       const completed = await repository.details(fixture.requestId);
-      expect(completed).toMatchObject({
-        status: "Completed",
+      expect(completed?.status).toBe("Completed");
+      expect(completed?.passengers[0].routes).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            distanceKm: "99999999.99",
+            points: [
+              expect.objectContaining({ distanceFromStartKm: "0.00" }),
+              expect.objectContaining({
+                distanceFromStartKm: "99999999.99",
+              }),
+            ],
+          }),
+        ]),
+      );
+      expect(completed?.passengers[0].executions).toEqual([
+        expect.objectContaining({
+          tripExecutionId: executionId,
+          startOdometer: "9999999999999999.98",
+          endOdometer: "9999999999999999.99",
+          status: "Completed",
+          passengerRating: 5,
+          passengerComment: "مناسب",
+        }),
+      ]);
+
+      expect(
+        await incidents.recordAccident({
+          tripRequestId: fixture.requestId,
+          vehicleAssignmentId: assignment.AssignmentId,
+          accidentDateTime: fixture.requestedTravelDateTime,
+          location: "جاده",
+          description: null,
+          damageAmount: "10.00",
+          driverFaultPercent: "0",
+          policeReportNo: null,
+          hasInjury: false,
+        }),
+      ).toMatchObject({ success: true });
+    },
+    600_000,
+  );
+
+  it(
+    "allocates distinct year-scoped RequestNo values under concurrent creates",
+    async () => {
+      const first = await createCoreFixture();
+      const secondPerson = await client.people.create({
+        data: {
+          FirstName: "TripConcurrent",
+          LastName: first.token,
+          PersonnelNo: `TRIP-C-${first.token}`,
+          IsActive: true,
+        },
+      });
+      personIds.push(secondPerson.PersonId);
+      const requestType = await client.tripRequestType.findFirstOrThrow({
+        where: { TypeCode: "COMMON_ORIGIN_DESTINATION" },
+      });
+      const command = {
+        tripRequestTypeId: requestType.TripRequestTypeId,
+        requestDateTime: new Date("2026-01-15T08:00:00Z"),
+        requestedTravelDateTime: new Date("2026-02-01T08:00:00Z"),
+        purpose: null,
+        description: null,
         passengers: [
           {
-            routes: [
-              {
-                distanceKm: "99999999.99",
-                points: [
-                  { distanceFromStartKm: "0.00" },
-                  { distanceFromStartKm: "99999999.99" },
-                ],
-              },
-            ],
-            executions: [
-              {
-                tripExecutionId: executionId,
-                startOdometer: "9999999999999999.98",
-                endOdometer: "9999999999999999.99",
-                status: "Completed",
-                passengerRating: 5,
-                passengerComment: "مناسب",
-              },
-            ],
+            passengerPersonId: secondPerson.PersonId,
+            originLocationId: first.origin.LocationId,
+            destinationLocationId: first.destination.LocationId,
+            requestedPickupDateTime: null,
+            pickupOrder: null,
+            dropoffOrder: null,
+            status: null,
+            description: null,
           },
         ],
-      });
+      };
+      const [left, right] = await Promise.all([
+        manage.createRequest(command),
+        manage.createRequest({
+          ...command,
+          requestDateTime: new Date("2026-01-16T08:00:00Z"),
+        }),
+      ]);
+      expect(left.success && right.success).toBe(true);
+      if (!left.success || !right.success) throw new Error("concurrent create");
+      requestIds.push(left.id, right.id);
+      const numbers = await Promise.all([
+        repository.details(left.id),
+        repository.details(right.id),
+        repository.details(first.requestId),
+      ]);
+      const requestNos = numbers.map((row) => row?.requestNo);
+      expect(new Set(requestNos).size).toBe(3);
+      expect(requestNos.every((value) => /^TR-1404-\d{4}$/.test(value ?? ""))).toBe(
+        true,
+      );
     },
     600_000,
   );

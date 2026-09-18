@@ -61,6 +61,79 @@ export function canTransitionTripExecution(
   );
 }
 
+export function isTerminalTripRequestStatus(status: string): boolean {
+  return status === "Completed" || status === "Cancelled";
+}
+
+export function isNonTerminalTripExecutionStatus(status: string): boolean {
+  return status === "Planned" || status === "InProgress";
+}
+
+export function executionHasStarted(execution: {
+  status: string;
+  actualPickupDateTime: Date | null;
+}): boolean {
+  return (
+    execution.actualPickupDateTime !== null ||
+    execution.status === "InProgress" ||
+    execution.status === "Completed"
+  );
+}
+
+export type TripExecutionLifecycleSnapshot = {
+  tripExecutionId: number;
+  status: string;
+  actualPickupDateTime: Date | null;
+};
+
+export type TripPassengerLifecycleSnapshot = {
+  tripId: number;
+  executions: TripExecutionLifecycleSnapshot[];
+};
+
+export type TripRequestLifecycleSnapshot = {
+  status: string;
+  passengers: TripPassengerLifecycleSnapshot[];
+};
+
+export function requestHasStartedExecution(
+  snapshot: TripRequestLifecycleSnapshot,
+): boolean {
+  return snapshot.passengers.some((passenger) =>
+    passenger.executions.some(executionHasStarted),
+  );
+}
+
+export function everyPassengerHasPersistedPlan(
+  snapshot: TripRequestLifecycleSnapshot,
+): boolean {
+  return (
+    snapshot.passengers.length > 0 &&
+    snapshot.passengers.every((passenger) =>
+      passenger.executions.some(
+        (execution) => execution.status !== "Cancelled",
+      ),
+    )
+  );
+}
+
+export function everyPassengerExecutionCompleted(
+  snapshot: TripRequestLifecycleSnapshot,
+): boolean {
+  return (
+    snapshot.passengers.length > 0 &&
+    snapshot.passengers.every((passenger) => {
+      const active = passenger.executions.filter(
+        (execution) => execution.status !== "Cancelled",
+      );
+      return (
+        active.length > 0 &&
+        active.every((execution) => execution.status === "Completed")
+      );
+    })
+  );
+}
+
 export function jalaliYearOf(dateTime: Date): number {
   const yearPart = new Intl.DateTimeFormat(
     "en-US-u-ca-persian-nu-latn",

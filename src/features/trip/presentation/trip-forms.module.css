@@ -101,6 +101,21 @@
   font-size: var(--font-size-sm);
 }
 
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.ineligibleList {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0 var(--space-5) 0 0;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-sm);
+}
+
 @media (max-width: 760px) {
   .section {
     padding: var(--space-4);

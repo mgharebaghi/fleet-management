@@ -197,10 +197,10 @@ differently.
 ## Trips
 
 Trip management starts at `/trips`: staff can create a request with one or
-more passenger-specific Trips, browse/search/filter requests, plan textual
-routes, select a driver/vehicle assignment active at the scheduled time,
-print the official RTL driver voucher, reconcile the returned paper into
-TripExecution and record the passenger survey.
+more passenger-specific Trips, create Locations inline when the catalog is
+empty, persist vehicle/driver planning as a Planned execution, print the
+driver mission sheet from that persisted plan, reconcile the returned paper,
+and optionally record accident/violation rows already present in the contract.
 
 Request numbers use `TR-{JalaliYear}-{4-digit sequence}` and reset each Jalali
 year. Request and execution lifecycles are enforced in Application while

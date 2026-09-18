@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useActionState, useEffect, useId, useInsertionEffect, useRef, useState } from "react";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
 import { JalaliDatePicker } from "@/components/ui/date-picker/jalali-date-picker";
 import {
+  FieldErrors,
   FieldLabel,
   FormActions,
   FormField,
@@ -15,6 +16,7 @@ import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
 import { SearchableSelect } from "@/components/ui/searchable-select/searchable-select";
 import { TechnicalValue } from "@/components/ui/technical-value/technical-value";
 import { TimeSelect } from "@/components/ui/time-select/time-select";
+import { TECHNICAL_PASSENGER_LIMIT } from "../application/trip-validation";
 import type {
   TripLocationReference,
   TripPersonReference,
@@ -22,6 +24,7 @@ import type {
 } from "../application/trip-records";
 import { createTripRequestAction } from "./trip.actions";
 import { tripMessages } from "./trip-form-data";
+import { LocationPicker } from "./location/location-picker";
 import styles from "./trip-forms.module.css";
 
 type CreateTripRequestFormProps = {
@@ -29,6 +32,19 @@ type CreateTripRequestFormProps = {
   people: TripPersonReference[];
   locations: TripLocationReference[];
 };
+
+function typeExplanation(typeCode: string) {
+  switch (typeCode) {
+    case "COMMON_ORIGIN":
+      return "یک مبدأ مشترک برای همهٔ مسافران؛ مقصد هر نفر جداگانه ثبت می‌شود.";
+    case "COMMON_DESTINATION":
+      return "یک مقصد مشترک برای همهٔ مسافران؛ مبدأ هر نفر جداگانه ثبت می‌شود.";
+    case "COMMON_ORIGIN_DESTINATION":
+      return "مبدأ و مقصد برای همهٔ مسافران یکسان است و در پروندهٔ هر مسافر تکرار می‌شود.";
+    default:
+      return "مبدأ و مقصد را برای هر مسافر مطابق همین درخواست ثبت کنید.";
+  }
+}
 
 export function CreateTripRequestForm({
   requestTypes,
@@ -40,9 +56,55 @@ export function CreateTripRequestForm({
     {},
   );
   const prefix = useId();
-  const [passengerCount, setPassengerCount] = useState(1);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [passengerCount, setPassengerCount] = useState(
+    Math.max(1, Number(state.values?.passengerCount ?? 1) || 1),
+  );
+  const [selectedTypeId, setSelectedTypeId] = useState(
+    state.values?.tripRequestTypeId ?? "",
+  );
+  const [typeRestoreNonce, setTypeRestoreNonce] = useState(0);
+  const selectedTypeIdRef = useRef(selectedTypeId);
+  useInsertionEffect(() => {
+    selectedTypeIdRef.current =
+      selectedTypeId || state.values?.tripRequestTypeId || "";
+  });
 
   const value = (name: string) => state.values?.[name] ?? "";
+  const selectedType = requestTypes.find(
+    (type) => String(type.tripRequestTypeId) === selectedTypeId,
+  );
+  const shareOrigin =
+    selectedType?.typeCode === "COMMON_ORIGIN" ||
+    selectedType?.typeCode === "COMMON_ORIGIN_DESTINATION";
+  const shareDestination =
+    selectedType?.typeCode === "COMMON_DESTINATION" ||
+    selectedType?.typeCode === "COMMON_ORIGIN_DESTINATION";
+  const fieldInvalid = (name: string) => state.field === name;
+  const fieldErrorId = (name: string) =>
+    fieldInvalid(name) ? `${prefix}-${name}-error` : undefined;
+
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    function handleReset() {
+      const next = selectedTypeIdRef.current;
+      if (!next) return;
+      setSelectedTypeId(next);
+      setTypeRestoreNonce((nonce) => nonce + 1);
+    }
+    form.addEventListener("reset", handleReset);
+    return () => form.removeEventListener("reset", handleReset);
+  }, []);
+
+  useEffect(() => {
+    if (!state.field || !formRef.current) return;
+    const invalid = formRef.current.querySelector<HTMLElement>(
+      `[name="${state.field}"], #${prefix}-${state.field}`,
+    );
+    invalid?.focus();
+  }, [prefix, state.field]);
+
   const personOptions = people.map((person) => ({
     value: String(person.personId),
     label: `${person.firstName} ${person.lastName} ${person.personnelNo ?? ""}`,
@@ -59,20 +121,10 @@ export function CreateTripRequestForm({
       </span>
     ),
   }));
-  const locationOptions = locations.map((location) => ({
-    value: String(location.locationId),
-    label: `${location.locationName} ${location.locationCode ?? ""} ${location.address ?? ""}`,
-    searchText: `${location.locationName} ${location.locationCode ?? ""} ${location.address ?? ""}`,
-    content: (
-      <span>
-        {location.locationName}
-        {location.locationType ? ` — ${location.locationType}` : ""}
-      </span>
-    ),
-  }));
 
   return (
     <form
+      ref={formRef}
       action={formAction}
       noValidate
       aria-busy={pending}
@@ -100,11 +152,16 @@ export function CreateTripRequestForm({
               نوع درخواست
             </FieldLabel>
             <select
+              key={typeRestoreNonce}
               id={`${prefix}-request-type`}
               name="tripRequestTypeId"
               className={formControlClassName}
-              defaultValue={value("tripRequestTypeId")}
+              defaultValue={selectedTypeId}
               disabled={pending}
+              required
+              aria-invalid={fieldInvalid("tripRequestTypeId")}
+              aria-describedby={fieldErrorId("tripRequestTypeId")}
+              onChange={(event) => setSelectedTypeId(event.target.value)}
             >
               <option value="">انتخاب نوع درخواست</option>
               {requestTypes.map((type) => (
@@ -116,18 +173,37 @@ export function CreateTripRequestForm({
                 </option>
               ))}
             </select>
+            {fieldInvalid("tripRequestTypeId") && state.error && (
+              <FieldErrors
+                id={`${prefix}-tripRequestTypeId-error`}
+                messages={[tripMessages[state.error]]}
+              />
+            )}
           </FormField>
           <FormField>
-            <FieldLabel htmlFor={`${prefix}-purpose`}>هدف سفر</FieldLabel>
+            <FieldLabel htmlFor={`${prefix}-purpose`}>
+              هدف سفر (اختیاری)
+            </FieldLabel>
             <input
               id={`${prefix}-purpose`}
               name="purpose"
               className={formControlClassName}
               defaultValue={value("purpose")}
               disabled={pending}
+              aria-invalid={fieldInvalid("purpose")}
+              aria-describedby={fieldErrorId("purpose")}
             />
+            {fieldInvalid("purpose") && state.error && (
+              <FieldErrors
+                id={`${prefix}-purpose-error`}
+                messages={[tripMessages[state.error]]}
+              />
+            )}
           </FormField>
         </FormGrid>
+        {selectedType && (
+          <p className={styles.hint}>{typeExplanation(selectedType.typeCode)}</p>
+        )}
 
         <div className={styles.dateRows}>
           <div className={styles.dateRow}>
@@ -162,9 +238,42 @@ export function CreateTripRequestForm({
           </div>
         </div>
 
+        {(shareOrigin || shareDestination) && (
+          <FormGrid>
+            {shareOrigin && (
+              <FormField>
+                <LocationPicker
+                  name="commonOriginLocationId"
+                  label="مبدأ مشترک"
+                  locations={locations}
+                  defaultValue={value("commonOriginLocationId")}
+                  disabled={pending}
+                  required
+                  invalid={fieldInvalid("commonOriginLocationId")}
+                  describedBy={fieldErrorId("commonOriginLocationId")}
+                />
+              </FormField>
+            )}
+            {shareDestination && (
+              <FormField>
+                <LocationPicker
+                  name="commonDestinationLocationId"
+                  label="مقصد مشترک"
+                  locations={locations}
+                  defaultValue={value("commonDestinationLocationId")}
+                  disabled={pending}
+                  required
+                  invalid={fieldInvalid("commonDestinationLocationId")}
+                  describedBy={fieldErrorId("commonDestinationLocationId")}
+                />
+              </FormField>
+            )}
+          </FormGrid>
+        )}
+
         <FormField>
           <FieldLabel htmlFor={`${prefix}-request-description`}>
-            توضیحات درخواست
+            توضیحات درخواست (اختیاری)
           </FieldLabel>
           <textarea
             id={`${prefix}-request-description`}
@@ -184,18 +293,23 @@ export function CreateTripRequestForm({
         <div className={styles.sectionHeading}>
           <div>
             <p className={styles.step}>۲</p>
-            <h2 id={`${prefix}-passengers`}>مسافران و مسیر هر نفر</h2>
+            <h2 id={`${prefix}-passengers`}>مسافران</h2>
           </div>
           <ActionButton
             type="button"
             variant="secondary"
             size="sm"
-            disabled={pending || passengerCount >= 50}
+            disabled={pending || passengerCount >= TECHNICAL_PASSENGER_LIMIT}
             onClick={() => setPassengerCount((count) => count + 1)}
           >
             افزودن مسافر
           </ActionButton>
         </div>
+        <p className={styles.hint}>
+          اگر زمان سوارشدن هر مسافر خالی بماند، همان زمان برنامه‌ریزی‌شدهٔ
+          درخواست استفاده می‌شود. حداکثر {TECHNICAL_PASSENGER_LIMIT} مسافر در
+          هر ارسال فرم یک محدودیت فنی است، نه قانون کسب‌وکار.
+        </p>
 
         <input
           type="hidden"
@@ -234,83 +348,88 @@ export function CreateTripRequestForm({
                     searchPlaceholder="جستجوی نام، شماره پرسنلی یا موبایل…"
                     disabled={pending}
                     required
+                    invalid={fieldInvalid(`passenger.${index}.personId`)}
                   />
                 </FormField>
-                <FormField>
-                  <SearchableSelect
-                    name={`passenger.${index}.originLocationId`}
-                    label="مبدأ"
-                    options={locationOptions}
-                    defaultValue={value(
-                      `passenger.${index}.originLocationId`,
-                    )}
-                    placeholder="انتخاب مبدأ"
-                    searchPlaceholder="جستجوی نام، کد یا نشانی مکان…"
-                    disabled={pending}
-                    required
-                  />
-                </FormField>
-                <FormField>
-                  <SearchableSelect
-                    name={`passenger.${index}.destinationLocationId`}
-                    label="مقصد"
-                    options={locationOptions}
-                    defaultValue={value(
-                      `passenger.${index}.destinationLocationId`,
-                    )}
-                    placeholder="انتخاب مقصد"
-                    searchPlaceholder="جستجوی نام، کد یا نشانی مکان…"
-                    disabled={pending}
-                    required
-                  />
-                </FormField>
-                <FormField>
-                  <FieldLabel htmlFor={`${prefix}-pickup-order-${index}`}>
-                    ترتیب سوارشدن
-                  </FieldLabel>
-                  <input
-                    id={`${prefix}-pickup-order-${index}`}
-                    name={`passenger.${index}.pickupOrder`}
-                    className={formControlClassName}
-                    inputMode="numeric"
-                    dir="ltr"
-                    defaultValue={value(`passenger.${index}.pickupOrder`)}
-                    disabled={pending}
-                  />
-                </FormField>
-                <FormField>
-                  <FieldLabel htmlFor={`${prefix}-dropoff-order-${index}`}>
-                    ترتیب پیاده‌شدن
-                  </FieldLabel>
-                  <input
-                    id={`${prefix}-dropoff-order-${index}`}
-                    name={`passenger.${index}.dropoffOrder`}
-                    className={formControlClassName}
-                    inputMode="numeric"
-                    dir="ltr"
-                    defaultValue={value(`passenger.${index}.dropoffOrder`)}
-                    disabled={pending}
-                  />
-                </FormField>
+                {!shareOrigin && (
+                  <FormField>
+                    <LocationPicker
+                      name={`passenger.${index}.originLocationId`}
+                      label="مبدأ"
+                      locations={locations}
+                      defaultValue={value(
+                        `passenger.${index}.originLocationId`,
+                      )}
+                      disabled={pending}
+                      required
+                    />
+                  </FormField>
+                )}
+                {!shareDestination && (
+                  <FormField>
+                    <LocationPicker
+                      name={`passenger.${index}.destinationLocationId`}
+                      label="مقصد"
+                      locations={locations}
+                      defaultValue={value(
+                        `passenger.${index}.destinationLocationId`,
+                      )}
+                      disabled={pending}
+                      required
+                    />
+                  </FormField>
+                )}
+                {passengerCount > 1 && (
+                  <>
+                    <FormField>
+                      <FieldLabel htmlFor={`${prefix}-pickup-order-${index}`}>
+                        ترتیب سوارشدن (اختیاری)
+                      </FieldLabel>
+                      <input
+                        id={`${prefix}-pickup-order-${index}`}
+                        name={`passenger.${index}.pickupOrder`}
+                        className={formControlClassName}
+                        inputMode="numeric"
+                        dir="ltr"
+                        defaultValue={value(`passenger.${index}.pickupOrder`)}
+                        disabled={pending}
+                      />
+                    </FormField>
+                    <FormField>
+                      <FieldLabel htmlFor={`${prefix}-dropoff-order-${index}`}>
+                        ترتیب پیاده‌شدن (اختیاری)
+                      </FieldLabel>
+                      <input
+                        id={`${prefix}-dropoff-order-${index}`}
+                        name={`passenger.${index}.dropoffOrder`}
+                        className={formControlClassName}
+                        inputMode="numeric"
+                        dir="ltr"
+                        defaultValue={value(`passenger.${index}.dropoffOrder`)}
+                        disabled={pending}
+                      />
+                    </FormField>
+                  </>
+                )}
               </FormGrid>
               <div className={styles.dateRow}>
                 <JalaliDatePicker
                   name={`passenger.${index}.pickupDay`}
-                  label="تاریخ درخواست‌شدهٔ سوارشدن (شمسی)"
+                  label="تاریخ درخواست‌شدهٔ سوارشدن (اختیاری)"
                   defaultValue={value(`passenger.${index}.pickupDay`)}
                   disabled={pending}
                 />
                 <TimeSelect
                   id={`${prefix}-pickup-time-${index}`}
                   name={`passenger.${index}.pickupTime`}
-                  label="ساعت سوارشدن (تهران)"
+                  label="ساعت سوارشدن (تهران، اختیاری)"
                   defaultValue={value(`passenger.${index}.pickupTime`)}
                   disabled={pending}
                 />
               </div>
               <FormField>
                 <FieldLabel htmlFor={`${prefix}-trip-description-${index}`}>
-                  توضیحات این مسافر
+                  توضیحات این مسافر (اختیاری)
                 </FieldLabel>
                 <textarea
                   id={`${prefix}-trip-description-${index}`}

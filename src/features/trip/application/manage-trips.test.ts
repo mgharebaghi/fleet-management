@@ -45,6 +45,7 @@ const vehicle = {
   modelName: "Model",
   vehicleTypeName: null,
   vehicleStatusName: "Operational",
+  isActive: true,
 };
 const assignment = {
   assignmentId: 1,
@@ -74,7 +75,13 @@ const trip = {
   destination: { ...location, locationId: 2, locationName: "قم" },
   routes: [],
   executions: [],
-} satisfies TripPassengerRecord & { requestedTravelDateTime: Date };
+  requestId: 1,
+  requestStatus: "New",
+} satisfies TripPassengerRecord & {
+  requestedTravelDateTime: Date;
+  requestId: number;
+  requestStatus: string;
+};
 
 const session = {
   requestType: vi.fn(),
@@ -88,7 +95,9 @@ const session = {
   assignment: vi.fn(),
   createRequest: vi.fn(),
   updateRequestStatus: vi.fn(),
+  cancelPlannedExecutions: vi.fn(),
   createRoute: vi.fn(),
+  deselectOtherSelectedRoutes: vi.fn(),
   createExecution: vi.fn(),
   updateExecution: vi.fn(),
   updateSurvey: vi.fn(),
@@ -129,6 +138,7 @@ const createInput: CreateTripRequestCommand = {
 
 const routeInput: NewTripRoute = {
   tripId: 1,
+  tripExecutionId: null,
   routeName: " مسیر اصلی ",
   alternativeNo: 1,
   distanceKm: "120.25",
@@ -146,15 +156,27 @@ const routeInput: NewTripRoute = {
   ],
 };
 
-const executionInput: SaveTripExecutionInput = {
+const plannedExecutionInput: SaveTripExecutionInput = {
   tripId: 1,
   tripExecutionId: null,
   vehicleDriverAssignmentId: 1,
+  actualPickupDateTime: null,
+  actualDropoffDateTime: null,
+  startOdometer: null,
+  endOdometer: null,
+  status: " Planned ",
+  description: null,
+};
+
+const startedExecutionInput: SaveTripExecutionInput = {
+  tripId: 1,
+  tripExecutionId: 2,
+  vehicleDriverAssignmentId: 1,
   actualPickupDateTime: new Date("2026-02-01T08:00:00Z"),
-  actualDropoffDateTime: new Date("2026-02-01T10:00:00Z"),
+  actualDropoffDateTime: null,
   startOdometer: "100",
-  endOdometer: "220.25",
-  status: " InProgress ",
+  endOdometer: null,
+  status: "InProgress",
   description: null,
 };
 
@@ -163,7 +185,12 @@ beforeEach(() => {
   session.requestType.mockResolvedValue(requestType);
   session.requestLifecycle.mockResolvedValue({
     status: "New",
-    hasStartedExecution: false,
+    passengers: [
+      {
+        tripId: 1,
+        executions: [],
+      },
+    ],
   });
   session.requestNumbers.mockResolvedValue([]);
   session.requestNoExists.mockResolvedValue(false);
@@ -179,10 +206,16 @@ beforeEach(() => {
     tripId: 1,
     status: "Planned",
     actualPickupDateTime: null,
+    actualDropoffDateTime: null,
+    vehicleDriverAssignmentId: 1,
+    requestId: 1,
+    requestStatus: "Assigned",
   });
   session.createRequest.mockResolvedValue(10);
   session.createRoute.mockResolvedValue(20);
   session.createExecution.mockResolvedValue(30);
+  session.cancelPlannedExecutions.mockResolvedValue(undefined);
+  session.deselectOtherSelectedRoutes.mockResolvedValue(undefined);
 });
 
 describe("create Trip request", () => {
@@ -210,7 +243,7 @@ describe("create Trip request", () => {
         ...createInput,
         ...(change as Partial<CreateTripRequestCommand>),
       }),
-    ).toEqual({ success: false, error });
+    ).toMatchObject({ success: false, error });
     expect(session.createRequest).not.toHaveBeenCalled();
   });
 
@@ -274,7 +307,27 @@ describe("create Trip request", () => {
 });
 
 describe("Trip request status", () => {
-  it("persists forward transitions and pre-start cancellation", async () => {
+  it("requires a persisted plan before Assigned and cancels Planned children", async () => {
+    expect(await manage.changeRequestStatus(1, "Assigned")).toEqual({
+      success: false,
+      error: "PLANNING_REQUIRED",
+    });
+
+    session.requestLifecycle.mockResolvedValue({
+      status: "New",
+      passengers: [
+        {
+          tripId: 1,
+          executions: [
+            {
+              tripExecutionId: 2,
+              status: "Planned",
+              actualPickupDateTime: null,
+            },
+          ],
+        },
+      ],
+    });
     expect(await manage.changeRequestStatus(1, "Assigned")).toEqual({
       success: true,
       id: 1,
@@ -285,12 +338,24 @@ describe("Trip request status", () => {
       success: true,
       id: 1,
     });
+    expect(session.cancelPlannedExecutions).toHaveBeenCalledWith(1);
   });
 
-  it("rejects reverse, unknown and post-start cancellation", async () => {
+  it("rejects reverse, unknown, incomplete and post-start cancellation", async () => {
     session.requestLifecycle.mockResolvedValue({
       status: "Assigned",
-      hasStartedExecution: false,
+      passengers: [
+        {
+          tripId: 1,
+          executions: [
+            {
+              tripExecutionId: 2,
+              status: "Planned",
+              actualPickupDateTime: null,
+            },
+          ],
+        },
+      ],
     });
     expect(await manage.changeRequestStatus(1, "New")).toEqual({
       success: false,
@@ -300,9 +365,24 @@ describe("Trip request status", () => {
       success: false,
       error: "INVALID_REQUEST_STATUS",
     });
+    expect(await manage.changeRequestStatus(1, "InProgress")).toEqual({
+      success: false,
+      error: "EXECUTION_NOT_STARTED",
+    });
     session.requestLifecycle.mockResolvedValue({
       status: "Assigned",
-      hasStartedExecution: true,
+      passengers: [
+        {
+          tripId: 1,
+          executions: [
+            {
+              tripExecutionId: 2,
+              status: "InProgress",
+              actualPickupDateTime: new Date("2026-02-01T08:00:00Z"),
+            },
+          ],
+        },
+      ],
     });
     expect(await manage.changeRequestStatus(1, "Cancelled")).toEqual({
       success: false,
@@ -320,6 +400,10 @@ describe("planned routes", () => {
     expect(session.createRoute).toHaveBeenCalledWith({
       ...routeInput,
       routeName: "مسیر اصلی",
+    });
+    expect(session.deselectOtherSelectedRoutes).toHaveBeenCalledWith({
+      tripId: 1,
+      tripExecutionId: null,
     });
   });
 
@@ -344,21 +428,52 @@ describe("planned routes", () => {
 });
 
 describe("Trip execution and survey", () => {
-  it("creates execution against an assignment active at scheduled pickup", async () => {
-    expect(await manage.saveExecution(executionInput)).toEqual({
+  it("creates a Planned execution against an assignment active at scheduled pickup", async () => {
+    expect(await manage.saveExecution(plannedExecutionInput)).toEqual({
       success: true,
       id: 30,
     });
     expect(session.createExecution).toHaveBeenCalledWith({
-      ...executionInput,
+      ...plannedExecutionInput,
       status: "Planned",
     });
   });
 
-  it("updates only an execution belonging to the selected Trip", async () => {
+  it("rejects actual start data on a Planned or Cancelled execution", async () => {
     expect(
-      await manage.saveExecution({ ...executionInput, tripExecutionId: 2 }),
-    ).toEqual({ success: true, id: 2 });
+      await manage.saveExecution({
+        ...plannedExecutionInput,
+        actualPickupDateTime: startedExecutionInput.actualPickupDateTime,
+      }),
+    ).toEqual({ success: false, error: "UNEXPECTED_ACTUAL_START" });
+  });
+
+  it("requires pickup without dropoff for InProgress and both times for Completed", async () => {
+    expect(
+      await manage.saveExecution({
+        ...startedExecutionInput,
+        actualPickupDateTime: null,
+      }),
+    ).toEqual({ success: false, error: "MISSING_ACTUAL_PICKUP" });
+    expect(
+      await manage.saveExecution({
+        ...startedExecutionInput,
+        actualDropoffDateTime: new Date("2026-02-01T10:00:00Z"),
+      }),
+    ).toEqual({ success: false, error: "UNEXPECTED_ACTUAL_DROPOFF" });
+    expect(
+      await manage.saveExecution({
+        ...startedExecutionInput,
+        status: "Completed",
+      }),
+    ).toEqual({ success: false, error: "MISSING_ACTUAL_DROPOFF" });
+  });
+
+  it("updates only an execution belonging to the selected Trip", async () => {
+    expect(await manage.saveExecution(startedExecutionInput)).toEqual({
+      success: true,
+      id: 2,
+    });
     expect(session.updateExecution).toHaveBeenCalled();
 
     session.execution.mockResolvedValue({
@@ -366,25 +481,93 @@ describe("Trip execution and survey", () => {
       tripId: 9,
       status: "Planned",
       actualPickupDateTime: null,
+      actualDropoffDateTime: null,
+      vehicleDriverAssignmentId: 1,
+      requestId: 1,
+      requestStatus: "Assigned",
+    });
+    expect(await manage.saveExecution(startedExecutionInput)).toEqual({
+      success: false,
+      error: "EXECUTION_NOT_FOUND",
+    });
+  });
+
+  it("forbids a second non-terminal execution on the same Trip", async () => {
+    session.trip.mockResolvedValue({
+      ...trip,
+      executions: [
+        {
+          tripExecutionId: 9,
+          tripId: 1,
+          assignment,
+          actualPickupDateTime: null,
+          actualDropoffDateTime: null,
+          startOdometer: null,
+          endOdometer: null,
+          status: "Planned",
+          passengerRating: null,
+          passengerComment: null,
+          surveyDateTime: null,
+          description: null,
+          createdAt: null,
+          routes: [],
+        },
+      ],
+    });
+    expect(await manage.saveExecution(plannedExecutionInput)).toEqual({
+      success: false,
+      error: "ACTIVE_EXECUTION_EXISTS",
+    });
+  });
+
+  it("keeps the assignment immutable after actual start", async () => {
+    session.execution.mockResolvedValue({
+      tripExecutionId: 2,
+      tripId: 1,
+      status: "InProgress",
+      actualPickupDateTime: startedExecutionInput.actualPickupDateTime,
+      actualDropoffDateTime: null,
+      vehicleDriverAssignmentId: 1,
+      requestId: 1,
+      requestStatus: "InProgress",
     });
     expect(
-      await manage.saveExecution({ ...executionInput, tripExecutionId: 2 }),
-    ).toEqual({ success: false, error: "EXECUTION_NOT_FOUND" });
+      await manage.saveExecution({
+        ...startedExecutionInput,
+        vehicleDriverAssignmentId: 99,
+      }),
+    ).toEqual({ success: false, error: "ASSIGNMENT_IMMUTABLE" });
   });
 
   it.each([
     [
       {
+        ...startedExecutionInput,
         actualDropoffDateTime: new Date("2026-02-01T07:59:00Z"),
       },
       "INVALID_EXECUTION_PERIOD",
     ],
-    [{ startOdometer: "-1" }, "INVALID_ODOMETER"],
-    [{ endOdometer: "99.99" }, "ODOMETER_DECREASE"],
-  ] as const)("rejects invalid reconciliation %o", async (change, error) => {
-    expect(
-      await manage.saveExecution({ ...executionInput, ...change }),
-    ).toEqual({ success: false, error });
+    [{ ...startedExecutionInput, startOdometer: "-1" }, "INVALID_ODOMETER"],
+    [
+      {
+        ...startedExecutionInput,
+        endOdometer: "99.99",
+      },
+      "ODOMETER_DECREASE",
+    ],
+    [
+      {
+        ...startedExecutionInput,
+        startOdometer: null,
+        endOdometer: "10",
+      },
+      "MISSING_START_ODOMETER",
+    ],
+  ] as const)("rejects invalid reconciliation %o", async (input, error) => {
+    expect(await manage.saveExecution(input)).toEqual({
+      success: false,
+      error,
+    });
   });
 
   it("rejects assignments outside the scheduled half-open period", async () => {
@@ -392,18 +575,34 @@ describe("Trip execution and survey", () => {
       ...assignment,
       toDateTime: trip.requestedPickupDateTime,
     });
-    expect(await manage.saveExecution(executionInput)).toEqual({
+    expect(await manage.saveExecution(plannedExecutionInput)).toEqual({
       success: false,
       error: "ASSIGNMENT_NOT_ACTIVE",
     });
   });
 
-  it("requires a license eligible on the scheduled day", async () => {
+  it("rejects inactive drivers, vehicles and ineligible licenses", async () => {
+    session.assignment.mockResolvedValue({
+      ...assignment,
+      driverIsActive: false,
+    });
+    expect(await manage.saveExecution(plannedExecutionInput)).toEqual({
+      success: false,
+      error: "DRIVER_INACTIVE",
+    });
+    session.assignment.mockResolvedValue({
+      ...assignment,
+      vehicle: { ...assignment.vehicle, isActive: false },
+    });
+    expect(await manage.saveExecution(plannedExecutionInput)).toEqual({
+      success: false,
+      error: "VEHICLE_INACTIVE",
+    });
     session.assignment.mockResolvedValue({
       ...assignment,
       hasEligibleLicense: false,
     });
-    expect(await manage.saveExecution(executionInput)).toEqual({
+    expect(await manage.saveExecution(plannedExecutionInput)).toEqual({
       success: false,
       error: "NO_ELIGIBLE_LICENSE",
     });
@@ -414,11 +613,15 @@ describe("Trip execution and survey", () => {
       tripExecutionId: 2,
       tripId: 1,
       status: "InProgress",
-      actualPickupDateTime: executionInput.actualPickupDateTime,
+      actualPickupDateTime: startedExecutionInput.actualPickupDateTime,
+      actualDropoffDateTime: null,
+      vehicleDriverAssignmentId: 1,
+      requestId: 1,
+      requestStatus: "InProgress",
     });
     expect(
       await manage.saveExecution({
-        ...executionInput,
+        ...plannedExecutionInput,
         tripExecutionId: 2,
         status: "Planned",
       }),
@@ -428,21 +631,19 @@ describe("Trip execution and survey", () => {
     });
     expect(
       await manage.saveExecution({
-        ...executionInput,
-        tripExecutionId: 2,
+        ...startedExecutionInput,
         status: "Cancelled",
       }),
     ).toEqual({
       success: false,
-      error: "INVALID_EXECUTION_TRANSITION",
+      error: "UNEXPECTED_ACTUAL_START",
     });
   });
 
   it("rejects an unknown status when editing an execution", async () => {
     expect(
       await manage.saveExecution({
-        ...executionInput,
-        tripExecutionId: 2,
+        ...startedExecutionInput,
         status: "Unknown",
       }),
     ).toEqual({
@@ -451,7 +652,17 @@ describe("Trip execution and survey", () => {
     });
   });
 
-  it("stores one survey payload on its real TripExecution row", async () => {
+  it("stores one survey payload only on a completed execution", async () => {
+    session.execution.mockResolvedValue({
+      tripExecutionId: 2,
+      tripId: 1,
+      status: "Completed",
+      actualPickupDateTime: startedExecutionInput.actualPickupDateTime,
+      actualDropoffDateTime: new Date("2026-02-01T10:00:00Z"),
+      vehicleDriverAssignmentId: 1,
+      requestId: 1,
+      requestStatus: "Completed",
+    });
     expect(
       await manage.saveSurvey({
         tripExecutionId: 2,
@@ -466,5 +677,24 @@ describe("Trip execution and survey", () => {
       passengerComment: "خوب",
       surveyDateTime: new Date("2026-02-02T08:00:00Z"),
     });
+
+    session.execution.mockResolvedValue({
+      tripExecutionId: 2,
+      tripId: 1,
+      status: "InProgress",
+      actualPickupDateTime: startedExecutionInput.actualPickupDateTime,
+      actualDropoffDateTime: null,
+      vehicleDriverAssignmentId: 1,
+      requestId: 1,
+      requestStatus: "InProgress",
+    });
+    expect(
+      await manage.saveSurvey({
+        tripExecutionId: 2,
+        passengerRating: 5,
+        passengerComment: "خوب",
+        surveyDateTime: new Date("2026-02-02T08:00:00Z"),
+      }),
+    ).toEqual({ success: false, error: "SURVEY_NOT_ALLOWED" });
   });
 });

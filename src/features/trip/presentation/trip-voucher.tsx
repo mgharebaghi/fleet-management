@@ -2,8 +2,9 @@ import { notFound } from "next/navigation";
 
 import { ActionLink } from "@/components/ui/action-link/action-link";
 import { TechnicalValue } from "@/components/ui/technical-value/technical-value";
-import { VehiclePlate } from "@/features/fleet/presentation/vehicles/list-vehicles/vehicle-plate";
+import { VehiclePlate } from "@/components/ui/vehicle-plate/vehicle-plate";
 import { makeReadTrips } from "../composition/trip.factory";
+import { persistedPlanningExecution } from "./trip-execution-current";
 import { PrintTripVoucherButton } from "./print-trip-voucher-button";
 import styles from "./trip-voucher.module.css";
 
@@ -20,29 +21,24 @@ const dateTimeFormatter = new Intl.DateTimeFormat("fa-IR", {
 export async function TripVoucherPage({
   tripRequestId,
   tripId,
-  assignmentId,
 }: {
   tripRequestId: number;
   tripId: number;
-  assignmentId: number;
 }) {
   const reader = makeReadTrips();
   const details = await reader.details(tripRequestId);
   if (!details) notFound();
   const trip = details.passengers.find((candidate) => candidate.tripId === tripId);
   if (!trip) notFound();
+  const execution = persistedPlanningExecution(trip.executions);
+  const assignment = execution?.assignment;
+  if (!assignment) notFound();
   const scheduledDateTime =
     trip.requestedPickupDateTime ?? details.requestedTravelDateTime;
-  const assignments = await reader.assignmentsActiveAt(scheduledDateTime);
-  const assignment = assignments.find(
-    (candidate) =>
-      candidate.assignmentId === assignmentId &&
-      candidate.hasEligibleLicense,
-  );
-  if (!assignment) notFound();
   const route =
     trip.routes.find((candidate) => candidate.isSelected) ??
     trip.routes[0] ??
+    execution?.routes.find((candidate) => candidate.isSelected) ??
     null;
 
   return (
@@ -64,7 +60,7 @@ export async function TripVoucherPage({
             <span>نسخه عملیاتی راننده</span>
           </div>
           <div className={styles.titleBlock}>
-            <h1 id="voucher-title">قبض رسمی سفر</h1>
+            <h1 id="voucher-title">برگه مأموریت سفر — نسخه راننده</h1>
             <p>جهت همراه داشتن راننده و تکمیل پس از مأموریت</p>
           </div>
           <div className={styles.issueMeta}>
@@ -83,18 +79,18 @@ export async function TripVoucherPage({
               </dd>
             </div>
             <div>
-              <dt>شناسهٔ سفر</dt>
-              <dd>
-                <TechnicalValue>{trip.tripId}</TechnicalValue>
-              </dd>
-            </div>
-            <div>
               <dt>نوع درخواست</dt>
               <dd>{details.requestType.typeName}</dd>
             </div>
             <div>
               <dt>زمان برنامه‌ریزی‌شده</dt>
               <dd>{dateTimeFormatter.format(scheduledDateTime)}</dd>
+            </div>
+            <div>
+              <dt>مسافر</dt>
+              <dd>
+                {trip.passenger.firstName} {trip.passenger.lastName}
+              </dd>
             </div>
             <div>
               <dt>مبدأ</dt>
@@ -168,7 +164,6 @@ export async function TripVoucherPage({
                 <th>شمارهٔ پرسنلی</th>
                 <th>مبدأ</th>
                 <th>مقصد</th>
-                <th>ترتیب سوار / پیاده</th>
               </tr>
             </thead>
             <tbody>
@@ -183,9 +178,6 @@ export async function TripVoucherPage({
                 </td>
                 <td>{trip.origin.locationName}</td>
                 <td>{trip.destination.locationName}</td>
-                <td>
-                  {trip.pickupOrder ?? "—"} / {trip.dropoffOrder ?? "—"}
-                </td>
               </tr>
             </tbody>
           </table>
@@ -218,7 +210,7 @@ export async function TripVoucherPage({
         </section>
 
         <section className={styles.section}>
-          <h2>اطلاعات تکمیلی راننده — دست‌نویس</h2>
+          <h2>حرکت و بازگشت واقعی — دست‌نویس</h2>
           <div className={styles.handwritingGrid}>
             <div>
               <span>تاریخ و ساعت حرکت واقعی</span>
@@ -236,8 +228,121 @@ export async function TripVoucherPage({
               <span>کیلومتر پایان</span>
               <i />
             </div>
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <h2>توقف‌ها — دست‌نویس</h2>
+          <table className={styles.passengerTable}>
+            <thead>
+              <tr>
+                <th>شروع</th>
+                <th>پایان / مدت</th>
+                <th>محل</th>
+                <th>دلیل</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 4 }, (_, index) => (
+                <tr key={index}>
+                  <td>
+                    <i className={styles.blank} />
+                  </td>
+                  <td>
+                    <i className={styles.blank} />
+                  </td>
+                  <td>
+                    <i className={styles.blank} />
+                  </td>
+                  <td>
+                    <i className={styles.blank} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+
+        <section className={styles.section}>
+          <h2>تأخیر و انحراف مسیر — دست‌نویس</h2>
+          <p className={styles.checks}>
+            تأخیر: ☐ رخ نداده ☐ رخ داده — شرح: <i className={styles.blankLine} />
+          </p>
+          <p className={styles.checks}>
+            انحراف مسیر: ☐ رخ نداده ☐ رخ داده — شرح:{" "}
+            <i className={styles.blankLine} />
+          </p>
+        </section>
+
+        <section className={styles.section}>
+          <h2>اعلام رخداد — دست‌نویس</h2>
+          <p className={styles.checks}>
+            ☐ هیچ ☐ تصادف ☐ تخلف/جریمه ☐ خرابی ☐ سایر
+          </p>
+        </section>
+
+        <section className={styles.section}>
+          <h2>جزئیات تصادف — دست‌نویس</h2>
+          <div className={styles.handwritingGrid}>
+            <div>
+              <span>تاریخ و ساعت</span>
+              <i />
+            </div>
+            <div>
+              <span>محل</span>
+              <i />
+            </div>
+            <div>
+              <span>جراحت ☐ بله ☐ خیر</span>
+              <i />
+            </div>
+            <div>
+              <span>شماره گزارش پلیس</span>
+              <i />
+            </div>
             <div className={styles.notes}>
-              <span>توضیحات راننده / واحد عملیات</span>
+              <span>شرح، خسارت و درصد تقصیر</span>
+              <i />
+              <i />
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <h2>جزئیات تخلف — دست‌نویس</h2>
+          <div className={styles.handwritingGrid}>
+            <div>
+              <span>تاریخ و ساعت</span>
+              <i />
+            </div>
+            <div>
+              <span>محل</span>
+              <i />
+            </div>
+            <div>
+              <span>نوع تخلف</span>
+              <i />
+            </div>
+            <div>
+              <span>شماره پیگیری</span>
+              <i />
+            </div>
+            <div>
+              <span>مبلغ در صورت مشخص بودن</span>
+              <i />
+            </div>
+            <div>
+              <span>توضیحات</span>
+              <i />
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <h2>سایر یادداشت‌های عملیاتی — دست‌نویس</h2>
+          <div className={styles.handwritingGrid}>
+            <div className={styles.notes}>
+              <span>مسیر، خودرو یا عملیات</span>
               <i />
               <i />
               <i />
@@ -265,8 +370,9 @@ export async function TripVoucherPage({
         </section>
 
         <footer className={styles.footer}>
-          این قبض پس از تکمیل و امضا به واحد عملیات تحویل و اطلاعات واقعی آن
-          در پروندهٔ الکترونیکی سفر ثبت می‌شود.
+          این برگه پس از تکمیل و امضا به واحد عملیات تحویل و اطلاعات واقعی آن
+          در پروندهٔ الکترونیکی سفر ثبت می‌شود. خانه‌های دست‌نویس در سامانه
+          ذخیره نمی‌شوند.
         </footer>
       </article>
     </main>

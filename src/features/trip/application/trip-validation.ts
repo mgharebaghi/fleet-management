@@ -10,6 +10,11 @@ import type {
 const SQL_INT_MIN = -2_147_483_648;
 const SQL_INT_MAX = 2_147_483_647;
 
+/** Presentation form guard only; not a domain passenger limit. */
+export const TECHNICAL_PASSENGER_LIMIT = 50;
+/** Presentation form guard only; not a domain waypoint limit. */
+export const TECHNICAL_ROUTE_POINT_LIMIT = 50;
+
 export function isValidTripId(value: number): boolean {
   return Number.isInteger(value) && value > 0 && value <= SQL_INT_MAX;
 }
@@ -164,6 +169,12 @@ export function normalizeTripRoute(input: NewTripRoute): NewTripRoute {
 
 export function tripRouteError(input: NewTripRoute): TripFailure | null {
   if (!isValidTripId(input.tripId)) return "INVALID_ID";
+  if (
+    input.tripExecutionId !== null &&
+    !isValidTripId(input.tripExecutionId)
+  ) {
+    return "INVALID_ID";
+  }
   if (!input.routeName) return "ROUTE_NAME_REQUIRED";
   if (input.routeName.length > 200) return "ROUTE_NAME_TOO_LONG";
   if (
@@ -246,6 +257,10 @@ export function tripExecutionError(
     return "INVALID_ODOMETER";
   }
 
+  if (input.endOdometer !== null && input.startOdometer === null) {
+    return "MISSING_START_ODOMETER";
+  }
+
   if (
     input.startOdometer !== null &&
     input.endOdometer !== null &&
@@ -256,4 +271,31 @@ export function tripExecutionError(
   }
 
   return null;
+}
+
+export function tripExecutionStateError(
+  input: SaveTripExecutionInput,
+): TripFailure | null {
+  const hasPickup = input.actualPickupDateTime !== null;
+  const hasDropoff = input.actualDropoffDateTime !== null;
+  const hasStartOdometer = input.startOdometer !== null;
+  const hasEndOdometer = input.endOdometer !== null;
+  const impliesStart = hasPickup || hasDropoff || hasStartOdometer || hasEndOdometer;
+
+  switch (input.status) {
+    case "Planned":
+      return impliesStart ? "UNEXPECTED_ACTUAL_START" : null;
+    case "InProgress":
+      if (!hasPickup) return "MISSING_ACTUAL_PICKUP";
+      if (hasDropoff) return "UNEXPECTED_ACTUAL_DROPOFF";
+      return null;
+    case "Completed":
+      if (!hasPickup) return "MISSING_ACTUAL_PICKUP";
+      if (!hasDropoff) return "MISSING_ACTUAL_DROPOFF";
+      return null;
+    case "Cancelled":
+      return impliesStart ? "UNEXPECTED_ACTUAL_START" : null;
+    default:
+      return "INVALID_EXECUTION_STATUS";
+  }
 }
