@@ -20,7 +20,7 @@ import {
 } from "./location.actions";
 import styles from "./location-picker.module.css";
 
-const LOCATION_CREATED_EVENT = "fleet-management:trip-location-created";
+export const LOCATION_CREATED_EVENT = "fleet-management:trip-location-created";
 
 const locationMessages: Record<
   NonNullable<CreateLocationActionState["error"]>,

@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/ui/page-header/page-header";
 import { PageShell } from "@/components/ui/page-shell/page-shell";
 import { ResultState } from "@/components/ui/result-state/result-state";
 import { makeReadTrips } from "../composition/trip.factory";
-import { CreateTripRequestForm } from "./create-trip-request-form";
+import { CreateTripRequestForm } from "./create-request/create-trip-request-form";
 
 export async function CreateTripRequestPage() {
   const reader = makeReadTrips();
@@ -14,11 +14,11 @@ export async function CreateTripRequestPage() {
   ]);
 
   return (
-    <PageShell>
+    <PageShell width="narrow">
       <PageHeader
         eyebrow="مدیریت سفر"
         title="ثبت درخواست سفر"
-        description="اطلاعات درخواست و مسیر هر مسافر را ثبت کنید. اگر مکان مبدأ یا مقصد در فهرست نیست، همان‌جا مکان جدید بسازید."
+        description="اطلاعات درخواست و مسافران را مرحله‌به‌مرحله وارد کنید و پس از مرور تأیید کنید. اگر مکان مبدأ یا مقصد در فهرست نیست، همان‌جا مکان جدید بسازید."
         action={<BackLink href="/trips/requests" label="بازگشت به سفرها" />}
         compactAction
       />

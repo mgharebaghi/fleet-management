@@ -149,6 +149,11 @@ request time. Pickup/drop-off order is de-emphasized for a single passenger.
 Passenger and route-point rows are parsed from consecutive submitted form
 keys; there is no approved product maximum.
 
+`/trips/create` is a Presentation-only wizard: request info, then passengers,
+then a review Dialog. Nothing is written to TripRequest/Trip until
+«تأیید و ثبت درخواست». Inline Location creation remains an independent catalog
+write. Server validation returns to the relevant step without wiping values.
+
 ## Tests
 
 - Unit: `npx vitest run src/features/trip/application`

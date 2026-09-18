@@ -13,6 +13,11 @@ import { selectSearchableOption } from "./support/searchable-select";
 
 const REVIEW_MEDIA_DIR =
   "/cursor/stores/bc-a8ae88c9-ec40-4abd-9894-42d1ed2dc651/media";
+const WIZARD_SCREENSHOTS = {
+  desktop: `${REVIEW_MEDIA_DIR}/trip-create-wizard-desktop.png`,
+  mobile: `${REVIEW_MEDIA_DIR}/trip-create-wizard-mobile.png`,
+  review: `${REVIEW_MEDIA_DIR}/trip-create-wizard-review.png`,
+};
 
 let adapter: E2EDatabaseAdapter;
 let personId: number | undefined;
@@ -350,6 +355,22 @@ test.describe.serial("Trip management", () => {
       await expect(page).toHaveURL(/\/trips\/create$/, { timeout: 60_000 });
       const form = page.getByRole("form", { name: "ثبت درخواست سفر" });
       await expect(form).toBeVisible({ timeout: 60_000 });
+      await expect(
+        page.getByRole("navigation", { name: "مراحل ثبت درخواست سفر" }),
+      ).toBeVisible();
+      await expect(
+        form.getByRole("heading", { name: "اطلاعات درخواست" }),
+      ).toBeVisible();
+      await expect(
+        form.getByRole("heading", { name: "مسافران" }),
+      ).toBeHidden();
+      await expect(
+        form.getByRole("button", { name: "بعدی", exact: true }),
+      ).toBeVisible();
+      await expect(
+        form.getByRole("button", { name: "مرور و ثبت", exact: true }),
+      ).toBeHidden();
+
       await form
         .getByLabel("نوع درخواست", { exact: true })
         .selectOption({ label: "مبدأ مشترک - مقاصد مختلف" });
@@ -359,9 +380,7 @@ test.describe.serial("Trip management", () => {
         ),
       ).toBeVisible();
       await expect(form.getByLabel("مبدأ مشترک", { exact: true })).toBeVisible();
-      await expect(form.getByLabel("مقصد", { exact: true })).toBeVisible();
       await expect(form.getByLabel("مقصد مشترک", { exact: true })).toHaveCount(0);
-      await expect(form.getByLabel("مبدأ", { exact: true })).toHaveCount(0);
 
       await form
         .getByLabel("نوع درخواست", { exact: true })
@@ -373,8 +392,6 @@ test.describe.serial("Trip management", () => {
       ).toBeVisible();
       await expect(form.getByLabel("مبدأ مشترک", { exact: true })).toBeVisible();
       await expect(form.getByLabel("مقصد مشترک", { exact: true })).toBeVisible();
-      await expect(form.getByLabel("مبدأ", { exact: true })).toHaveCount(0);
-      await expect(form.getByLabel("مقصد", { exact: true })).toHaveCount(0);
       await form
         .getByRole("button", {
           name: "تاریخ ثبت درخواست (شمسی)",
@@ -413,14 +430,112 @@ test.describe.serial("Trip management", () => {
       await form
         .getByLabel("هدف سفر (اختیاری)", { exact: true })
         .fill(tooLongPurpose);
+
+      await mkdir(REVIEW_MEDIA_DIR, { recursive: true });
+      await page.screenshot({
+        path: WIZARD_SCREENSHOTS.desktop,
+        fullPage: true,
+      });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.screenshot({
+        path: WIZARD_SCREENSHOTS.mobile,
+        fullPage: true,
+      });
+      const hasHorizontalOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+      );
+      expect(hasHorizontalOverflow).toBe(false);
+      await page.setViewportSize({ width: 1280, height: 720 });
+
+      await form.getByRole("button", { name: "بعدی", exact: true }).click();
+      await expect(
+        form.getByRole("alert").filter({
+          hasText: "مبدأ مشترک",
+        }),
+      ).toBeVisible();
+      await expect(
+        form.getByRole("heading", { name: "اطلاعات درخواست" }),
+      ).toBeVisible();
+
+      await createInlineLocation(page, form, "مبدأ مشترک", inlineOriginName);
+      await createInlineLocation(
+        page,
+        form,
+        "مقصد مشترک",
+        inlineDestinationName,
+      );
+      await form.getByRole("button", { name: "بعدی", exact: true }).click();
+      await expect(
+        form.getByRole("heading", { name: "مسافران" }),
+      ).toBeVisible();
+      await expect(
+        form.getByRole("heading", { name: "اطلاعات درخواست" }),
+      ).toBeHidden();
+      await expect(form.getByLabel("مسافر", { exact: true })).toBeVisible();
+      await expect(form.getByLabel("مبدأ", { exact: true })).toHaveCount(0);
+      await expect(form.getByLabel("مقصد", { exact: true })).toHaveCount(0);
+
+      await form.getByRole("button", { name: "قبلی", exact: true }).click();
+      await expect(
+        form.getByRole("heading", { name: "اطلاعات درخواست" }),
+      ).toBeVisible();
+      await expect(
+        form.getByLabel("هدف سفر (اختیاری)", { exact: true }),
+      ).toHaveValue(tooLongPurpose);
+      await expect(
+        form.getByLabel("نوع درخواست", { exact: true }),
+      ).toHaveValue(/.+/);
+      await form.getByRole("button", { name: "بعدی", exact: true }).click();
+
       await form
-        .getByRole("button", { name: "ثبت درخواست سفر", exact: true })
+        .getByRole("button", { name: "افزودن مسافر", exact: true })
+        .click();
+      await expect(form.getByRole("heading", { name: "مسافر 2" })).toBeVisible();
+      await form.getByRole("button", { name: "حذف", exact: true }).click();
+      await expect(form.getByRole("heading", { name: "مسافر 2" })).toHaveCount(0);
+
+      await selectSearchableOption(form, "مسافر", token, token);
+      await form
+        .getByRole("button", { name: "مرور و ثبت", exact: true })
+        .click();
+      const review = page.getByRole("dialog", {
+        name: "مرور و تأیید درخواست",
+      });
+      await expect(review).toBeVisible();
+      await expect(review.getByText("مبدأ و مقصد مشترک")).toBeVisible();
+      await expect(review.getByText(`مسافر ${token}`)).toBeVisible();
+      await expect(review.getByText(inlineOriginName).first()).toBeVisible();
+      await expect(review.getByText(inlineDestinationName).first()).toBeVisible();
+      const reviewText = await review.innerText();
+      expect(reviewText).not.toMatch(
+        new RegExp(`(?:^|\\D)${Number(personId)}(?:\\D|$)`),
+      );
+      await page.screenshot({
+        path: WIZARD_SCREENSHOTS.review,
+        fullPage: true,
+      });
+
+      const notYetPersisted = await request()
+        .input("token", token)
+        .query<{ count: number }>(
+          `SELECT COUNT(*) AS count
+           FROM trip.TripRequest
+           WHERE Purpose LIKE N'%' + @token + N'%'
+              OR Purpose = @token`,
+        );
+      expect(notYetPersisted.recordset[0].count).toBe(0);
+
+      await review
+        .getByRole("button", { name: "تأیید و ثبت درخواست", exact: true })
         .click();
       await expect(page).toHaveURL(/\/trips\/create$/);
       await expect(
         form.getByRole("alert").filter({
           hasText: "هدف سفر حداکثر ۵۰۰ نویسه است.",
         }).first(),
+      ).toBeVisible();
+      await expect(
+        form.getByRole("heading", { name: "اطلاعات درخواست" }),
       ).toBeVisible();
       await expect(
         form.getByLabel("هدف سفر (اختیاری)", { exact: true }),
@@ -434,16 +549,17 @@ test.describe.serial("Trip management", () => {
       await form
         .getByLabel("هدف سفر (اختیاری)", { exact: true })
         .fill(`هدف ${token}`);
-      await selectSearchableOption(form, "مسافر", token, token);
-      await createInlineLocation(page, form, "مبدأ مشترک", inlineOriginName);
-      await createInlineLocation(
-        page,
-        form,
-        "مقصد مشترک",
-        inlineDestinationName,
-      );
+      await form.getByRole("button", { name: "بعدی", exact: true }).click();
+      await expect(
+        form.getByRole("heading", { name: "مسافران" }),
+      ).toBeVisible();
       await form
-        .getByRole("button", { name: "ثبت درخواست سفر", exact: true })
+        .getByRole("button", { name: "مرور و ثبت", exact: true })
+        .click();
+      await expect(review).toBeVisible();
+      await expect(review.getByText(`هدف ${token}`)).toBeVisible();
+      await review
+        .getByRole("button", { name: "تأیید و ثبت درخواست", exact: true })
         .click();
 
       await eventually(page).toHaveURL(/\/trips\/\d+$/);
