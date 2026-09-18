@@ -45,7 +45,7 @@ export async function TripVoucherPage({
     <main className={styles.page} lang="fa" dir="rtl">
       <div className={styles.screenActions}>
         <ActionLink
-          href={`/trips/${tripRequestId}?tab=assignment`}
+          href={`/trips/${tripRequestId}#planning`}
           variant="secondary"
         >
           بازگشت به پرونده سفر

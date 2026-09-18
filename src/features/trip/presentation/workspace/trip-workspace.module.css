@@ -1,0 +1,248 @@
+.workspace {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.summary,
+.section,
+.nextAction,
+.passengerCard,
+.groupCard {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface-subtle);
+}
+
+.summary {
+  gap: var(--space-4);
+}
+
+.summaryHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.summaryHeader h2,
+.section h2,
+.passengerCard h3,
+.groupCard h3 {
+  color: var(--app-heading);
+  font-size: var(--font-size-lg);
+}
+
+.summaryFacts,
+.passengerFacts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.summaryFacts div,
+.passengerFacts div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.summaryFacts dt,
+.passengerFacts dt {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.summaryFacts dd,
+.passengerFacts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--app-heading);
+  font-weight: 700;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.progress {
+  min-width: 0;
+}
+
+.progressList {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  padding: var(--space-4);
+  list-style: none;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface);
+}
+
+.progressItem {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 8rem;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.marker {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--app-border);
+  border-radius: 50%;
+  background: var(--app-surface);
+  color: var(--app-text-muted);
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.label {
+  min-width: 0;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.progressItem[data-state="current"] .marker {
+  border-color: var(--app-primary);
+  background: var(--app-primary);
+  color: var(--app-on-primary);
+}
+
+.progressItem[data-state="current"] .label {
+  color: var(--app-heading);
+}
+
+.progressItem[data-state="complete"] .marker {
+  border-color: var(--app-primary);
+  background: var(--app-info-background);
+  color: var(--app-primary);
+}
+
+.progressItem[data-state="complete"] .label {
+  color: var(--app-text);
+}
+
+.progressItem[data-state="cancelled"] .marker,
+.progressItem[data-state="cancelled"] .label {
+  color: var(--app-danger-text);
+}
+
+.progressItem[data-state="cancelled"] .marker {
+  border-color: var(--app-danger-text);
+  background: var(--app-danger-background);
+}
+
+.nextAction {
+  background: var(--app-surface);
+}
+
+.nextCopy {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.nextCopy p {
+  color: var(--app-text-muted);
+}
+
+.sectionNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.sectionNav a {
+  padding: 8px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-control);
+  color: var(--app-text);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  background: var(--app-surface);
+  transition:
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.sectionNav a:hover {
+  border-color: var(--app-accent);
+  color: var(--app-primary);
+}
+
+.disclosure {
+  min-width: 0;
+  padding: var(--space-3) 0 0;
+}
+
+.disclosure > summary {
+  cursor: pointer;
+  color: var(--app-primary);
+  font-weight: 700;
+}
+
+.disclosure[open] > summary {
+  margin-bottom: var(--space-3);
+}
+
+.muted {
+  color: var(--app-text-muted);
+}
+
+.readiness {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.passengerList,
+.stack {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.passengerCard,
+.groupCard {
+  background: var(--app-surface);
+}
+
+@media (max-width: 760px) {
+  .summary,
+  .section,
+  .nextAction,
+  .passengerCard,
+  .groupCard {
+    padding: var(--space-4);
+  }
+
+  .summaryFacts,
+  .passengerFacts {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marker,
+  .sectionNav a {
+    transition: none;
+  }
+}

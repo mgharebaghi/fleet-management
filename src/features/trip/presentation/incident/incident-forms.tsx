@@ -67,7 +67,7 @@ export function TripIncidentForms({
           <TimeSelect
             id={`${prefix}-accident-time`}
             name="accidentTime"
-            label="ساعت تصادف (تهران)"
+            label="ساعت تصادف"
             defaultValue={accidentState.values?.accidentTime ?? ""}
             disabled={accidentPending}
           />
@@ -171,7 +171,7 @@ export function TripIncidentForms({
           <TimeSelect
             id={`${prefix}-violation-time`}
             name="violationTime"
-            label="ساعت تخلف (تهران)"
+            label="ساعت تخلف"
             defaultValue={violationState.values?.violationTime ?? ""}
             disabled={violationPending}
           />

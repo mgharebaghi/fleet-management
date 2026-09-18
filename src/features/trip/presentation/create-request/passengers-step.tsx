@@ -205,7 +205,7 @@ export function PassengersStep({
               <TimeSelect
                 id={`${prefix}-pickup-time-${index}`}
                 name={`passenger.${index}.pickupTime`}
-                label="ساعت سوارشدن (تهران، اختیاری)"
+                label="ساعت سوارشدن (اختیاری)"
                 defaultValue={value(`passenger.${index}.pickupTime`)}
                 disabled={pending}
               />

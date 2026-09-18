@@ -142,7 +142,7 @@ export function RequestStep({
           <TimeSelect
             id={`${prefix}-request-time`}
             name="requestTime"
-            label="ساعت ثبت (تهران)"
+            label="ساعت ثبت"
             defaultValue={value("requestTime")}
             disabled={pending}
           />
@@ -157,7 +157,7 @@ export function RequestStep({
           <TimeSelect
             id={`${prefix}-travel-time`}
             name="requestedTravelTime"
-            label="ساعت برنامه‌ریزی‌شده (تهران)"
+            label="ساعت برنامه‌ریزی‌شده"
             defaultValue={value("requestedTravelTime")}
             disabled={pending}
           />

@@ -19,6 +19,16 @@ const WIZARD_SCREENSHOTS = {
   review: `${REVIEW_MEDIA_DIR}/trip-create-wizard-review.png`,
   reviewMobile: `${REVIEW_MEDIA_DIR}/trip-create-wizard-review-mobile.png`,
 };
+const WORKSPACE_SCREENSHOTS = {
+  listDesktop: `${REVIEW_MEDIA_DIR}/trip-workspace-list-desktop.png`,
+  listMobile: `${REVIEW_MEDIA_DIR}/trip-workspace-list-mobile.png`,
+  created: `${REVIEW_MEDIA_DIR}/trip-workspace-new.png`,
+  planned: `${REVIEW_MEDIA_DIR}/trip-workspace-planned.png`,
+  inProgress: `${REVIEW_MEDIA_DIR}/trip-workspace-inprogress.png`,
+  completed: `${REVIEW_MEDIA_DIR}/trip-workspace-completed.png`,
+  multiPassenger: `${REVIEW_MEDIA_DIR}/trip-workspace-multipassenger.png`,
+  mobile: `${REVIEW_MEDIA_DIR}/trip-workspace-mobile.png`,
+};
 
 let adapter: E2EDatabaseAdapter;
 let personId: number | undefined;
@@ -58,15 +68,25 @@ async function tripRequestCountForFixturePerson() {
   return result.recordset[0].count;
 }
 
-async function saveReviewScreenshot(
+async function saveWorkspaceScreenshot(
   page: Page,
-  name: "desktop" | "mobile" | "voucher",
+  name: keyof typeof WORKSPACE_SCREENSHOTS,
 ) {
   await mkdir(REVIEW_MEDIA_DIR, { recursive: true });
   await page.screenshot({
-    path: `${REVIEW_MEDIA_DIR}/trip-corrected-${name}.png`,
+    path: WORKSPACE_SCREENSHOTS[name],
     fullPage: true,
   });
+}
+
+async function expectNoPageOverflow(page: Page) {
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth + 1,
+    ),
+  ).toBe(true);
 }
 
 async function createInlineLocation(
@@ -358,9 +378,11 @@ test.describe.serial("Trip management", () => {
       page.setDefaultTimeout(60_000);
       page.setDefaultNavigationTimeout(120_000);
       const eventually = expect.configure({ timeout: 120_000 });
-      const openTab = async (name: string, tab: string) => {
-        await page.getByRole("link", { name, exact: true }).click();
-        await eventually(page).toHaveURL(new RegExp(`tab=${tab}`));
+      const openSection = async (name: string) => {
+        await page
+          .getByRole("navigation", { name: "بخش‌های پرونده سفر" })
+          .getByRole("link", { name, exact: true })
+          .click();
       };
       await page.goto("/trips");
       await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
@@ -427,7 +449,7 @@ test.describe.serial("Trip management", () => {
         "۱",
       );
       await form
-        .getByLabel("ساعت ثبت (تهران)", { exact: true })
+        .getByLabel("ساعت ثبت", { exact: true })
         .selectOption("08");
       await form
         .getByRole("button", {
@@ -444,7 +466,7 @@ test.describe.serial("Trip management", () => {
         "۲",
       );
       await form
-        .getByLabel("ساعت برنامه‌ریزی‌شده (تهران)", { exact: true })
+        .getByLabel("ساعت برنامه‌ریزی‌شده", { exact: true })
         .selectOption("08");
       const tooLongPurpose = "پ".repeat(501);
       await form
@@ -611,24 +633,34 @@ test.describe.serial("Trip management", () => {
         );
       inlineOriginId = createdLocations.recordset[0]?.origin;
       inlineDestinationId = createdLocations.recordset[0]?.destination;
-      await saveReviewScreenshot(page, "desktop");
       await expect(
-        page.getByText(/درخواست TR-1404-\d{4}/).first(),
+        page.getByRole("heading", { name: /سفر TR-1404-\d{4}/ }),
       ).toBeVisible();
       await expect(
         page.getByText("جدید", { exact: true }).first(),
       ).toBeVisible();
       await expect(
+        page.getByRole("navigation", { name: "مراحل انجام سفر" }),
+      ).toBeVisible();
+      await expect(
         page.getByRole("navigation", { name: "بخش‌های پرونده سفر" }),
       ).toBeVisible();
-
-      const statusForm = page.getByText("اقدام‌های وضعیت درخواست");
-      await eventually(statusForm).toBeVisible();
       await expect(
-        page.getByRole("button", { name: "ثبت تخصیص‌یافته" }),
-      ).toBeDisabled();
+        page.getByRole("heading", { name: "اقدام بعدی" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "ثبت خودرو و راننده" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "لغو درخواست" }),
+      ).toBeVisible();
+      await saveWorkspaceScreenshot(page, "created");
+      await saveWorkspaceScreenshot(page, "multiPassenger");
 
-      await openTab("مسافران", "passengers");
+      await page.goto(`/trips/${requestId}?tab=passengers`);
+      await eventually(
+        page.getByRole("heading", { name: "جزئیات سفر و مسافران" }),
+      ).toBeVisible();
       await eventually(page.getByText(`مسافر ${token}`).first()).toBeVisible();
       await eventually(
         page.getByText(inlineOriginName, { exact: true }).first(),
@@ -637,7 +669,10 @@ test.describe.serial("Trip management", () => {
         page.getByText(inlineDestinationName, { exact: true }).first(),
       ).toBeVisible();
 
-      await openTab("مسیر", "route");
+      await page.goto(`/trips/${requestId}?tab=route`);
+      await eventually(
+        page.getByRole("heading", { name: "برنامه‌ریزی سفر" }),
+      ).toBeVisible();
       const routeForm = page.getByRole("form", {
         name: "ثبت مسیر برنامه‌ریزی‌شده",
       });
@@ -659,8 +694,10 @@ test.describe.serial("Trip management", () => {
       await eventually(
         page.getByText(`مسیر ${token}`, { exact: true }),
       ).toBeVisible();
+      await eventually(page.getByText("مسیر: ثبت شده")).toBeVisible();
 
-      await openTab("خودرو و راننده", "assignment");
+      await openSection("برنامه‌ریزی سفر");
+      await page.getByRole("button", { name: "ثبت خودرو و راننده" }).click();
       const planningForm = page.getByRole("form", {
         name: "ثبت برنامهٔ اجرا",
       });
@@ -677,6 +714,10 @@ test.describe.serial("Trip management", () => {
       await eventually(
         page.getByText("تخصیص ثبت‌شده", { exact: true }).first(),
       ).toBeVisible();
+      await eventually(
+        page.getByRole("button", { name: "ثبت تخصیص‌یافته" }),
+      ).toBeVisible();
+      await saveWorkspaceScreenshot(page, "planned");
 
       const voucherLink = page.getByRole("link", {
         name: "صدور برگه مأموریت",
@@ -696,7 +737,6 @@ test.describe.serial("Trip management", () => {
       await eventually(
         page.getByText("توقف‌ها — دست‌نویس", { exact: true }),
       ).toBeVisible();
-      await saveReviewScreenshot(page, "voucher");
       await page.emulateMedia({ media: "print" });
       await expect(page.locator("[data-admin-chrome]").first()).toBeHidden();
       await expect(page.getByRole("button", { name: "چاپ قبض سفر" })).toBeHidden();
@@ -704,15 +744,17 @@ test.describe.serial("Trip management", () => {
       await page
         .getByRole("link", { name: "بازگشت به پرونده سفر" })
         .click();
-      await eventually(page).toHaveURL(/tab=assignment/);
+      await eventually(page).toHaveURL(/#planning/);
 
-      await openTab("اطلاعات عمومی", "general");
       await page.getByRole("button", { name: "ثبت تخصیص‌یافته" }).click();
       await eventually(
         page.getByText("تخصیص‌یافته", { exact: true }).first(),
       ).toBeVisible();
+      await eventually(
+        page.getByRole("button", { name: "ثبت زمان حرکت" }),
+      ).toBeVisible();
 
-      await openTab("اجراء و زمان‌بندی", "execution");
+      await page.getByRole("button", { name: "ثبت زمان حرکت" }).click();
       const executionForm = page.getByRole("form", {
         name: "اصلاح اجرای سفر",
       });
@@ -731,7 +773,7 @@ test.describe.serial("Trip management", () => {
         "۲",
       );
       await executionForm
-        .getByLabel("ساعت واقعی حرکت (تهران)", { exact: true })
+        .getByLabel("ساعت واقعی حرکت", { exact: true })
         .selectOption("08");
       await executionForm
         .getByLabel("کیلومتر شروع (اختیاری)", { exact: true })
@@ -743,13 +785,13 @@ test.describe.serial("Trip management", () => {
         page.getByText("در حال اجرا", { exact: true }).first(),
       ).toBeVisible();
 
-      await openTab("اطلاعات عمومی", "general");
       await page.getByRole("button", { name: "شروع درخواست" }).click();
       await eventually(
-        page.getByText("در حال اجرا", { exact: true }).first(),
+        page.getByRole("button", { name: "ثبت بازگشت" }),
       ).toBeVisible();
+      await saveWorkspaceScreenshot(page, "inProgress");
 
-      await openTab("اجراء و زمان‌بندی", "execution");
+      await openSection("اجرای سفر");
       const completeForm = page.getByRole("form", {
         name: "اصلاح اجرای سفر",
       });
@@ -768,7 +810,7 @@ test.describe.serial("Trip management", () => {
         "۲",
       );
       await completeForm
-        .getByLabel("ساعت واقعی بازگشت (تهران)", { exact: true })
+        .getByLabel("ساعت واقعی بازگشت", { exact: true })
         .selectOption("10");
       await completeForm
         .getByRole("button", { name: "تکمیل اجرا" })
@@ -777,6 +819,8 @@ test.describe.serial("Trip management", () => {
         page.getByText("تکمیل‌شده", { exact: true }).first(),
       ).toBeVisible();
 
+      await openSection("بازگشت و تکمیل");
+      await page.getByText("ثبت تصادف یا تخلف").click();
       const accidentForm = page.getByRole("form", {
         name: "ثبت تصادف برگشتی",
       });
@@ -791,11 +835,11 @@ test.describe.serial("Trip management", () => {
         "۲",
       );
       await accidentForm
-        .getByLabel("ساعت تصادف (تهران)", { exact: true })
+        .getByLabel("ساعت تصادف", { exact: true })
         .selectOption("09");
       await accidentForm.getByLabel("جراحت").selectOption("false");
       await accidentForm.getByRole("button", { name: "ثبت تصادف" }).click();
-      await eventually(page).toHaveURL(/tab=execution/);
+      await eventually(page).toHaveURL(/#return/);
       const accidents = await request()
         .input("requestId", requestId)
         .query<{ count: number }>(
@@ -803,13 +847,13 @@ test.describe.serial("Trip management", () => {
         );
       expect(accidents.recordset[0].count).toBe(1);
 
-      await openTab("اطلاعات عمومی", "general");
       await page.getByRole("button", { name: "تکمیل درخواست" }).click();
       await eventually(
-        page.getByText("تکمیل‌شده", { exact: true }).first(),
+        page.getByRole("button", { name: "مشاهده جزئیات سفر" }),
       ).toBeVisible();
+      await saveWorkspaceScreenshot(page, "completed");
 
-      await openTab("نظرسنجی مسافران", "survey");
+      await page.goto(`/trips/${requestId}?tab=survey`);
       const surveyForm = page.getByRole("form", {
         name: "ثبت نظرسنجی مسافر",
       });
@@ -817,15 +861,24 @@ test.describe.serial("Trip management", () => {
       await surveyForm.getByLabel("امتیاز مسافر").fill("5");
       await surveyForm.getByLabel("نظر مسافر").fill(`نظر ${token}`);
       await surveyForm.getByRole("button", { name: "ذخیره نظرسنجی" }).click();
-      await eventually(
-        page.getByText("امتیاز 5", { exact: false }),
-      ).toBeVisible();
+      await eventually(page).toHaveURL(/#return/);
+      await eventually(page.getByText(/امتیاز:\s*5/)).toBeVisible();
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expectNoPageOverflow(page);
+      await saveWorkspaceScreenshot(page, "mobile");
+      await page.setViewportSize({ width: 1280, height: 720 });
 
       await page.goto(`/trips/requests?search=${encodeURIComponent(token)}`);
       await eventually(page.getByText(/TR-1404-\d{4}/).first()).toBeVisible();
       await eventually(
-        page.getByText(inlineOriginName, { exact: true }).first(),
+        page.locator("table").getByText(inlineOriginName),
       ).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "مشاهده جزئیات سفر" }).first(),
+      ).toBeVisible();
+      await eventually(page.getByText("بازگشت و تکمیل").first()).toBeVisible();
+      await saveWorkspaceScreenshot(page, "listDesktop");
       await page.getByLabel("وضعیت درخواست").selectOption("Completed");
       await eventually(page).toHaveURL(/status=Completed/);
       await page.setViewportSize({ width: 390, height: 844 });
@@ -838,7 +891,7 @@ test.describe.serial("Trip management", () => {
           return element.scrollWidth <= element.clientWidth;
         }),
       ).toBe(true);
-      await saveReviewScreenshot(page, "mobile");
+      await saveWorkspaceScreenshot(page, "listMobile");
     },
   );
 });

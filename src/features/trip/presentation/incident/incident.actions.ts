@@ -40,7 +40,7 @@ export async function recordTripAccidentAction(
     return { error: "UNEXPECTED", values };
   }
   revalidatePath(`/trips/${tripRequestId}`);
-  redirect(`/trips/${tripRequestId}?tab=execution`);
+  redirect(`/trips/${tripRequestId}#return`);
 }
 
 export async function recordTripViolationAction(
@@ -68,5 +68,5 @@ export async function recordTripViolationAction(
     return { error: "UNEXPECTED", values };
   }
   revalidatePath(`/trips/${tripRequestId}`);
-  redirect(`/trips/${tripRequestId}?tab=execution`);
+  redirect(`/trips/${tripRequestId}#return`);
 }

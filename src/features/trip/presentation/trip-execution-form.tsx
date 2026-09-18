@@ -60,7 +60,9 @@ export function TripExecutionForm({
       aria-busy={pending}
     >
       <h3>
-        ثبت بازگشت کاغذی — {trip.passenger.firstName} {trip.passenger.lastName}
+        {execution.status === "Planned"
+          ? `ثبت زمان حرکت — ${trip.passenger.firstName} ${trip.passenger.lastName}`
+          : `ثبت بازگشت — ${trip.passenger.firstName} ${trip.passenger.lastName}`}
       </h3>
       <p className={styles.hint}>
         راننده: {execution.assignment.driverFirstName}{" "}
@@ -90,7 +92,7 @@ export function TripExecutionForm({
           <TimeSelect
             id={`${prefix}-actual-pickup-time`}
             name="actualPickupTime"
-            label="ساعت واقعی حرکت (تهران)"
+            label="ساعت واقعی حرکت"
             defaultValue={value("actualPickupTime", pickup.time)}
             disabled={pending}
           />
@@ -106,7 +108,7 @@ export function TripExecutionForm({
             <TimeSelect
               id={`${prefix}-actual-dropoff-time`}
               name="actualDropoffTime"
-              label="ساعت واقعی بازگشت (تهران)"
+              label="ساعت واقعی بازگشت"
               defaultValue={value("actualDropoffTime", dropoff.time)}
               disabled={pending}
             />
@@ -167,7 +169,7 @@ export function TripExecutionForm({
       </FormField>
       <p className={styles.hint}>
         اطلاعات کاغذ برگشتی را کارکنان در این فرم ثبت می‌کنند؛ تخصیص خودرو از
-        بخش «خودرو و راننده» مدیریت می‌شود.
+        بخش «برنامه‌ریزی سفر» مدیریت می‌شود.
       </p>
       <FormActions separated>
         <ActionButton type="submit" disabled={pending} pending={pending}>

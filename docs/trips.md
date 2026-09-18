@@ -113,7 +113,7 @@ was found.
 
 ## Assignment, voucher and paper
 
-The Vehicle and Driver tab persists the selected assignment as a Planned
+The Vehicle and Driver section persists the selected assignment as a Planned
 TripExecution. The official printable sheet is `برگه مأموریت سفر — نسخه راننده`
 and is derived only from that persisted plan. Query-string assignment switching
 is not used.
@@ -153,6 +153,36 @@ keys; there is no approved product maximum.
 then a review Dialog. Nothing is written to TripRequest/Trip until
 «تأیید و ثبت درخواست». Inline Location creation remains an independent catalog
 write. Server validation returns to the relevant step without wiping values.
+
+## Staff workspace
+
+`/trips/{id}` is a Presentation-only administrative workspace. It answers
+what this trip is, which stage it is in, what is already recorded, what
+remains, and what the next allowed action is. Users do not need
+TripRequest / Trip / TripExecution table names to operate it.
+
+Visible workflow stages are Presentation projections, not persisted fields
+and not a second lifecycle:
+
+```
+ثبت درخواست → برنامه‌ریزی → آماده اعزام → اجرای سفر → بازگشت و تکمیل
+```
+
+They are derived from the existing TripRequest and TripExecution statuses
+and from whether a non-cancelled plan and actual start exist. Underlying
+lifecycles are unchanged.
+
+Operational sections:
+
+- جزئیات سفر و مسافران
+- برنامه‌ریزی سفر — vehicle and driver, optional route, voucher after a
+  persisted plan (`ثبت نشده — اختیاری` / `ثبت شده` for route)
+- اجرای سفر — actual departure and return from the paper sheet
+- بازگشت و تکمیل — accident, violation, survey, and request completion
+
+Legacy `?tab=` values (`general`, `passengers`, `assignment`, `route`,
+`execution`, `survey`) map onto those sections. Time labels no longer
+append `(تهران)`; Tehran timezone behavior is unchanged.
 
 ## Tests
 

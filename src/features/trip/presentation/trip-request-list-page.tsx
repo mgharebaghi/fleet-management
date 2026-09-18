@@ -16,13 +16,9 @@ import { ResultState } from "@/components/ui/result-state/result-state";
 import { StatusBadge } from "@/components/ui/status-badge/status-badge";
 import { TechnicalValue } from "@/components/ui/technical-value/technical-value";
 import { makeReadTrips } from "../composition/trip.factory";
-import {
-  formatTripDateTime,
-  locationSummary,
-  singleSearchParam,
-} from "./trip-format";
+import { formatTripDateTime, singleSearchParam } from "./trip-format";
 import { TripFilters } from "./trip-filters";
-import { requestStatusLabel } from "./trip-status";
+import { projectTripListItem } from "./workspace/trip-workspace-view";
 import styles from "./trip-pages.module.css";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -30,7 +26,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 function requestLink(id: number) {
   return (
     <ActionLink href={`/trips/${id}`} variant="quiet">
-      مشاهده جزئیات
+      مشاهده جزئیات سفر
     </ActionLink>
   );
 }
@@ -50,13 +46,14 @@ export async function TripsPage({
       ? requestedPage
       : 1;
   const result = await makeReadTrips().list(search, status, page);
+  const rows = result.requests.map(projectTripListItem);
 
   return (
     <PageShell>
       <PageHeader
         eyebrow="مدیریت سفر"
         title="سفرها"
-        description="ثبت درخواست، برنامه‌ریزی، صدور قبض راننده و ثبت اطلاعات برگشتی"
+        description="ثبت درخواست، برنامه‌ریزی، اعزام، بازگشت و تکمیل"
         action={
           <ActionLink href="/trips/create" variant="primary">
             ثبت درخواست سفر
@@ -68,82 +65,97 @@ export async function TripsPage({
         status={status}
         statuses={result.statuses}
       />
-      {result.requests.length === 0 ? (
+      {rows.length === 0 ? (
         <ResultState
           title="درخواست سفری پیدا نشد"
           description="جستجو یا وضعیت را تغییر دهید، یا یک درخواست سفر ثبت کنید."
         />
       ) : (
         <>
-          <DataTable caption="درخواست‌های سفر" minWidth={840}>
-            <thead>
-              <tr>
-                <th>شمارهٔ درخواست</th>
-                <th>نوع درخواست</th>
-                <th>مبدأ</th>
-                <th>مقصد</th>
-                <th>زمان برنامه‌ریزی‌شده</th>
-                <th>مسافران</th>
-                <th>وضعیت</th>
-                <th>عملیات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.requests.map((request) => (
-                <tr key={request.tripRequestId}>
-                  <td>
-                    <Link
-                      href={`/trips/${request.tripRequestId}`}
-                      className={styles.recordLink}
-                    >
-                      <TechnicalValue>{request.requestNo}</TechnicalValue>
-                    </Link>
-                  </td>
-                  <td>{request.requestTypeName}</td>
-                  <td>{locationSummary(request.origins, "چند مبدأ")}</td>
-                  <td>{locationSummary(request.destinations, "چند مقصد")}</td>
-                  <td>{formatTripDateTime(request.requestedTravelDateTime)}</td>
-                  <td>{request.passengerCount}</td>
-                  <td>
-                    <StatusBadge
-                      label={requestStatusLabel(request.status)}
-                      tone="info"
-                    />
-                  </td>
-                  <td>{requestLink(request.tripRequestId)}</td>
+          <div className={styles.listTable}>
+            <DataTable caption="درخواست‌های سفر" minWidth={960}>
+              <thead>
+                <tr>
+                  <th>شمارهٔ درخواست</th>
+                  <th>وضعیت</th>
+                  <th>مرحله</th>
+                  <th>نوع</th>
+                  <th>زمان برنامه‌ریزی‌شده</th>
+                  <th>مسافران</th>
+                  <th>مبدأ / مقصد</th>
+                  <th>هدف سفر</th>
+                  <th>اقدام بعدی</th>
+                  <th>عملیات</th>
                 </tr>
-              ))}
-            </tbody>
-          </DataTable>
+              </thead>
+              <tbody>
+                {rows.map((request) => (
+                  <tr key={request.tripRequestId}>
+                    <td>
+                      <Link
+                        href={`/trips/${request.tripRequestId}`}
+                        className={styles.recordLink}
+                      >
+                        <TechnicalValue>{request.requestNo}</TechnicalValue>
+                      </Link>
+                    </td>
+                    <td>
+                      <StatusBadge label={request.statusLabel} tone="info" />
+                    </td>
+                    <td>{request.currentStageLabel}</td>
+                    <td>{request.requestTypeName}</td>
+                    <td>{formatTripDateTime(request.plannedAt)}</td>
+                    <td>{request.passengerCount}</td>
+                    <td>
+                      {request.originSummary} ← {request.destinationSummary}
+                    </td>
+                    <td>{request.purpose ?? "ثبت نشده"}</td>
+                    <td>
+                      <span className={styles.muted}>
+                        {request.nextActionHint}
+                      </span>
+                    </td>
+                    <td>{requestLink(request.tripRequestId)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
+          </div>
           <RecordCardList>
-            {result.requests.map((request) => (
+            {rows.map((request) => (
               <RecordCard key={request.tripRequestId}>
                 <RecordCardHeader
                   title={
                     <TechnicalValue>{request.requestNo}</TechnicalValue>
                   }
                   badge={
-                    <StatusBadge
-                      label={requestStatusLabel(request.status)}
-                      tone="info"
-                    />
+                    <StatusBadge label={request.statusLabel} tone="info" />
                   }
                 />
                 <RecordCardDetails>
+                  <RecordCardDetail label="مرحله">
+                    {request.currentStageLabel}
+                  </RecordCardDetail>
                   <RecordCardDetail label="نوع">
                     {request.requestTypeName}
                   </RecordCardDetail>
-                  <RecordCardDetail label="مبدأ">
-                    {locationSummary(request.origins, "چند مبدأ")}
-                  </RecordCardDetail>
-                  <RecordCardDetail label="مقصد">
-                    {locationSummary(request.destinations, "چند مقصد")}
-                  </RecordCardDetail>
-                  <RecordCardDetail label="زمان سفر">
-                    {formatTripDateTime(request.requestedTravelDateTime)}
+                  <RecordCardDetail label="زمان برنامه‌ریزی‌شده">
+                    {formatTripDateTime(request.plannedAt)}
                   </RecordCardDetail>
                   <RecordCardDetail label="مسافران">
                     {request.passengerCount}
+                  </RecordCardDetail>
+                  <RecordCardDetail label="مبدأ">
+                    {request.originSummary}
+                  </RecordCardDetail>
+                  <RecordCardDetail label="مقصد">
+                    {request.destinationSummary}
+                  </RecordCardDetail>
+                  <RecordCardDetail label="هدف سفر">
+                    {request.purpose ?? "ثبت نشده"}
+                  </RecordCardDetail>
+                  <RecordCardDetail label="اقدام بعدی">
+                    {request.nextActionHint}
                   </RecordCardDetail>
                 </RecordCardDetails>
                 {requestLink(request.tripRequestId)}

@@ -78,7 +78,7 @@ export function PassengerSurveyForm({
         <TimeSelect
           id={`${prefix}-survey-time`}
           name="surveyTime"
-          label="ساعت نظرسنجی (تهران)"
+          label="ساعت نظرسنجی"
           defaultValue={value("surveyTime", survey.time)}
           disabled={pending}
         />
