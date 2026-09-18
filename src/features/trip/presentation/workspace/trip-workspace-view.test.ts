@@ -6,9 +6,11 @@ import type {
   TripRequestDetails,
 } from "../../application/trip-records";
 import {
+  defaultPassengerTabIndex,
   projectTripListItem,
   projectTripWorkspace,
   workspaceSectionForTab,
+  workspaceTabHref,
 } from "./trip-workspace-view";
 
 const person = {
@@ -271,8 +273,50 @@ describe("Trip workspace view model", () => {
     expect(workspaceSectionForTab("assignment")).toBe("planning");
     expect(workspaceSectionForTab("route")).toBe("planning");
     expect(workspaceSectionForTab("execution")).toBe("execution");
-    expect(workspaceSectionForTab("survey")).toBe("return");
+    expect(workspaceSectionForTab("survey")).toBe("completion");
+    expect(workspaceSectionForTab("return")).toBe("completion");
+    expect(workspaceSectionForTab("completion")).toBe("completion");
+    expect(workspaceSectionForTab("planning")).toBe("planning");
     expect(workspaceSectionForTab(undefined)).toBe("details");
+  });
+
+  it("builds tab hrefs without query for the default details tab", () => {
+    expect(workspaceTabHref(44, "details")).toBe("/trips/44");
+    expect(workspaceTabHref(44, "planning")).toBe("/trips/44?tab=planning");
+    expect(workspaceTabHref(44, "completion")).toBe(
+      "/trips/44?tab=completion",
+    );
+  });
+
+  it("defaults passenger switcher to first incomplete passenger", () => {
+    const view = projectTripWorkspace(
+      details({
+        passengers: [
+          passenger({ executions: [execution()] }),
+          passenger({
+            tripId: 12,
+            passenger: { ...person, personId: 2, firstName: "مریم" },
+          }),
+        ],
+      }),
+    );
+    expect(defaultPassengerTabIndex(view.passengers, "planning")).toBe(1);
+    expect(
+      defaultPassengerTabIndex(
+        projectTripWorkspace(
+          details({
+            passengers: [
+              passenger({
+                executions: [
+                  execution({ status: "Completed" }),
+                ],
+              }),
+            ],
+          }),
+        ).passengers,
+        "execution",
+      ),
+    ).toBe(0);
   });
 
   it("projects list rows from request summaries only", () => {
@@ -332,7 +376,7 @@ describe("Trip workspace view model", () => {
         origins: ["تهران"],
         destinations: ["قم"],
       }).currentStageLabel,
-    ).toBe("بازگشت و تکمیل");
+    ).toBe("تکمیل");
     expect(
       projectTripListItem({
         tripRequestId: 48,
