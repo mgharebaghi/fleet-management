@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { mkdir } from "node:fs/promises";
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
@@ -11,25 +10,6 @@ import {
 import { selectJalaliDate } from "./support/jalali-calendar";
 import { selectSearchableOption } from "./support/searchable-select";
 import { gregorianToJalali } from "../src/components/ui/date-picker/jalali-date";
-
-const REVIEW_MEDIA_DIR =
-  "/cursor/stores/bc-a8ae88c9-ec40-4abd-9894-42d1ed2dc651/media";
-const WIZARD_SCREENSHOTS = {
-  desktop: `${REVIEW_MEDIA_DIR}/trip-create-wizard-desktop.png`,
-  mobile: `${REVIEW_MEDIA_DIR}/trip-create-wizard-mobile.png`,
-  review: `${REVIEW_MEDIA_DIR}/trip-create-wizard-review.png`,
-  reviewMobile: `${REVIEW_MEDIA_DIR}/trip-create-wizard-review-mobile.png`,
-};
-const WORKSPACE_SCREENSHOTS = {
-  listDesktop: `${REVIEW_MEDIA_DIR}/trip-workspace-list-desktop.png`,
-  listMobile: `${REVIEW_MEDIA_DIR}/trip-workspace-list-mobile.png`,
-  created: `${REVIEW_MEDIA_DIR}/trip-workspace-new.png`,
-  planned: `${REVIEW_MEDIA_DIR}/trip-workspace-planned.png`,
-  inProgress: `${REVIEW_MEDIA_DIR}/trip-workspace-inprogress.png`,
-  completed: `${REVIEW_MEDIA_DIR}/trip-workspace-completed.png`,
-  multiPassenger: `${REVIEW_MEDIA_DIR}/trip-workspace-multipassenger.png`,
-  mobile: `${REVIEW_MEDIA_DIR}/trip-workspace-mobile.png`,
-};
 
 let adapter: E2EDatabaseAdapter;
 let personId: number | undefined;
@@ -77,17 +57,6 @@ async function tripRequestCountForFixturePerson() {
        )`,
     );
   return result.recordset[0].count;
-}
-
-async function saveWorkspaceScreenshot(
-  page: Page,
-  name: keyof typeof WORKSPACE_SCREENSHOTS,
-) {
-  await mkdir(REVIEW_MEDIA_DIR, { recursive: true });
-  await page.screenshot({
-    path: WORKSPACE_SCREENSHOTS[name],
-    fullPage: true,
-  });
 }
 
 async function expectNoPageOverflow(page: Page) {
@@ -479,16 +448,7 @@ test.describe.serial("Trip management", () => {
         .getByLabel("هدف سفر", { exact: true })
         .fill(`هدف ${token}`);
 
-      await mkdir(REVIEW_MEDIA_DIR, { recursive: true });
-      await page.screenshot({
-        path: WIZARD_SCREENSHOTS.desktop,
-        fullPage: true,
-      });
       await page.setViewportSize({ width: 390, height: 844 });
-      await page.screenshot({
-        path: WIZARD_SCREENSHOTS.mobile,
-        fullPage: true,
-      });
       const hasHorizontalOverflow = await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
       );
@@ -598,16 +558,7 @@ test.describe.serial("Trip management", () => {
           document.documentElement.clientWidth + 1,
       );
       expect(reviewHasHorizontalOverflow).toBe(false);
-      await mkdir(REVIEW_MEDIA_DIR, { recursive: true });
-      await page.screenshot({
-        path: WIZARD_SCREENSHOTS.reviewMobile,
-        fullPage: true,
-      });
       await page.setViewportSize({ width: 1280, height: 720 });
-      await page.screenshot({
-        path: WIZARD_SCREENSHOTS.review,
-        fullPage: true,
-      });
 
       expect(await tripRequestCountForFixturePerson()).toBe(0);
 
@@ -641,8 +592,6 @@ test.describe.serial("Trip management", () => {
       await eventually(
         page.getByRole("heading", { name: "اطلاعات درخواست" }),
       ).toBeVisible();
-      await saveWorkspaceScreenshot(page, "created");
-      await saveWorkspaceScreenshot(page, "multiPassenger");
 
       await page.goto(`/trips/${requestId}?tab=passengers`);
       await eventually(page.getByText(`مسافر ${token}`).first()).toBeVisible();
@@ -720,14 +669,12 @@ test.describe.serial("Trip management", () => {
         .getByRole("link", { name: "تخصیص‌یافته", exact: true })
         .click();
       await eventually(page).toHaveURL(/\?tab=completion/);
-      await saveWorkspaceScreenshot(page, "planned");
 
       await page.getByRole("button", { name: "شروع سفر" }).click();
       await eventually(
         page.getByText("در حال اجرا", { exact: true }).first(),
       ).toBeVisible();
       await page.goto(`/trips/${requestId}?tab=completion`);
-      await saveWorkspaceScreenshot(page, "inProgress");
 
       await page.getByRole("button", { name: "ثبت / ویرایش اطلاعات اجرای مسافران" }).click();
       const completionDialog = page.getByRole("dialog", {
@@ -790,7 +737,6 @@ test.describe.serial("Trip management", () => {
       await eventually(
         page.getByText("تکمیل‌شده", { exact: true }).first(),
       ).toBeVisible();
-      await saveWorkspaceScreenshot(page, "completed");
 
       await page.goto(`/trips/${requestId}?tab=completion`);
       await page.getByRole("button", { name: "ثبت نظرسنجی" }).click();
@@ -808,7 +754,6 @@ test.describe.serial("Trip management", () => {
 
       await page.setViewportSize({ width: 390, height: 844 });
       await expectNoPageOverflow(page);
-      await saveWorkspaceScreenshot(page, "mobile");
       await page.setViewportSize({ width: 1280, height: 720 });
 
       await page.goto(`/trips/requests?search=${encodeURIComponent(token)}`);
@@ -821,7 +766,6 @@ test.describe.serial("Trip management", () => {
       await expect(
         page.getByRole("link", { name: "مشاهده جزئیات" }).first(),
       ).toBeVisible();
-      await saveWorkspaceScreenshot(page, "listDesktop");
       await page.getByLabel("وضعیت درخواست").selectOption("Completed");
       await eventually(page).toHaveURL(/status=Completed/);
       await page.setViewportSize({ width: 390, height: 844 });
@@ -833,7 +777,6 @@ test.describe.serial("Trip management", () => {
           return element.scrollWidth <= element.clientWidth;
         }),
       ).toBe(true);
-      await saveWorkspaceScreenshot(page, "listMobile");
     },
   );
 });
