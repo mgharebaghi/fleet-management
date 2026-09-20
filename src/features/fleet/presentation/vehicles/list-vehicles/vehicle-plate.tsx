@@ -1,1 +1,1 @@
-export { VehiclePlate } from "@/components/ui/vehicle-plate/vehicle-plate";
+export { VehiclePlate } from "../../../../../components/ui/vehicle-plate/vehicle-plate";
