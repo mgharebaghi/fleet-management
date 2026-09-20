@@ -12,7 +12,9 @@ export function TripWorkspaceFocus({
   useEffect(() => {
     const panel = document.getElementById(`workspace-tab-${sectionId}`);
     if (!panel) return;
-    panel.querySelector<HTMLElement>("h2, h3")?.focus({ preventScroll: true });
+    const target =
+      panel.querySelector<HTMLElement>("h2, h3, table, [tabindex]") ?? panel;
+    target.focus({ preventScroll: true });
   }, [sectionId]);
   return null;
 }

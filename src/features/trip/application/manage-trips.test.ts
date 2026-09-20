@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ManageTrips } from "./manage-trips";
 import type {
@@ -6,6 +6,7 @@ import type {
   TripWriteSession,
 } from "./trip-repository";
 import type {
+  CreateCompleteTripRequestCommand,
   CreateTripRequestCommand,
   NewTripRoute,
   SaveTripExecutionInput,
@@ -88,6 +89,7 @@ const session = {
   requestLifecycle: vi.fn(),
   requestNumbers: vi.fn(),
   requestNoExists: vi.fn(),
+  lockRequestNumberYear: vi.fn(),
   person: vi.fn(),
   location: vi.fn(),
   trip: vi.fn(),
@@ -96,8 +98,16 @@ const session = {
   createRequest: vi.fn(),
   updateRequestStatus: vi.fn(),
   cancelPlannedExecutions: vi.fn(),
+  startTripExecutions: vi.fn(),
+  route: vi.fn(),
   createRoute: vi.fn(),
+  updateRoute: vi.fn(),
+  deleteRoute: vi.fn(),
   deselectOtherSelectedRoutes: vi.fn(),
+  request: vi.fn(),
+  createPassenger: vi.fn(),
+  updatePassenger: vi.fn(),
+  deletePassenger: vi.fn(),
   createExecution: vi.fn(),
   updateExecution: vi.fn(),
   updateSurvey: vi.fn(),
@@ -118,7 +128,6 @@ const manage = new ManageTrips(repository);
 
 const createInput: CreateTripRequestCommand = {
   tripRequestTypeId: 1,
-  requestDateTime: new Date("2026-01-01T08:00:00Z"),
   requestedTravelDateTime: new Date("2026-02-01T08:00:00Z"),
   purpose: " مأموریت ",
   description: " توضیح ",
@@ -181,6 +190,8 @@ const startedExecutionInput: SaveTripExecutionInput = {
 };
 
 beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-01-01T08:00:00Z"));
   vi.resetAllMocks();
   session.requestType.mockResolvedValue(requestType);
   session.requestLifecycle.mockResolvedValue({
@@ -211,11 +222,24 @@ beforeEach(() => {
     requestId: 1,
     requestStatus: "Assigned",
   });
-  session.createRequest.mockResolvedValue(10);
+  session.createRequest.mockResolvedValue({ tripRequestId: 10, tripIds: [101] });
+  session.route.mockResolvedValue({
+    routeId: 20,
+    tripId: 1,
+    tripExecutionId: null,
+    isSelected: true,
+  });
   session.createRoute.mockResolvedValue(20);
+  session.updateRoute.mockResolvedValue(undefined);
+  session.deleteRoute.mockResolvedValue(undefined);
   session.createExecution.mockResolvedValue(30);
   session.cancelPlannedExecutions.mockResolvedValue(undefined);
+  session.startTripExecutions.mockResolvedValue(undefined);
   session.deselectOtherSelectedRoutes.mockResolvedValue(undefined);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("create Trip request", () => {
@@ -226,15 +250,44 @@ describe("create Trip request", () => {
     });
     expect(session.createRequest).toHaveBeenCalledWith({
       ...createInput,
+      requestDateTime: new Date("2026-01-01T08:00:00Z"),
       requestNo: "TR-1404-0001",
       purpose: "مأموریت",
       status: "New",
       description: "توضیح",
+      passengers: [
+        {
+          ...createInput.passengers[0],
+          requestedPickupDateTime: createInput.requestedTravelDateTime,
+        },
+      ],
     });
   });
 
+  it("preserves a passenger-specific requested pickup override", async () => {
+    const requestedPickupDateTime = new Date("2026-02-01T08:30:00Z");
+
+    await manage.createRequest({
+      ...createInput,
+      passengers: [
+        {
+          ...createInput.passengers[0],
+          requestedPickupDateTime,
+        },
+      ],
+    });
+
+    expect(session.createRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        passengers: [
+          expect.objectContaining({ requestedPickupDateTime }),
+        ],
+      }),
+    );
+  });
+
   it.each([
-    [{ requestDateTime: new Date("invalid") }, "INVALID_DATE"],
+    [{ requestedTravelDateTime: new Date("invalid") }, "INVALID_DATE"],
     [{ purpose: "x".repeat(501) }, "PURPOSE_TOO_LONG"],
     [{ passengers: [] }, "PASSENGER_REQUIRED"],
   ] as const)("rejects invalid request input %o", async (change, error) => {
@@ -370,6 +423,125 @@ describe("create Trip request", () => {
   });
 });
 
+describe("create complete Trip request", () => {
+  const completeInput: CreateCompleteTripRequestCommand = {
+    ...createInput,
+    passengers: [
+      {
+        ...createInput.passengers[0],
+        vehicleDriverAssignmentId: 11,
+        routes: [
+          {
+            routeName: "مسیر اصلی",
+            alternativeNo: null,
+            distanceKm: "12.50",
+            estimatedDurationMinute: 30,
+            isSelected: true,
+            description: null,
+            points: [
+              {
+                locationId: 3,
+                trafficZone: null,
+                sequenceNo: 1,
+                distanceFromStartKm: "5.00",
+                description: null,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        ...createInput.passengers[0],
+        passengerPersonId: 2,
+        destinationLocationId: 4,
+        pickupOrder: 2,
+        dropoffOrder: 2,
+        vehicleDriverAssignmentId: 22,
+        routes: [
+          {
+            routeName: "مسیر دوم",
+            alternativeNo: 2,
+            distanceKm: null,
+            estimatedDurationMinute: null,
+            isSelected: false,
+            description: "مسیر مسافر دوم",
+            points: [],
+          },
+        ],
+      },
+    ],
+  };
+
+  it("maps generated Trip ids to each passenger's assignment and optional routes in one atomic callback", async () => {
+    session.createRequest.mockResolvedValueOnce({
+      tripRequestId: 77,
+      tripIds: [701, 702],
+    });
+
+    expect(await manage.createCompleteRequest(completeInput)).toEqual({
+      success: true,
+      id: 77,
+    });
+
+    expect(session.lockRequestNumberYear).toHaveBeenCalledWith(1404);
+    expect(session.createRequest).toHaveBeenCalledTimes(1);
+    expect(session.createRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestDateTime: new Date("2026-01-01T08:00:00Z"),
+        requestNo: "TR-1404-0001",
+        status: "New",
+        passengers: [
+          expect.objectContaining({ passengerPersonId: 1 }),
+          expect.objectContaining({ passengerPersonId: 2 }),
+        ],
+      }),
+    );
+    expect(session.createExecution).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ tripId: 701, vehicleDriverAssignmentId: 11, status: "Planned" }),
+    );
+    expect(session.createExecution).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ tripId: 702, vehicleDriverAssignmentId: 22, status: "Planned" }),
+    );
+    expect(session.createRoute).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ tripId: 701, routeName: "مسیر اصلی", points: [expect.objectContaining({ locationId: 3 })] }),
+    );
+    expect(session.createRoute).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ tripId: 702, routeName: "مسیر دوم", points: [] }),
+    );
+    expect(session.updateRequestStatus).toHaveBeenCalledWith(77, "Assigned");
+  });
+
+  it("validates the complete command before creating any request rows", async () => {
+    const result = await manage.createCompleteRequest({
+      ...completeInput,
+      passengers: [
+        {
+          ...completeInput.passengers[0],
+          vehicleDriverAssignmentId: Number.NaN,
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({ success: false, error: "INVALID_ID" });
+    expect(session.createRequest).not.toHaveBeenCalled();
+  });
+
+  it("does not attempt to persist blank route points", async () => {
+    session.createRequest.mockResolvedValueOnce({ tripRequestId: 88, tripIds: [801] });
+    await manage.createCompleteRequest({
+      ...completeInput,
+      passengers: [{ ...completeInput.passengers[1], passengerPersonId: 1 }],
+    });
+    expect(session.createRoute).toHaveBeenCalledWith(
+      expect.objectContaining({ points: [] }),
+    );
+  });
+});
+
 describe("Trip request status", () => {
   it("requires a persisted plan before Assigned and cancels Planned children", async () => {
     expect(await manage.changeRequestStatus(1, "Assigned")).toEqual({
@@ -430,8 +602,24 @@ describe("Trip request status", () => {
       error: "INVALID_REQUEST_STATUS",
     });
     expect(await manage.changeRequestStatus(1, "InProgress")).toEqual({
+      success: true,
+      id: 1,
+    });
+    expect(session.startTripExecutions).toHaveBeenCalledWith(1);
+    expect(session.updateRequestStatus).toHaveBeenCalledWith(1, "InProgress");
+
+    session.requestLifecycle.mockResolvedValue({
+      status: "Assigned",
+      passengers: [
+        {
+          tripId: 1,
+          executions: [],
+        },
+      ],
+    });
+    expect(await manage.changeRequestStatus(1, "InProgress")).toEqual({
       success: false,
-      error: "EXECUTION_NOT_STARTED",
+      error: "PLANNING_REQUIRED",
     });
     session.requestLifecycle.mockResolvedValue({
       status: "Assigned",
@@ -489,6 +677,130 @@ describe("planned routes", () => {
       }),
     ).toEqual({ success: false, error });
   });
+
+  it("updates an existing route without creating a duplicate Route row", async () => {
+    const updateInput = {
+      ...routeInput,
+      routeId: 20,
+      points: [
+        ...routeInput.points,
+        {
+          locationId: 2,
+          sequenceNo: 2,
+          trafficZone: null,
+          distanceFromStartKm: "10.5",
+          description: "نقطه جدید اضافه شده",
+        },
+      ],
+    };
+
+    const result = await manage.saveRoute(updateInput);
+
+    expect(result).toEqual({
+      success: true,
+      id: 20,
+    });
+    // Verifies that createRoute was NOT called
+    expect(session.createRoute).not.toHaveBeenCalled();
+    // Verifies updateRoute was called with the exact same routeId and new points
+    expect(session.updateRoute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        routeId: 20,
+        tripId: 1,
+        points: expect.arrayContaining([
+          expect.objectContaining({ locationId: 1 }),
+          expect.objectContaining({ locationId: 2 }),
+        ]),
+      }),
+    );
+  });
+
+  it("rejects updating a route belonging to another passenger (multi-passenger isolation)", async () => {
+    session.route.mockResolvedValueOnce({
+      routeId: 20,
+      tripId: 2, // Belongs to passenger 2
+      tripExecutionId: null,
+      isSelected: false,
+    });
+
+    const result = await manage.saveRoute({
+      ...routeInput,
+      routeId: 20,
+      tripId: 1, // Target is passenger 1
+    });
+
+    expect(result).toEqual({ success: false, error: "TRIP_NOT_FOUND" });
+    expect(session.updateRoute).not.toHaveBeenCalled();
+  });
+
+  it("rejects updating a route in a terminal TripRequest", async () => {
+    session.trip.mockResolvedValueOnce({
+      ...trip,
+      requestStatus: "Completed",
+    });
+
+    const result = await manage.saveRoute({
+      ...routeInput,
+      routeId: 20,
+    });
+
+    expect(result).toEqual({ success: false, error: "REQUEST_TERMINAL" });
+    expect(session.updateRoute).not.toHaveBeenCalled();
+  });
+
+  it("deletes a route and its points transactionally", async () => {
+    const result = await manage.deleteRoute({
+      tripRequestId: 1,
+      routeId: 20,
+    });
+
+    expect(result).toEqual({ success: true, id: 20 });
+    expect(session.deleteRoute).toHaveBeenCalledWith(20);
+  });
+
+  it("rejects deleting a route in a terminal TripRequest", async () => {
+    session.trip.mockResolvedValueOnce({
+      ...trip,
+      requestStatus: "Cancelled",
+    });
+
+    const result = await manage.deleteRoute({
+      tripRequestId: 1,
+      routeId: 20,
+    });
+
+    expect(result).toEqual({ success: false, error: "REQUEST_TERMINAL" });
+    expect(session.deleteRoute).not.toHaveBeenCalled();
+  });
+
+  it("protects historical execution evidence from route deletion", async () => {
+    session.route.mockResolvedValueOnce({
+      routeId: 20,
+      tripId: 1,
+      tripExecutionId: 5, // Attached to an execution
+      isSelected: true,
+    });
+
+    const result = await manage.deleteRoute({
+      tripRequestId: 1,
+      routeId: 20,
+    });
+
+    expect(result).toEqual({ success: false, error: "ROUTE_IN_USE" });
+    expect(session.deleteRoute).not.toHaveBeenCalled();
+  });
+
+  it("returns ROUTE_NOT_FOUND when trying to delete a non-existent route", async () => {
+    session.route.mockResolvedValueOnce(null);
+
+    const result = await manage.deleteRoute({
+      tripRequestId: 1,
+      routeId: 999,
+    });
+
+    expect(result).toEqual({ success: false, error: "ROUTE_NOT_FOUND" });
+    expect(session.deleteRoute).not.toHaveBeenCalled();
+  });
 });
 
 describe("Trip execution and survey", () => {
@@ -512,25 +824,77 @@ describe("Trip execution and survey", () => {
     ).toEqual({ success: false, error: "UNEXPECTED_ACTUAL_START" });
   });
 
-  it("requires pickup without dropoff for InProgress and both times for Completed", async () => {
+  it("allows InProgress execution with optional actualPickupDateTime and forbids dropoff while InProgress", async () => {
+    // Actual pickup is optional during InProgress (can remain null)
     expect(
       await manage.saveExecution({
         ...startedExecutionInput,
         actualPickupDateTime: null,
       }),
-    ).toEqual({ success: false, error: "MISSING_ACTUAL_PICKUP" });
+    ).toEqual({ success: true, id: 2 });
+
+    // Dropoff cannot be entered while execution status is InProgress
     expect(
       await manage.saveExecution({
         ...startedExecutionInput,
         actualDropoffDateTime: new Date("2026-02-01T10:00:00Z"),
       }),
     ).toEqual({ success: false, error: "UNEXPECTED_ACTUAL_DROPOFF" });
+  });
+
+  it("requires actualDropoffDateTime to complete passenger execution, while actualPickupDateTime remains optional", async () => {
+    // Cannot complete without dropoff
     expect(
       await manage.saveExecution({
         ...startedExecutionInput,
         status: "Completed",
+        actualDropoffDateTime: null,
       }),
     ).toEqual({ success: false, error: "MISSING_ACTUAL_DROPOFF" });
+
+    // Can complete with dropoff even when pickup is null
+    expect(
+      await manage.saveExecution({
+        ...startedExecutionInput,
+        status: "Completed",
+        actualPickupDateTime: null,
+        actualDropoffDateTime: new Date("2026-02-01T10:00:00Z"),
+      }),
+    ).toEqual({ success: true, id: 2 });
+    expect(session.updateExecution).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tripExecutionId: 2,
+        status: "Completed",
+        actualPickupDateTime: null,
+        actualDropoffDateTime: new Date("2026-02-01T10:00:00Z"),
+      }),
+    );
+  });
+
+  it("allows entering or editing ActualPickupDateTime later on the same TripExecution", async () => {
+    session.execution.mockResolvedValue({
+      tripExecutionId: 2,
+      tripId: 1,
+      status: "InProgress",
+      actualPickupDateTime: null,
+      actualDropoffDateTime: null,
+      vehicleDriverAssignmentId: 1,
+      requestId: 1,
+      requestStatus: "InProgress",
+    });
+
+    const laterPickup = new Date("2026-02-01T08:15:00Z");
+    const result = await manage.saveExecution({
+      ...startedExecutionInput,
+      actualPickupDateTime: laterPickup,
+    });
+    expect(result).toEqual({ success: true, id: 2 });
+    expect(session.updateExecution).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tripExecutionId: 2,
+        actualPickupDateTime: laterPickup,
+      }),
+    );
   });
 
   it("updates only an execution belonging to the selected Trip", async () => {
@@ -760,5 +1124,455 @@ describe("Trip execution and survey", () => {
         surveyDateTime: new Date("2026-02-02T08:00:00Z"),
       }),
     ).toEqual({ success: false, error: "SURVEY_NOT_ALLOWED" });
+  });
+
+  describe("passenger management", () => {
+    const validPassengerInput = {
+      passengerPersonId: 2,
+      originLocationId: 1,
+      destinationLocationId: 2,
+      requestedPickupDateTime: new Date("2026-02-01T08:30:00Z"),
+      pickupOrder: 2,
+      dropoffOrder: 2,
+      status: null,
+      description: "همکار بخش فنی",
+    };
+
+    const mockRequest = {
+      tripRequestId: 10,
+      status: "Assigned",
+      tripRequestTypeId: 1, // COMMON_ORIGIN
+      passengers: [
+        {
+          tripId: 101,
+          passengerPersonId: 1,
+          originLocationId: 1,
+          destinationLocationId: 2,
+        },
+      ],
+    };
+
+    beforeEach(() => {
+      session.request.mockResolvedValue(mockRequest);
+      session.requestType.mockResolvedValue(requestType);
+      session.person.mockImplementation(async (id: number) => ({
+        ...person,
+        personId: id,
+      }));
+      session.location.mockImplementation(async (id: number) => ({
+        ...location,
+        locationId: id,
+      }));
+      session.createPassenger.mockResolvedValue(102);
+      session.updatePassenger.mockResolvedValue(undefined);
+      session.deletePassenger.mockResolvedValue(undefined);
+    });
+
+    it("adds a passenger to an existing non-terminal request", async () => {
+      const result = await manage.addPassenger({
+        tripRequestId: 10,
+        passenger: validPassengerInput,
+      });
+
+      expect(result).toEqual({ success: true, id: 102 });
+      expect(session.createPassenger).toHaveBeenCalledWith({
+        tripRequestId: 10,
+        passenger: expect.objectContaining({
+          passengerPersonId: 2,
+          originLocationId: 1,
+          destinationLocationId: 2,
+          description: "همکار بخش فنی",
+        }),
+      });
+    });
+
+    it("rejects adding a passenger to a completed or cancelled request", async () => {
+      session.request.mockResolvedValue({
+        ...mockRequest,
+        status: "Completed",
+      });
+
+      const result = await manage.addPassenger({
+        tripRequestId: 10,
+        passenger: validPassengerInput,
+      });
+
+      expect(result).toEqual({ success: false, error: "REQUEST_TERMINAL" });
+      expect(session.createPassenger).not.toHaveBeenCalled();
+    });
+
+    it("validates request type grouping when adding a passenger (e.g. Common Origin)", async () => {
+      const invalidGroupingInput = {
+        ...validPassengerInput,
+        originLocationId: 99, // different origin violates COMMON_ORIGIN
+      };
+
+      const result = await manage.addPassenger({
+        tripRequestId: 10,
+        passenger: invalidGroupingInput,
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "COMMON_ORIGIN_REQUIRED",
+      });
+      expect(session.createPassenger).not.toHaveBeenCalled();
+    });
+
+    it("updates a passenger when no execution has started", async () => {
+      session.trip.mockResolvedValue({
+        ...trip,
+        tripId: 101,
+        requestId: 10,
+        requestStatus: "Assigned",
+        executions: [
+          {
+            tripExecutionId: 201,
+            tripId: 101,
+            status: "Planned",
+            actualPickupDateTime: null,
+            actualDropoffDateTime: null,
+            startOdometer: null,
+            endOdometer: null,
+            description: null,
+            passengerRating: null,
+            passengerComment: null,
+            surveyDateTime: null,
+            assignment,
+            routes: [],
+          },
+        ],
+      });
+
+      const result = await manage.updatePassenger({
+        tripRequestId: 10,
+        tripId: 101,
+        passenger: {
+          ...validPassengerInput,
+          description: "ویرایش توضیحات",
+        },
+      });
+
+      expect(result).toEqual({ success: true, id: 101 });
+      expect(session.updatePassenger).toHaveBeenCalledWith({
+        tripId: 101,
+        passenger: expect.objectContaining({
+          description: "ویرایش توضیحات",
+        }),
+      });
+    });
+
+    it("rejects updating passenger identity/route if execution has already started", async () => {
+      session.trip.mockResolvedValue({
+        ...trip,
+        tripId: 101,
+        passengerPersonId: 1,
+        originLocationId: 1,
+        destinationLocationId: 2,
+        requestId: 10,
+        requestStatus: "InProgress",
+        executions: [
+          {
+            tripExecutionId: 201,
+            tripId: 101,
+            status: "InProgress",
+            actualPickupDateTime: new Date("2026-02-01T08:05:00Z"),
+            actualDropoffDateTime: null,
+            startOdometer: 1000,
+            endOdometer: null,
+            description: null,
+            passengerRating: null,
+            passengerComment: null,
+            surveyDateTime: null,
+            assignment,
+            routes: [],
+          },
+        ],
+      });
+
+      // Attempt to change person
+      const result = await manage.updatePassenger({
+        tripRequestId: 10,
+        tripId: 101,
+        passenger: {
+          ...validPassengerInput,
+          passengerPersonId: 99, // changed person
+        },
+      });
+
+      expect(result).toEqual({ success: false, error: "PASSENGER_IN_USE" });
+      expect(session.updatePassenger).not.toHaveBeenCalled();
+    });
+
+    it("allows updating minor details (description, pickup time) even if execution started", async () => {
+      session.trip.mockResolvedValue({
+        ...trip,
+        tripId: 101,
+        passengerPersonId: 1,
+        originLocationId: 1,
+        destinationLocationId: 2,
+        requestId: 10,
+        requestStatus: "InProgress",
+        executions: [
+          {
+            tripExecutionId: 201,
+            tripId: 101,
+            status: "InProgress",
+            actualPickupDateTime: new Date("2026-02-01T08:05:00Z"),
+            actualDropoffDateTime: null,
+            startOdometer: 1000,
+            endOdometer: null,
+            description: null,
+            passengerRating: null,
+            passengerComment: null,
+            surveyDateTime: null,
+            assignment,
+            routes: [],
+          },
+        ],
+      });
+
+      const result = await manage.updatePassenger({
+        tripRequestId: 10,
+        tripId: 101,
+        passenger: {
+          passengerPersonId: 1,
+          originLocationId: 1,
+          destinationLocationId: 2,
+          requestedPickupDateTime: new Date("2026-02-01T08:45:00Z"),
+          pickupOrder: 1,
+          dropoffOrder: 1,
+          status: null,
+          description: "یادداشت جدید در حین سفر",
+        },
+      });
+
+      expect(result).toEqual({ success: true, id: 101 });
+      expect(session.updatePassenger).toHaveBeenCalled();
+    });
+
+    it("deletes an unstarted passenger from a non-terminal request", async () => {
+      session.trip.mockResolvedValue({
+        ...trip,
+        tripId: 101,
+        requestId: 10,
+        requestStatus: "Assigned",
+        routes: [],
+        executions: [
+          {
+            tripExecutionId: 201,
+            tripId: 101,
+            status: "Planned",
+            actualPickupDateTime: null,
+            actualDropoffDateTime: null,
+            startOdometer: null,
+            endOdometer: null,
+            description: null,
+            passengerRating: null,
+            passengerComment: null,
+            surveyDateTime: null,
+            assignment,
+            routes: [],
+          },
+        ],
+      });
+
+      const result = await manage.deletePassenger({
+        tripRequestId: 10,
+        tripId: 101,
+      });
+
+      expect(result).toEqual({ success: true, id: 101 });
+      expect(session.deletePassenger).toHaveBeenCalledWith(101);
+    });
+
+    it("rejects deleting a passenger if request is terminal", async () => {
+      session.trip.mockResolvedValue({
+        ...trip,
+        tripId: 101,
+        requestId: 10,
+        requestStatus: "Completed",
+      });
+
+      const result = await manage.deletePassenger({
+        tripRequestId: 10,
+        tripId: 101,
+      });
+
+      expect(result).toEqual({ success: false, error: "REQUEST_TERMINAL" });
+      expect(session.deletePassenger).not.toHaveBeenCalled();
+    });
+
+    it("rejects deleting a passenger if execution has already started", async () => {
+      session.trip.mockResolvedValue({
+        ...trip,
+        tripId: 101,
+        requestId: 10,
+        requestStatus: "InProgress",
+        executions: [
+          {
+            tripExecutionId: 201,
+            tripId: 101,
+            status: "InProgress",
+            actualPickupDateTime: new Date("2026-02-01T08:05:00Z"),
+            actualDropoffDateTime: null,
+            startOdometer: 1000,
+            endOdometer: null,
+            description: null,
+            passengerRating: null,
+            passengerComment: null,
+            surveyDateTime: null,
+            assignment,
+            routes: [],
+          },
+        ],
+      });
+
+      const result = await manage.deletePassenger({
+        tripRequestId: 10,
+        tripId: 101,
+      });
+
+      expect(result).toEqual({ success: false, error: "PASSENGER_IN_USE" });
+      expect(session.deletePassenger).not.toHaveBeenCalled();
+    });
+
+    it("rejects adding a passenger when trip request is InProgress (planning freeze)", async () => {
+      session.request.mockResolvedValue({
+        tripRequestId: 10,
+        status: "InProgress",
+        tripRequestTypeId: 1,
+        passengers: [],
+      });
+
+      const result = await manage.addPassenger({
+        tripRequestId: 10,
+        passenger: validPassengerInput,
+      });
+
+      expect(result).toEqual({ success: false, error: "REQUEST_TERMINAL" });
+      expect(session.createPassenger).not.toHaveBeenCalled();
+    });
+
+    it("rejects adding or deleting planned routes when trip request is InProgress", async () => {
+      session.trip.mockResolvedValue({
+        ...trip,
+        requestId: 10,
+        requestStatus: "InProgress",
+      });
+
+      const addRouteResult = await manage.saveRoute({
+        tripId: 1,
+        tripExecutionId: null,
+        routeName: "مسیر اصلی",
+        alternativeNo: null,
+        distanceKm: "10",
+        estimatedDurationMinute: 20,
+        isSelected: true,
+        description: null,
+        points: [{ locationId: 1, trafficZone: null, sequenceNo: 1, distanceFromStartKm: null, description: null }],
+      });
+      expect(addRouteResult).toEqual({ success: false, error: "REQUEST_TERMINAL" });
+
+      session.route.mockResolvedValue({
+        routeId: 5,
+        tripId: 1,
+        tripExecutionId: null,
+        routeName: "مسیر",
+        alternativeNo: null,
+        distanceKm: null,
+        estimatedDurationMinute: null,
+        isSelected: false,
+        description: null,
+        createdAt: new Date(),
+        points: [],
+      });
+
+      const deleteRouteResult = await manage.deleteRoute({
+        tripRequestId: 10,
+        routeId: 5,
+      });
+      expect(deleteRouteResult).toEqual({ success: false, error: "REQUEST_TERMINAL" });
+    });
+
+    it("rejects adding a new planning execution when trip request is InProgress", async () => {
+      session.trip.mockResolvedValue({
+        ...trip,
+        requestId: 10,
+        requestStatus: "InProgress",
+        executions: [],
+      });
+
+      const result = await manage.saveExecution({
+        tripId: 1,
+        tripExecutionId: null,
+        vehicleDriverAssignmentId: 1,
+        actualPickupDateTime: null,
+        actualDropoffDateTime: null,
+        startOdometer: null,
+        endOdometer: null,
+        status: "Planned",
+        description: null,
+      });
+
+      expect(result).toEqual({ success: false, error: "REQUEST_TERMINAL" });
+    });
+
+    it("populates server timestamp on first survey save and preserves existing timestamp on subsequent edits", async () => {
+      // First save: execution.surveyDateTime is null
+      session.execution.mockResolvedValue({
+        tripExecutionId: 2,
+        tripId: 1,
+        status: "Completed",
+        actualPickupDateTime: new Date("2026-02-01T08:00:00Z"),
+        actualDropoffDateTime: new Date("2026-02-01T10:00:00Z"),
+        vehicleDriverAssignmentId: 1,
+        surveyDateTime: null,
+        requestId: 1,
+        requestStatus: "Completed",
+      });
+
+      const firstSave = await manage.saveSurvey({
+        tripExecutionId: 2,
+        passengerRating: 4,
+        passengerComment: "خوب بود",
+      });
+      expect(firstSave).toEqual({ success: true, id: 2 });
+      expect(session.updateSurvey).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tripExecutionId: 2,
+          passengerRating: 4,
+          passengerComment: "خوب بود",
+          surveyDateTime: expect.any(Date),
+        }),
+      );
+
+      // Subsequent edit: execution.surveyDateTime already exists
+      const originalTimestamp = new Date("2026-02-02T12:00:00Z");
+      session.execution.mockResolvedValue({
+        tripExecutionId: 2,
+        tripId: 1,
+        status: "Completed",
+        actualPickupDateTime: new Date("2026-02-01T08:00:00Z"),
+        actualDropoffDateTime: new Date("2026-02-01T10:00:00Z"),
+        vehicleDriverAssignmentId: 1,
+        surveyDateTime: originalTimestamp,
+        requestId: 1,
+        requestStatus: "Completed",
+      });
+
+      const secondSave = await manage.saveSurvey({
+        tripExecutionId: 2,
+        passengerRating: 5,
+        passengerComment: "عالی شد",
+      });
+      expect(secondSave).toEqual({ success: true, id: 2 });
+      expect(session.updateSurvey).toHaveBeenCalledWith({
+        tripExecutionId: 2,
+        passengerRating: 5,
+        passengerComment: "عالی شد",
+        surveyDateTime: originalTimestamp,
+      });
+    });
   });
 });

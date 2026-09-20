@@ -5,8 +5,8 @@ type StatusBadgeTone = "positive" | "negative" | "warning" | "info";
 const statusTones: Record<TripRequestStatus, StatusBadgeTone> = {
   New: "info",
   Assigned: "warning",
-  InProgress: "positive",
-  Completed: "info",
+  InProgress: "info",
+  Completed: "positive",
   Cancelled: "negative",
 };
 

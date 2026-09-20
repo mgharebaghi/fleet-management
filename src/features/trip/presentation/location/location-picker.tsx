@@ -258,7 +258,7 @@ export function LocationPicker({
             </FormField>
             <FormField>
               <FieldLabel htmlFor={`${pickerId}-location-code`}>
-                کد مکان (اختیاری)
+                کد مکان
               </FieldLabel>
               <input
                 id={`${pickerId}-location-code`}
@@ -281,7 +281,7 @@ export function LocationPicker({
             </FormField>
             <FormField>
               <FieldLabel htmlFor={`${pickerId}-location-type`}>
-                نوع مکان (اختیاری)
+                نوع مکان
               </FieldLabel>
               <input
                 id={`${pickerId}-location-type`}
@@ -295,7 +295,7 @@ export function LocationPicker({
             </FormField>
             <FormField>
               <FieldLabel htmlFor={`${pickerId}-latitude`}>
-                عرض جغرافیایی (اختیاری)
+                عرض جغرافیایی
               </FieldLabel>
               <input
                 id={`${pickerId}-latitude`}
@@ -311,7 +311,7 @@ export function LocationPicker({
             </FormField>
             <FormField>
               <FieldLabel htmlFor={`${pickerId}-longitude`}>
-                طول جغرافیایی (اختیاری)
+                طول جغرافیایی
               </FieldLabel>
               <input
                 id={`${pickerId}-longitude`}
@@ -328,7 +328,7 @@ export function LocationPicker({
           </FormGrid>
           <FormField>
             <FieldLabel htmlFor={`${pickerId}-address`}>
-              نشانی (اختیاری)
+              نشانی
             </FieldLabel>
             <textarea
               id={`${pickerId}-address`}
@@ -341,7 +341,7 @@ export function LocationPicker({
           </FormField>
           <FormField>
             <FieldLabel htmlFor={`${pickerId}-description`}>
-              توضیحات (اختیاری)
+              توضیحات
             </FieldLabel>
             <textarea
               id={`${pickerId}-description`}

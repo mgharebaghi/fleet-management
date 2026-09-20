@@ -1,4 +1,5 @@
 import { ActionButton } from "../../../../components/ui/action-button/action-button";
+import { InlineNotice } from "../../../../components/ui/inline-notice/inline-notice";
 import type {
   TripLocationReference,
   TripPersonReference,
@@ -25,6 +26,7 @@ export function PassengersStep({
   onRemoveLastPassenger,
   onBack,
   onReview,
+  locked = false,
 }: {
   hidden: boolean;
   prefix: string;
@@ -43,6 +45,7 @@ export function PassengersStep({
   onRemoveLastPassenger: () => void;
   onBack: () => void;
   onReview: () => void;
+  locked?: boolean;
 }) {
   const snapshotValue = (name: string) => {
     const activePrefix = `passenger.${activePassengerIndex}.`;
@@ -71,12 +74,21 @@ export function PassengersStep({
       ));
     });
 
+  const isDisabled = pending || locked;
+
   return (
     <section
       className={styles.createSurface}
       hidden={hidden}
       aria-labelledby={`${prefix}-passengers`}
     >
+      {locked && (
+        <InlineNotice tone="info" role="status">
+          اطلاعات اولیه درخواست ذخیره شده است. برای تغییر مسافران یا نوع درخواست،
+          این پیش‌نویس را لغو کرده و درخواست جدیدی ثبت کنید.
+        </InlineNotice>
+      )}
+
       <div className={styles.passengerStepHeader}>
         <div className={styles.createSurfaceHeading}>
           <div>
@@ -87,14 +99,28 @@ export function PassengersStep({
             </p>
           </div>
         </div>
-        <TripPassengerSwitcher
-          passengerCount={passengerCount}
-          activeIndex={activePassengerIndex}
-          onSelect={onSelectPassenger}
-          onAdd={onAddPassenger}
-          disabled={pending}
-          addLabel="+ افزودن مسافر"
-        />
+        <div className={styles.passengerControls}>
+          <TripPassengerSwitcher
+            passengerCount={passengerCount}
+            activeIndex={activePassengerIndex}
+            onSelect={onSelectPassenger}
+            onAdd={onAddPassenger}
+            disabled={isDisabled}
+            addLabel="+ افزودن مسافر"
+          />
+          {passengerCount > 1 &&
+            activePassengerIndex === passengerCount - 1 && (
+              <ActionButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={isDisabled}
+                onClick={onRemoveLastPassenger}
+              >
+                حذف مسافر
+              </ActionButton>
+            )}
+        </div>
       </div>
 
       <input
@@ -105,29 +131,11 @@ export function PassengersStep({
       />
       {hiddenPassengerFields}
 
-      <div className={styles.passengerEditorHeading}>
-        <h3 id={`${prefix}-passenger-${activePassengerIndex}-title`}>
-          اطلاعات مسافر {activePassengerIndex + 1}
-        </h3>
-        {passengerCount > 1 &&
-          activePassengerIndex === passengerCount - 1 && (
-            <ActionButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={pending}
-              onClick={onRemoveLastPassenger}
-            >
-              حذف مسافر
-            </ActionButton>
-          )}
-      </div>
-
       <PassengerEditor
         key={`${prefix}-passenger-editor-${activePassengerIndex}`}
         index={activePassengerIndex}
         prefix={prefix}
-        pending={pending}
+        pending={isDisabled}
         people={people}
         locations={locations}
         passengerCount={passengerCount}
@@ -136,11 +144,6 @@ export function PassengersStep({
         value={snapshotValue}
         fieldInvalid={fieldInvalid}
       />
-
-      <p className={styles.hint}>
-        اگر زمان سوارشدن هر مسافر خالی بماند، همان زمان برنامه‌ریزی‌شدهٔ
-        درخواست استفاده می‌شود.
-      </p>
 
       <div className={styles.createActions}>
         <ActionButton
@@ -152,8 +155,13 @@ export function PassengersStep({
           قبلی
         </ActionButton>
         <div className={styles.createActionsEnd}>
-          <ActionButton type="button" disabled={pending} onClick={onReview}>
-            بعدی
+          <ActionButton
+            type="button"
+            disabled={pending}
+            pending={pending}
+            onClick={onReview}
+          >
+            بعدی: راننده و خودرو
           </ActionButton>
         </div>
       </div>

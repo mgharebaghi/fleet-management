@@ -1,6 +1,6 @@
 "use client";
 
-import type { MouseEvent, ReactNode } from "react";
+import type { MouseEvent, ReactNode, SyntheticEvent } from "react";
 import { useEffect, useRef } from "react";
 
 import styles from "./dialog.module.css";
@@ -10,6 +10,7 @@ let rootOverflowBeforeFirstDialog = "";
 
 export type DialogProps = {
   id?: string;
+  className?: string;
   open: boolean;
   onClose: () => void;
   titleId: string;
@@ -22,6 +23,7 @@ export type DialogProps = {
 
 export function Dialog({
   id,
+  className,
   open,
   onClose,
   titleId,
@@ -71,6 +73,7 @@ export function Dialog({
 
   function handleBackdropClick(event: MouseEvent<HTMLDialogElement>) {
     if (event.target === dialogRef.current) {
+      event.stopPropagation();
       onClose();
     }
   }
@@ -79,7 +82,13 @@ export function Dialog({
   // one of them back as onClose would let a dialog that is closing because
   // the caller already moved on (opening another dialog, say) overwrite that
   // newer state. Only a close the caller did not ask for — Escape — is news.
-  function handleNativeClose() {
+  // When nested dialogs close, their synthetic close event must not bubble up
+  // to parent dialogs.
+  function handleNativeClose(event: SyntheticEvent<HTMLDialogElement>) {
+    event.stopPropagation();
+    if (event.target !== dialogRef.current) {
+      return;
+    }
     if (open) {
       onClose();
     }
@@ -89,11 +98,13 @@ export function Dialog({
     <dialog
       id={id}
       ref={dialogRef}
-      className={
-        size === "form"
-          ? styles.dialog
-          : `${styles.dialog} ${styles[size]}`
-      }
+      className={[
+        styles.dialog,
+        size !== "form" && styles[size],
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-labelledby={titleId}
       aria-describedby={description ? `${titleId}-description` : undefined}
       onClick={handleBackdropClick}

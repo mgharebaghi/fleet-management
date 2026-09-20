@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useId, useState } from "react";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
-import { ActionLink } from "@/components/ui/action-link/action-link";
+import { Dialog } from "@/components/ui/dialog/dialog";
 import { FormActions } from "@/components/ui/form-field/form-field";
+import { EditIcon } from "@/components/ui/icon/icons";
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
 import { SearchableSelect } from "@/components/ui/searchable-select/searchable-select";
 import { StatusBadge } from "@/components/ui/status-badge/status-badge";
@@ -62,6 +63,8 @@ export function TripAssignmentPlanner({
     execution?.status === "Planned" ? execution.tripExecutionId : null,
   );
   const [state, formAction, pending] = useActionState(action, {});
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const dialogTitleId = useId();
   const eligible = assignments.filter((assignment) =>
     isAssignmentEligible(assignment, scheduledDateTime),
   );
@@ -82,7 +85,7 @@ export function TripAssignmentPlanner({
         {trip.passenger.firstName} {trip.passenger.lastName}
       </h3>
       {persisted && (
-        <article className={pageStyles.entityCard}>
+        <article className={styles.persistedPlan}>
           <div className={pageStyles.entityHeader}>
             <h3>
               {persisted.driverFirstName} {persisted.driverLastName}
@@ -99,81 +102,117 @@ export function TripAssignmentPlanner({
               <TechnicalValue>{persisted.vehicle.vehicleCode}</TechnicalValue>
             </span>
           </div>
-          {execution && execution.status !== "Cancelled" && (
-            <div className={pageStyles.entityActions}>
-              <ActionLink
-                href={`/trips/${tripRequestId}/voucher/${trip.tripId}`}
-                variant="primary"
-              >
-                صدور برگه مأموریت
-              </ActionLink>
-            </div>
-          )}
         </article>
       )}
 
       {canPlan ? (
-        <form
-          action={formAction}
-          noValidate
-          aria-label="ثبت برنامهٔ اجرا"
-          className={styles.detailForm}
-        >
-          {state.error && (
-            <InlineNotice tone="danger" role="alert">
-              {tripMessages[state.error]}
-            </InlineNotice>
-          )}
-          <input type="hidden" name="executionStatus" value="Planned" />
-          <SearchableSelect
-            name="assignmentId"
-            label="تخصیص خودرو و راننده"
-            options={options}
-            defaultValue={
-              state.values?.assignmentId ??
-              (persisted ? String(persisted.assignmentId) : "")
-            }
-            placeholder="انتخاب تخصیص واجد شرایط"
-            searchPlaceholder="جستجوی راننده یا خودرو…"
-            required
-            disabled={pending || options.length === 0}
-          />
-          {ineligible.length > 0 && (
-            <div>
-              <p className={styles.hint}>تخصیص‌های غیرواجد شرایط</p>
-              <ul className={styles.ineligibleList}>
-                {ineligible.map((assignment) => (
-                  <li key={assignment.assignmentId}>
-                    {assignmentLabel(assignment)} —{" "}
-                    {assignmentIneligibilityReasons(
-                      assignment,
-                      scheduledDateTime,
-                    )
-                      .map((reason) => assignmentIneligibilityMessages[reason])
-                      .join("، ")}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <p className={styles.hint}>
-            این انتخاب به‌صورت برنامهٔ سفر ذخیره می‌شود. برگهٔ مأموریت فقط از
-            همین تخصیص ثبت‌شده صادر می‌شود.
-          </p>
-          <FormActions separated>
+        <>
+          <div className={pageStyles.entityActions}>
             <ActionButton
-              type="submit"
-              disabled={pending || options.length === 0}
-              pending={pending}
+              type="button"
+              disabled={options.length === 0}
+              onClick={() => setDialogOpen(true)}
             >
-              {pending
-                ? "در حال ثبت…"
-                : persisted
-                  ? "به‌روزرسانی تخصیص"
-                  : "ثبت برنامهٔ اجرا"}
+              {persisted && <EditIcon />}
+              {persisted
+                ? "ویرایش تخصیص خودرو و راننده"
+                : "تخصیص خودرو و راننده"}
             </ActionButton>
-          </FormActions>
-        </form>
+          </div>
+          {options.length === 0 && (
+            <p className={styles.hint}>
+              تخصیص واجد شرایطی برای زمان این سفر موجود نیست.
+            </p>
+          )}
+          <Dialog
+            open={dialogOpen}
+            onClose={() => setDialogOpen(false)}
+            titleId={dialogTitleId}
+            title={
+              persisted
+                ? "ویرایش تخصیص خودرو و راننده"
+                : "تخصیص خودرو و راننده"
+            }
+            description="تخصیص فعال و واجد شرایط را برای این مسافر انتخاب کنید."
+          >
+            <form
+              action={formAction}
+              noValidate
+              aria-label={
+                persisted
+                  ? "ویرایش تخصیص خودرو و راننده"
+                  : "ثبت برنامهٔ اجرا"
+              }
+              className={styles.workspaceForm}
+            >
+              {state.error && (
+                <InlineNotice tone="danger" role="alert">
+                  {tripMessages[state.error]}
+                </InlineNotice>
+              )}
+              <input type="hidden" name="executionStatus" value="Planned" />
+              <SearchableSelect
+                name="assignmentId"
+                label="تخصیص خودرو و راننده"
+                options={options}
+                defaultValue={
+                  state.values?.assignmentId ??
+                  (persisted ? String(persisted.assignmentId) : "")
+                }
+                placeholder="انتخاب تخصیص واجد شرایط"
+                searchPlaceholder="جستجوی راننده یا خودرو…"
+                required
+                disabled={pending || options.length === 0}
+              />
+              {ineligible.length > 0 && (
+                <div>
+                  <p className={styles.hint}>تخصیص‌های غیرواجد شرایط</p>
+                  <ul className={styles.ineligibleList}>
+                    {ineligible.map((assignment) => (
+                      <li key={assignment.assignmentId}>
+                        {assignmentLabel(assignment)} —{" "}
+                        {assignmentIneligibilityReasons(
+                          assignment,
+                          scheduledDateTime,
+                        )
+                          .map(
+                            (reason) =>
+                              assignmentIneligibilityMessages[reason],
+                          )
+                          .join("، ")}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className={styles.hint}>
+                این انتخاب به‌صورت برنامهٔ سفر ذخیره می‌شود. برگهٔ مأموریت فقط
+                از همین تخصیص ثبت‌شده صادر می‌شود.
+              </p>
+              <FormActions separated>
+                <ActionButton
+                  type="submit"
+                  disabled={pending || options.length === 0}
+                  pending={pending}
+                >
+                  {pending
+                    ? "در حال ثبت…"
+                    : persisted
+                      ? "ذخیره ویرایش تخصیص"
+                      : "ثبت برنامهٔ اجرا"}
+                </ActionButton>
+                <ActionButton
+                  type="button"
+                  variant="secondary"
+                  disabled={pending}
+                  onClick={() => setDialogOpen(false)}
+                >
+                  انصراف
+                </ActionButton>
+              </FormActions>
+            </form>
+          </Dialog>
+        </>
       ) : (
         <p className={styles.hint}>
           {requestIsTerminal

@@ -1,4 +1,12 @@
 import { ActionLink } from "../../../components/ui/action-link/action-link";
+import { ViewIcon } from "../../../components/ui/icon/icons";
+import {
+  RecordCard,
+  RecordCardDetail,
+  RecordCardDetails,
+  RecordCardHeader,
+  RecordCardList,
+} from "../../../components/ui/record-cards/record-cards";
 import { StatusBadge } from "../../../components/ui/status-badge/status-badge";
 import { TechnicalValue } from "../../../components/ui/technical-value/technical-value";
 import {
@@ -26,40 +34,118 @@ export function TripRequestListRow({
   );
 
   return (
-    <article className={styles.row}>
-      <div className={styles.scheduleBlock}>
-        <span className={styles.travelDay}>{schedule.travelDayLabel}</span>
-        <span className={styles.travelTime}>{schedule.travelTimeLabel}</span>
-      </div>
-      <div className={styles.routeBlock}>
-        <p className={styles.routeLine}>
-          {request.originSummary} ← {request.destinationSummary}
-        </p>
-        <p className={styles.metaLine}>
-          {purposeOrType}
-          <span className={styles.metaSeparator} aria-hidden="true">
-            •
-          </span>
-          {formatTripListPassengerCount(request.passengerCount)}
-        </p>
-      </div>
-      <div className={styles.statusCell}>
+    <tr>
+      <td>
+        <TechnicalValue>{request.requestNo}</TechnicalValue>
+      </td>
+      <td>
         <StatusBadge
           label={request.statusLabel}
           tone={tripRequestStatusTone(status)}
         />
-      </div>
-      <div className={styles.idBlock}>
-        <span className={styles.requestNo}>
-          <TechnicalValue>{request.requestNo}</TechnicalValue>
+      </td>
+      <td>
+        <div className={styles.scheduleCell}>
+          <span className={styles.scheduleDay}>{schedule.travelDayLabel}</span>
+          <span className={styles.scheduleTime}>{schedule.travelTimeLabel}</span>
+        </div>
+      </td>
+      <td>
+        <span className={styles.routeText}>
+          {request.originSummary} ← {request.destinationSummary}
         </span>
-        <span className={styles.shortDate}>{schedule.shortDateLabel}</span>
-      </div>
-      <div className={styles.detailsAction}>
+      </td>
+      <td>
+        <div className={styles.typeCell}>
+          <span className={styles.typeHeadline}>{purposeOrType}</span>
+          {request.purpose &&
+            request.purpose.trim() !== request.requestTypeName && (
+              <span className={styles.typeSub}>{request.requestTypeName}</span>
+            )}
+        </div>
+      </td>
+      <td>{formatTripListPassengerCount(request.passengerCount)}</td>
+      <td>
         <ActionLink href={`/trips/${request.tripRequestId}`} variant="secondary">
+          <ViewIcon />
+          مشاهده جزئیات
+        </ActionLink>
+      </td>
+    </tr>
+  );
+}
+
+export type TripRequestCardItem = {
+  view: TripListItemView;
+  status: string;
+};
+
+export function TripRequestCard({
+  request,
+  status,
+}: TripRequestListRowProps) {
+  const schedule = formatTripListSchedule(request.plannedAt);
+  const purposeOrType = tripListPurposeOrTypeLine(
+    request.purpose,
+    request.requestTypeName,
+  );
+
+  return (
+    <RecordCard>
+      <RecordCardHeader
+        title={<TechnicalValue>{request.requestNo}</TechnicalValue>}
+        badge={
+          <StatusBadge
+            label={request.statusLabel}
+            tone={tripRequestStatusTone(status)}
+          />
+        }
+      />
+      <div className={styles.cardRoute}>
+        <span className={styles.routeText}>
+          {request.originSummary} ← {request.destinationSummary}
+        </span>
+      </div>
+      <RecordCardDetails>
+        <RecordCardDetail label="زمان سفر">
+          <span>
+            {schedule.travelDayLabel} ({schedule.travelTimeLabel})
+          </span>
+        </RecordCardDetail>
+        <RecordCardDetail label="نوع درخواست">
+          {purposeOrType}
+        </RecordCardDetail>
+        <RecordCardDetail label="تعداد مسافر">
+          {formatTripListPassengerCount(request.passengerCount)}
+        </RecordCardDetail>
+      </RecordCardDetails>
+      <div className={styles.cardActions}>
+        <ActionLink
+          href={`/trips/${request.tripRequestId}`}
+          variant="secondary"
+        >
+          <ViewIcon />
           مشاهده جزئیات
         </ActionLink>
       </div>
-    </article>
+    </RecordCard>
+  );
+}
+
+export function TripRequestCards({
+  rows,
+}: {
+  rows: readonly TripRequestCardItem[];
+}) {
+  return (
+    <RecordCardList>
+      {rows.map((row) => (
+        <TripRequestCard
+          key={row.view.tripRequestId}
+          request={row.view}
+          status={row.status}
+        />
+      ))}
+    </RecordCardList>
   );
 }

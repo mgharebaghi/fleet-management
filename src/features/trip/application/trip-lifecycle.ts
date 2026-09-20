@@ -57,7 +57,9 @@ export function canTransitionTripExecution(
   }
   return (
     (current === "Planned" && target === "InProgress") ||
-    (current === "InProgress" && target === "Completed")
+    (current === "Planned" && target === "Completed") ||
+    (current === "InProgress" && target === "Completed") ||
+    (current === "Completed" && target === "InProgress")
   );
 }
 

@@ -5,6 +5,7 @@ import type {
   SaveTripExecutionInput,
   TripAssignmentReference,
   TripLocationReference,
+  TripPassengerInput,
   TripPassengerRecord,
   TripPersonReference,
   TripRequestDetails,
@@ -29,6 +30,7 @@ export type TripExecutionWriteRecord = {
   actualPickupDateTime: Date | null;
   actualDropoffDateTime: Date | null;
   vehicleDriverAssignmentId: number;
+  surveyDateTime: Date | null;
   requestId: number;
   requestStatus: string;
 };
@@ -44,16 +46,49 @@ export interface TripWriteSession {
   trip(id: number): Promise<TripPassengerWriteRecord | null>;
   execution(id: number): Promise<TripExecutionWriteRecord | null>;
   requestLifecycle(id: number): Promise<TripRequestLifecycleSnapshot | null>;
+  request(id: number): Promise<{
+    tripRequestId: number;
+    status: string;
+    tripRequestTypeId: number;
+    passengers: Array<{
+      tripId: number;
+      passengerPersonId: number;
+      originLocationId: number;
+      destinationLocationId: number;
+    }>;
+  } | null>;
+  createPassenger(input: {
+    tripRequestId: number;
+    passenger: TripPassengerInput;
+  }): Promise<number>;
+  updatePassenger(input: {
+    tripId: number;
+    passenger: TripPassengerInput;
+  }): Promise<void>;
+  deletePassenger(tripId: number): Promise<void>;
   requestNumbers(jalaliYear: number): Promise<string[]>;
+  lockRequestNumberYear(jalaliYear: number): Promise<void>;
   requestNoExists(requestNo: string): Promise<boolean>;
   assignment(
     id: number,
     activeAt: Date,
   ): Promise<TripAssignmentReference | null>;
-  createRequest(input: CreateTripRequestInput): Promise<number>;
+  createRequest(input: CreateTripRequestInput): Promise<{
+    tripRequestId: number;
+    tripIds: number[];
+  }>;
   updateRequestStatus(id: number, status: TripRequestStatus): Promise<void>;
   cancelPlannedExecutions(tripRequestId: number): Promise<void>;
+  startTripExecutions(tripRequestId: number): Promise<void>;
+  route(id: number): Promise<{
+    routeId: number;
+    tripId: number | null;
+    tripExecutionId: number | null;
+    isSelected: boolean;
+  } | null>;
   createRoute(input: NewTripRoute): Promise<number>;
+  updateRoute(input: NewTripRoute & { routeId: number }): Promise<void>;
+  deleteRoute(id: number): Promise<void>;
   deselectOtherSelectedRoutes(input: {
     tripId: number | null;
     tripExecutionId: number | null;

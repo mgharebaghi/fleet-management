@@ -1,6 +1,7 @@
 import type {
   CreateTripRequestCommand,
   NewTripRoute,
+  NewTripRouteDetails,
   SaveTripExecutionInput,
   TripFailure,
   TripPassengerInput,
@@ -33,6 +34,16 @@ function normalizeOptional(value: string | null): string | null {
   return value?.trim() || null;
 }
 
+export function normalizeTripPassenger(
+  passenger: TripPassengerInput,
+): TripPassengerInput {
+  return {
+    ...passenger,
+    status: normalizeOptional(passenger.status),
+    description: normalizeOptional(passenger.description),
+  };
+}
+
 export function normalizeTripRequest(
   input: CreateTripRequestCommand,
 ): CreateTripRequestCommand {
@@ -40,15 +51,13 @@ export function normalizeTripRequest(
     ...input,
     purpose: normalizeOptional(input.purpose),
     description: normalizeOptional(input.description),
-    passengers: input.passengers.map((passenger) => ({
-      ...passenger,
-      status: normalizeOptional(passenger.status),
-      description: normalizeOptional(passenger.description),
-    })),
+    passengers: input.passengers.map(normalizeTripPassenger),
   };
 }
 
-function passengerError(passenger: TripPassengerInput): TripFailure | null {
+export function tripPassengerError(
+  passenger: TripPassengerInput,
+): TripFailure | null {
   if (
     !isValidTripId(passenger.passengerPersonId) ||
     !isValidTripId(passenger.originLocationId) ||
@@ -82,17 +91,14 @@ export function tripRequestError(
   input: CreateTripRequestCommand,
 ): TripFailure | null {
   if (!isValidTripId(input.tripRequestTypeId)) return "INVALID_ID";
-  if (
-    !isValidTripDate(input.requestDateTime) ||
-    !isValidTripDate(input.requestedTravelDateTime)
-  ) {
+  if (!isValidTripDate(input.requestedTravelDateTime)) {
     return "INVALID_DATE";
   }
   if ((input.purpose?.length ?? 0) > 500) return "PURPOSE_TOO_LONG";
   if (input.passengers.length === 0) return "PASSENGER_REQUIRED";
 
   for (const passenger of input.passengers) {
-    const error = passengerError(passenger);
+    const error = tripPassengerError(passenger);
     if (error) return error;
   }
 
@@ -152,6 +158,15 @@ function decimalHundredths(value: string): bigint {
 export function normalizeTripRoute(input: NewTripRoute): NewTripRoute {
   return {
     ...input,
+    ...normalizeTripRouteDetails(input),
+  };
+}
+
+export function normalizeTripRouteDetails(
+  input: NewTripRouteDetails,
+): NewTripRouteDetails {
+  return {
+    ...input,
     routeName: input.routeName.trim(),
     description: normalizeOptional(input.description),
     points: input.points.map((point) => ({
@@ -170,6 +185,12 @@ export function tripRouteError(input: NewTripRoute): TripFailure | null {
   ) {
     return "INVALID_ID";
   }
+  return tripRouteDetailsError(input);
+}
+
+export function tripRouteDetailsError(
+  input: NewTripRouteDetails,
+): TripFailure | null {
   if (!input.routeName) return "ROUTE_NAME_REQUIRED";
   if (input.routeName.length > 200) return "ROUTE_NAME_TOO_LONG";
   if (
@@ -281,11 +302,9 @@ export function tripExecutionStateError(
     case "Planned":
       return impliesStart ? "UNEXPECTED_ACTUAL_START" : null;
     case "InProgress":
-      if (!hasPickup) return "MISSING_ACTUAL_PICKUP";
       if (hasDropoff) return "UNEXPECTED_ACTUAL_DROPOFF";
       return null;
     case "Completed":
-      if (!hasPickup) return "MISSING_ACTUAL_PICKUP";
       if (!hasDropoff) return "MISSING_ACTUAL_DROPOFF";
       return null;
     case "Cancelled":

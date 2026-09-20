@@ -7,6 +7,7 @@ import type {
   NewTripRoute,
   SavePassengerSurveyInput,
   SaveTripExecutionInput,
+  TripPassengerInput,
 } from "../application/trip-records";
 import type { TripRequestStatus } from "../application/trip-lifecycle";
 import {
@@ -97,6 +98,7 @@ export class PrismaTripWriteSession implements TripWriteSession {
         ActualPickupDateTime: true,
         ActualDropoffDateTime: true,
         VehicleDriverAssignmentId: true,
+        SurveyDateTime: true,
         Trip: {
           select: {
             TripRequest: {
@@ -114,6 +116,7 @@ export class PrismaTripWriteSession implements TripWriteSession {
           actualPickupDateTime: row.ActualPickupDateTime,
           actualDropoffDateTime: row.ActualDropoffDateTime,
           vehicleDriverAssignmentId: row.VehicleDriverAssignmentId,
+          surveyDateTime: row.SurveyDateTime,
           requestId: row.Trip.TripRequest.TripRequestId,
           requestStatus: row.Trip.TripRequest.Status,
         }
@@ -154,6 +157,38 @@ export class PrismaTripWriteSession implements TripWriteSession {
       : null;
   }
 
+  async request(id: number) {
+    const row = await this.client.tripRequest.findUnique({
+      where: { TripRequestId: id },
+      select: {
+        TripRequestId: true,
+        Status: true,
+        TripRequestTypeId: true,
+        Trip: {
+          select: {
+            TripId: true,
+            PassengerPersonId: true,
+            OriginLocationId: true,
+            DestinationLocationId: true,
+          },
+        },
+      },
+    });
+    return row
+      ? {
+          tripRequestId: row.TripRequestId,
+          status: row.Status,
+          tripRequestTypeId: row.TripRequestTypeId,
+          passengers: row.Trip.map((t) => ({
+            tripId: t.TripId,
+            passengerPersonId: t.PassengerPersonId,
+            originLocationId: t.OriginLocationId,
+            destinationLocationId: t.DestinationLocationId,
+          })),
+        }
+      : null;
+  }
+
   async requestNumbers(jalaliYear: number) {
     const prefix = `TR-${String(jalaliYear).padStart(4, "0")}-`;
     const rows = await this.client.$queryRaw<Array<{ requestNo: string }>>`
@@ -162,6 +197,22 @@ export class PrismaTripWriteSession implements TripWriteSession {
       WHERE UPPER(LTRIM(RTRIM(RequestNo))) LIKE ${`${prefix}%`}
     `;
     return rows.map((row) => row.requestNo);
+  }
+
+  async lockRequestNumberYear(jalaliYear: number) {
+    const resource = `FleetManagement.Trip.RequestNo.${jalaliYear}`;
+    const [lock] = await this.client.$queryRaw<Array<{ result: number }>>`
+      DECLARE @result int;
+      EXEC @result = sys.sp_getapplock
+        @Resource = ${resource},
+        @LockMode = 'Exclusive',
+        @LockOwner = 'Transaction',
+        @LockTimeout = 10000;
+      SELECT @result AS result;
+    `;
+    if (!lock || lock.result < 0) {
+      throw new Error("Trip request-number lock could not be acquired.");
+    }
   }
 
   async requestNoExists(requestNo: string) {
@@ -192,22 +243,117 @@ export class PrismaTripWriteSession implements TripWriteSession {
         Status: input.status,
         Description: input.description,
         CreatedAt: new Date(),
-        Trip: {
-          create: input.passengers.map((passenger) => ({
-            PassengerPersonId: passenger.passengerPersonId,
-            OriginLocationId: passenger.originLocationId,
-            DestinationLocationId: passenger.destinationLocationId,
-            RequestedPickupDateTime: passenger.requestedPickupDateTime,
-            PickupOrder: passenger.pickupOrder,
-            DropoffOrder: passenger.dropoffOrder,
-            Status: passenger.status,
-            Description: passenger.description,
-          })),
-        },
       },
       select: { TripRequestId: true },
     });
-    return row.TripRequestId;
+    const tripIds: number[] = [];
+    for (const passenger of input.passengers) {
+      const trip = await this.client.trip.create({
+        data: {
+          TripRequestId: row.TripRequestId,
+          PassengerPersonId: passenger.passengerPersonId,
+          OriginLocationId: passenger.originLocationId,
+          DestinationLocationId: passenger.destinationLocationId,
+          RequestedPickupDateTime: passenger.requestedPickupDateTime,
+          PickupOrder: passenger.pickupOrder,
+          DropoffOrder: passenger.dropoffOrder,
+          Status: passenger.status,
+          Description: passenger.description,
+        },
+        select: { TripId: true },
+      });
+      tripIds.push(trip.TripId);
+    }
+    return {
+      tripRequestId: row.TripRequestId,
+      tripIds,
+    };
+  }
+
+  async createPassenger(input: {
+    tripRequestId: number;
+    passenger: TripPassengerInput;
+  }) {
+    const row = await this.client.trip.create({
+      data: {
+        TripRequestId: input.tripRequestId,
+        PassengerPersonId: input.passenger.passengerPersonId,
+        OriginLocationId: input.passenger.originLocationId,
+        DestinationLocationId: input.passenger.destinationLocationId,
+        RequestedPickupDateTime: input.passenger.requestedPickupDateTime,
+        PickupOrder: input.passenger.pickupOrder,
+        DropoffOrder: input.passenger.dropoffOrder,
+        Status: input.passenger.status,
+        Description: input.passenger.description,
+      },
+      select: { TripId: true },
+    });
+    return row.TripId;
+  }
+
+  async updatePassenger(input: {
+    tripId: number;
+    passenger: TripPassengerInput;
+  }) {
+    await this.client.trip.update({
+      where: { TripId: input.tripId },
+      data: {
+        PassengerPersonId: input.passenger.passengerPersonId,
+        OriginLocationId: input.passenger.originLocationId,
+        DestinationLocationId: input.passenger.destinationLocationId,
+        RequestedPickupDateTime: input.passenger.requestedPickupDateTime,
+        PickupOrder: input.passenger.pickupOrder,
+        DropoffOrder: input.passenger.dropoffOrder,
+        Status: input.passenger.status,
+        Description: input.passenger.description,
+      },
+    });
+  }
+
+  async deletePassenger(tripId: number) {
+    const tripRoutes = await this.client.route.findMany({
+      where: { TripId: tripId },
+      select: { RouteId: true },
+    });
+
+    const executions = await this.client.tripExecution.findMany({
+      where: { TripId: tripId },
+      select: { TripExecutionId: true },
+    });
+    const executionIds = executions.map((e) => e.TripExecutionId);
+
+    const executionRoutes =
+      executionIds.length > 0
+        ? await this.client.route.findMany({
+            where: { TripExecutionId: { in: executionIds } },
+            select: { RouteId: true },
+          })
+        : [];
+
+    const routeIdSet = new Set<number>([
+      ...tripRoutes.map((r) => r.RouteId),
+      ...executionRoutes.map((r) => r.RouteId),
+    ]);
+    const routeIds = Array.from(routeIdSet);
+
+    if (routeIds.length > 0) {
+      await this.client.routePoint.deleteMany({
+        where: { RouteId: { in: routeIds } },
+      });
+      await this.client.route.deleteMany({
+        where: { RouteId: { in: routeIds } },
+      });
+    }
+
+    if (executionIds.length > 0) {
+      await this.client.tripExecution.deleteMany({
+        where: { TripExecutionId: { in: executionIds } },
+      });
+    }
+
+    await this.client.trip.delete({
+      where: { TripId: tripId },
+    });
   }
 
   async updateRequestStatus(id: number, status: TripRequestStatus) {
@@ -225,6 +371,16 @@ export class PrismaTripWriteSession implements TripWriteSession {
         Trip: { TripRequestId: tripRequestId },
       },
       data: { Status: "Cancelled" },
+    });
+  }
+
+  async startTripExecutions(tripRequestId: number) {
+    await this.client.tripExecution.updateMany({
+      where: {
+        Status: "Planned",
+        Trip: { TripRequestId: tripRequestId },
+      },
+      data: { Status: "InProgress" },
     });
   }
 
@@ -250,6 +406,26 @@ export class PrismaTripWriteSession implements TripWriteSession {
             },
       data: { IsSelected: false },
     });
+  }
+
+  async route(id: number) {
+    const row = await this.client.route.findUnique({
+      where: { RouteId: id },
+      select: {
+        RouteId: true,
+        TripId: true,
+        TripExecutionId: true,
+        IsSelected: true,
+      },
+    });
+    return row
+      ? {
+          routeId: row.RouteId,
+          tripId: row.TripId,
+          tripExecutionId: row.TripExecutionId,
+          isSelected: row.IsSelected,
+        }
+      : null;
   }
 
   async createRoute(input: NewTripRoute) {
@@ -282,6 +458,52 @@ export class PrismaTripWriteSession implements TripWriteSession {
       select: { RouteId: true },
     });
     return row.RouteId;
+  }
+
+  async updateRoute(input: NewTripRoute & { routeId: number }) {
+    await this.client.route.update({
+      where: { RouteId: input.routeId },
+      data: {
+        RouteName: input.routeName,
+        AlternativeNo: input.alternativeNo,
+        DistanceKm:
+          input.distanceKm === null
+            ? null
+            : new Prisma.Decimal(input.distanceKm),
+        EstimatedDurationMinute: input.estimatedDurationMinute,
+        IsSelected: input.isSelected,
+        Description: input.description,
+      },
+    });
+
+    await this.client.routePoint.deleteMany({
+      where: { RouteId: input.routeId },
+    });
+
+    for (const point of input.points) {
+      await this.client.routePoint.create({
+        data: {
+          RouteId: input.routeId,
+          LocationId: point.locationId,
+          TrafficZone: point.trafficZone,
+          SequenceNo: point.sequenceNo,
+          DistanceFromStartKm:
+            point.distanceFromStartKm === null
+              ? null
+              : new Prisma.Decimal(point.distanceFromStartKm),
+          Description: point.description,
+        },
+      });
+    }
+  }
+
+  async deleteRoute(id: number) {
+    await this.client.routePoint.deleteMany({
+      where: { RouteId: id },
+    });
+    await this.client.route.delete({
+      where: { RouteId: id },
+    });
   }
 
   async createExecution(input: SaveTripExecutionInput) {

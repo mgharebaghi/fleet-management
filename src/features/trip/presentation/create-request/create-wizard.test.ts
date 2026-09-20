@@ -1,17 +1,22 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import {
+  CREATE_WIZARD_STEPS,
   createRequestReview,
   createRequestSummaryPreview,
   dropPassengerSnapshot,
   extractPassengerSnapshot,
   gapNotice,
+  hasPassengerPickupOverride,
   mergePassengerSnapshots,
   mergePreservedLocationValues,
   passengerIndexFromField,
   passengerStepGaps,
   preservedLocationValue,
   requestStepGaps,
+  routePointLocationError,
   reviewContainsRawId,
   shouldSubmitCreateForm,
   typeExplanation,
@@ -100,8 +105,6 @@ describe("Trip create wizard presentation", () => {
       requestStepGaps(
         {
           tripRequestTypeId: "3",
-          requestDay: "2025-03-21",
-          requestTime: "08:00",
         },
         "COMMON_ORIGIN_DESTINATION",
       ),
@@ -115,8 +118,6 @@ describe("Trip create wizard presentation", () => {
       requestStepGaps(
         {
           tripRequestTypeId: "3",
-          requestDay: "2025-03-21",
-          requestTime: "08:00",
           requestedTravelDay: "2025-03-22",
           requestedTravelTime: "08:00",
           commonOriginLocationId: "80",
@@ -149,6 +150,19 @@ describe("Trip create wizard presentation", () => {
         "COMMON_ORIGIN",
       ),
     ).toEqual([]);
+    expect(
+      passengerStepGaps(
+        {
+          "passenger.0.personId": "44",
+          "passenger.0.destinationLocationId": "81",
+          "passenger.0.pickupOverride": "true",
+        },
+        "COMMON_ORIGIN",
+      ),
+    ).toEqual([
+      "passenger.0.pickupDay",
+      "passenger.0.pickupTime",
+    ]);
   });
 
   it("builds a human-readable review without raw identifiers", () => {
@@ -156,8 +170,6 @@ describe("Trip create wizard presentation", () => {
       {
         tripRequestTypeId: "3",
         purpose: "جلسه",
-        requestDay: "2025-03-21",
-        requestTime: "08:00",
         requestedTravelDay: "2025-03-22",
         requestedTravelTime: "09:00",
         commonOriginLocationId: "80",
@@ -176,9 +188,9 @@ describe("Trip create wizard presentation", () => {
       originName: "تهران",
       destinationName: "قم",
     });
-    expect(review.requestAt).toContain("۱۴۰۴");
+    expect(review.travelAt).toContain("۱۴۰۴");
     expect(reviewContainsRawId(review, [3, 44, 80, 81])).toBe(false);
-    expect(gapNotice(["tripRequestTypeId", "requestDay"])).toContain(
+    expect(gapNotice(["tripRequestTypeId", "requestedTravelDay"])).toContain(
       "نوع درخواست",
     );
   });
@@ -365,8 +377,6 @@ describe("Trip create wizard presentation", () => {
       createRequestSummaryPreview(
         {
           tripRequestTypeId: "3",
-          requestDay: "2025-03-21",
-          requestTime: "08:00",
           requestedTravelDay: "2025-03-22",
           requestedTravelTime: "09:00",
           commonOriginLocationId: "80",
@@ -376,6 +386,70 @@ describe("Trip create wizard presentation", () => {
         { requestTypes, locations },
       ).passengerCount,
     ).toBe(2);
+
+    const changedAfterBack = mergePassengerSnapshots(
+      merged,
+      { "passenger.0.personId": "99", "passenger.1.personId": "44" },
+      2,
+    );
+    expect(changedAfterBack[0]["passenger.0.personId"]).toBe("99");
+  });
+
+  it("keeps every pre-confirmation wizard step free of database mutation actions", () => {
+    const files = [
+      "create-trip-request-form.tsx",
+      "assignment-step.tsx",
+      "route-step.tsx",
+      "planning-step.tsx",
+    ];
+    const preConfirmationSource = files
+      .map((file) => readFileSync(new URL(file, import.meta.url), "utf8"))
+      .join("\n");
+    for (const retiredMutation of [
+      "createTripDraftAction",
+      "saveWizardAssignmentAction",
+      "addWizardRouteAction",
+      "addWizardRouteFormAction",
+      "confirmTripReadyAction",
+      "cancelTripDraftAction",
+    ]) {
+      expect(preConfirmationSource).not.toContain(retiredMutation);
+    }
+    expect(preConfirmationSource).not.toContain("createCompleteTripRequestAction");
+    const reviewSource = readFileSync(
+      new URL("review-step.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(reviewSource).toContain("createCompleteTripRequestAction");
+    expect(reviewSource).toContain("ثبت نهایی درخواست");
+  });
+
+  it("treats an equal persisted pickup time as inherited and a different time as an override", () => {
+    const requestedTravelDateTime = new Date("2026-03-22T05:30:00Z");
+
+    expect(
+      hasPassengerPickupOverride(null, requestedTravelDateTime),
+    ).toBe(false);
+    expect(
+      hasPassengerPickupOverride(
+        new Date("2026-03-22T05:30:00Z"),
+        requestedTravelDateTime,
+      ),
+    ).toBe(false);
+    expect(
+      hasPassengerPickupOverride(
+        new Date("2026-03-22T06:00:00Z"),
+        requestedTravelDateTime,
+      ),
+    ).toBe(true);
+  });
+
+  it("allows zero route points and validates only points explicitly added", () => {
+    expect(routePointLocationError([])).toBeNull();
+    expect(routePointLocationError([{ locationId: null }])).toBe(
+      "لطفاً مکان را برای نقطه 1 انتخاب کنید.",
+    );
+    expect(routePointLocationError([{ locationId: 80 }])).toBeNull();
   });
 
   it("does not let a stale active catalog choose the failed Location field", () => {
@@ -395,5 +469,17 @@ describe("Trip create wizard presentation", () => {
       step: 2,
       fields: ["passenger.0.destinationLocationId"],
     });
+  });
+
+  it("defines the six sequential progressive wizard steps with exact Persian labels", () => {
+    expect(CREATE_WIZARD_STEPS).toHaveLength(6);
+    expect(CREATE_WIZARD_STEPS.map((s) => s.label)).toEqual([
+      "اطلاعات درخواست",
+      "مسافران",
+      "راننده و خودرو",
+      "مسیر",
+      "برنامه‌ریزی",
+      "مرور و تأیید",
+    ]);
   });
 });

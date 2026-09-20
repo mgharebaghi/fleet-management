@@ -38,16 +38,42 @@ export type TripPassengerInput = {
   description: string | null;
 };
 
+export type SaveTripPassengerInput = TripPassengerInput & {
+  tripId?: number | null;
+};
+
 export type CreateTripRequestCommand = {
   tripRequestTypeId: number;
-  requestDateTime: Date;
   requestedTravelDateTime: Date;
   purpose: string | null;
   description: string | null;
   passengers: TripPassengerInput[];
 };
 
+export type NewTripRouteDetails = {
+  routeName: string;
+  alternativeNo: number | null;
+  distanceKm: string | null;
+  estimatedDurationMinute: number | null;
+  isSelected: boolean;
+  description: string | null;
+  points: NewTripRoutePoint[];
+};
+
+export type CreateCompleteTripPassengerInput = TripPassengerInput & {
+  vehicleDriverAssignmentId: number;
+  routes: NewTripRouteDetails[];
+};
+
+export type CreateCompleteTripRequestCommand = Omit<
+  CreateTripRequestCommand,
+  "passengers"
+> & {
+  passengers: CreateCompleteTripPassengerInput[];
+};
+
 export type CreateTripRequestInput = CreateTripRequestCommand & {
+  requestDateTime: Date;
   requestNo: string;
   status: "New";
 };
@@ -168,16 +194,13 @@ export type NewTripRoutePoint = {
   description: string | null;
 };
 
-export type NewTripRoute = {
+export type NewTripRoute = NewTripRouteDetails & {
   tripId: number;
   tripExecutionId: number | null;
-  routeName: string;
-  alternativeNo: number | null;
-  distanceKm: string | null;
-  estimatedDurationMinute: number | null;
-  isSelected: boolean;
-  description: string | null;
-  points: NewTripRoutePoint[];
+};
+
+export type SaveTripRouteInput = NewTripRoute & {
+  routeId?: number | null;
 };
 
 export type SaveTripExecutionInput = {
@@ -196,7 +219,7 @@ export type SavePassengerSurveyInput = {
   tripExecutionId: number;
   passengerRating: number | null;
   passengerComment: string | null;
-  surveyDateTime: Date | null;
+  surveyDateTime?: Date | null;
 };
 
 export type TripFailure =
@@ -226,6 +249,9 @@ export type TripFailure =
   | "INVALID_DURATION"
   | "INVALID_SEQUENCE"
   | "TRAFFIC_ZONE_TOO_LONG"
+  | "ROUTE_NOT_FOUND"
+  | "ROUTE_IN_USE"
+  | "PASSENGER_IN_USE"
   | "ASSIGNMENT_NOT_FOUND"
   | "ASSIGNMENT_NOT_ACTIVE"
   | "NO_ELIGIBLE_LICENSE"

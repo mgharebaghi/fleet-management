@@ -1,4 +1,5 @@
 import { ActionButton } from "../../../../components/ui/action-button/action-button";
+import { InlineNotice } from "../../../../components/ui/inline-notice/inline-notice";
 import { JalaliDatePicker } from "../../../../components/ui/date-picker/jalali-date-picker";
 import {
   FieldErrors,
@@ -35,6 +36,7 @@ export function RequestStep({
   onTypeChange,
   onNext,
   onCancel,
+  locked = false,
 }: {
   hidden: boolean;
   prefix: string;
@@ -53,13 +55,23 @@ export function RequestStep({
   onTypeChange: (typeId: string) => void;
   onNext: () => void;
   onCancel?: () => void;
+  locked?: boolean;
 }) {
+  const isDisabled = pending || locked;
+
   return (
     <section
       className={styles.createSurface}
       hidden={hidden}
       aria-labelledby={`${prefix}-request`}
     >
+      {locked && (
+        <InlineNotice tone="info" role="status">
+          اطلاعات اولیه درخواست ذخیره شده است. برای تغییر مسافران یا نوع درخواست،
+          این پیش‌نویس را لغو کرده و درخواست جدیدی ثبت کنید.
+        </InlineNotice>
+      )}
+
       <div className={styles.createSurfaceHeading}>
         <div>
           <h2 id={`${prefix}-request`}>اطلاعات اصلی</h2>
@@ -67,112 +79,104 @@ export function RequestStep({
         </div>
       </div>
 
-      <FormGrid>
-        <FormField>
-          <FieldLabel htmlFor={`${prefix}-request-type`} required>
-            نوع درخواست سفر
-          </FieldLabel>
-          <select
-            key={typeRestoreNonce}
-            id={`${prefix}-request-type`}
-            name="tripRequestTypeId"
-            className={formControlClassName}
-            defaultValue={selectedTypeId}
-            disabled={pending}
-            required
-            aria-invalid={fieldInvalid("tripRequestTypeId")}
-            aria-describedby={fieldErrorId("tripRequestTypeId")}
-            onChange={(event) => onTypeChange(event.target.value)}
-          >
-            <option value="">لطفاً انتخاب کنید</option>
-            {requestTypes.map((type) => (
-              <option
-                key={type.tripRequestTypeId}
-                value={type.tripRequestTypeId}
-              >
-                {type.typeName}
-              </option>
-            ))}
-          </select>
-          {fieldInvalid("tripRequestTypeId") && state.error && (
-            <FieldErrors
-              id={`${prefix}-tripRequestTypeId-error`}
-              messages={[tripMessages[state.error]]}
+      <div className={styles.requestBasics}>
+        <FormGrid>
+          <FormField>
+            <FieldLabel htmlFor={`${prefix}-request-type`} required>
+              نوع درخواست سفر
+            </FieldLabel>
+            <select
+              key={typeRestoreNonce}
+              id={`${prefix}-request-type`}
+              name="tripRequestTypeId"
+              className={formControlClassName}
+              defaultValue={selectedTypeId}
+              disabled={isDisabled}
+              required
+              aria-invalid={fieldInvalid("tripRequestTypeId")}
+              aria-describedby={fieldErrorId("tripRequestTypeId")}
+              onChange={(event) => onTypeChange(event.target.value)}
+            >
+              <option value="">لطفاً انتخاب کنید</option>
+              {requestTypes.map((type) => (
+                <option
+                  key={type.tripRequestTypeId}
+                  value={type.tripRequestTypeId}
+                >
+                  {type.typeName}
+                </option>
+              ))}
+            </select>
+            {fieldInvalid("tripRequestTypeId") && state.error && (
+              <FieldErrors
+                id={`${prefix}-tripRequestTypeId-error`}
+                messages={[tripMessages[state.error]]}
+              />
+            )}
+          </FormField>
+          <FormField>
+            <FieldLabel htmlFor={`${prefix}-purpose`}>
+              هدف سفر
+            </FieldLabel>
+            <input
+              id={`${prefix}-purpose`}
+              name="purpose"
+              className={formControlClassName}
+              defaultValue={value("purpose")}
+              disabled={isDisabled}
+              aria-invalid={fieldInvalid("purpose")}
+              aria-describedby={fieldErrorId("purpose")}
             />
-          )}
-        </FormField>
+            {fieldInvalid("purpose") && state.error && (
+              <FieldErrors
+                id={`${prefix}-purpose-error`}
+                messages={[tripMessages[state.error]]}
+              />
+            )}
+          </FormField>
+        </FormGrid>
         <input
           type="hidden"
           name="requestTypeCode"
           value={selectedType?.typeCode ?? ""}
           readOnly
         />
-        <FormField>
-          <FieldLabel htmlFor={`${prefix}-purpose`}>هدف سفر (اختیاری)</FieldLabel>
-          <input
-            id={`${prefix}-purpose`}
-            name="purpose"
-            className={formControlClassName}
-            defaultValue={value("purpose")}
-            disabled={pending}
-            aria-invalid={fieldInvalid("purpose")}
-            aria-describedby={fieldErrorId("purpose")}
-          />
-          {fieldInvalid("purpose") && state.error && (
-            <FieldErrors
-              id={`${prefix}-purpose-error`}
-              messages={[tripMessages[state.error]]}
-            />
-          )}
-        </FormField>
-      </FormGrid>
-      {selectedType && (
-        <p className={styles.hint}>{typeExplanation(selectedType.typeCode)}</p>
-      )}
+        {selectedType && (
+          <p className={styles.hint}>
+            {typeExplanation(selectedType.typeCode)}
+          </p>
+        )}
+      </div>
 
-      <div className={styles.dateRows}>
-        <div className={styles.dateRow}>
-          <JalaliDatePicker
-            name="requestDay"
-            label="تاریخ درخواست (شمسی)"
-            defaultValue={value("requestDay")}
-            disabled={pending}
-          />
-          <TimeSelect
-            id={`${prefix}-request-time`}
-            name="requestTime"
-            label="ساعت درخواست"
-            defaultValue={value("requestTime")}
-            disabled={pending}
-          />
-        </div>
-        <div className={styles.dateRow}>
+      <fieldset className={styles.requestDateTimeFieldset}>
+        <legend>تاریخ و زمان درخواست سفر</legend>
+        <div className={styles.requestDateTimeGroup}>
           <JalaliDatePicker
             name="requestedTravelDay"
-            label="تاریخ پیشنهادی سفر (شمسی)"
+            label="تاریخ (شمسی)"
             defaultValue={value("requestedTravelDay")}
-            disabled={pending}
+            disabled={isDisabled}
           />
           <TimeSelect
             id={`${prefix}-travel-time`}
             name="requestedTravelTime"
-            label="ساعت پیشنهادی سفر"
+            label="ساعت"
             defaultValue={value("requestedTravelTime")}
-            disabled={pending}
+            disabled={isDisabled}
           />
         </div>
-      </div>
+      </fieldset>
 
       {(shareOrigin || shareDestination) && (
-        <FormGrid>
+        <FormGrid columns={12}>
           {shareOrigin && (
-            <FormField>
+            <FormField className={styles.requestLocationField}>
               <LocationPicker
                 name="commonOriginLocationId"
                 label="مبدأ"
                 locations={locations}
                 defaultValue={value("commonOriginLocationId")}
-                disabled={pending}
+                disabled={isDisabled}
                 required
                 invalid={fieldInvalid("commonOriginLocationId")}
                 describedBy={fieldErrorId("commonOriginLocationId")}
@@ -180,13 +184,13 @@ export function RequestStep({
             </FormField>
           )}
           {shareDestination && (
-            <FormField>
+            <FormField className={styles.requestLocationField}>
               <LocationPicker
                 name="commonDestinationLocationId"
                 label="مقصد"
                 locations={locations}
                 defaultValue={value("commonDestinationLocationId")}
-                disabled={pending}
+                disabled={isDisabled}
                 required
                 invalid={fieldInvalid("commonDestinationLocationId")}
                 describedBy={fieldErrorId("commonDestinationLocationId")}
@@ -198,7 +202,7 @@ export function RequestStep({
 
       <FormField>
         <FieldLabel htmlFor={`${prefix}-request-description`}>
-          توضیحات (اختیاری)
+          توضیحات
         </FieldLabel>
         <textarea
           id={`${prefix}-request-description`}
@@ -206,7 +210,7 @@ export function RequestStep({
           className={formControlClassName}
           rows={3}
           defaultValue={value("requestDescription")}
-          disabled={pending}
+          disabled={isDisabled}
         />
       </FormField>
 
@@ -218,7 +222,7 @@ export function RequestStep({
             disabled={pending}
             onClick={onCancel}
           >
-            انصراف
+            {locked ? "لغو پیش‌نویس سفر" : "انصراف"}
           </ActionButton>
         ) : (
           <span />

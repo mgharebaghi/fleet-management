@@ -1,5 +1,7 @@
 import { formatGregorianDateAsJalali } from "../../../../components/ui/date-picker/jalali-date";
 import type {
+  NewTripRouteDetails,
+  TripAssignmentReference,
   TripLocationInputFailure,
   TripLocationReference,
   TripPersonReference,
@@ -7,20 +9,57 @@ import type {
 } from "../../application/trip-records";
 import { consecutiveFormIndexes } from "../trip-form-data";
 
-export type CreateWizardStep = 1 | 2;
+export type CreateWizardStep = 1 | 2 | 3 | 4 | 5 | 6;
+
+export type CreateWizardPassenger = {
+  key: number;
+  personId: number;
+  personName: string;
+  personnelNo: string | null;
+  originName: string;
+  destinationName: string;
+  requestedPickupAt: string;
+  requestedPickupLabel: string;
+};
+
+export type CreateWizardRoute = NewTripRouteDetails & {
+  key: string;
+  passengerKey: number;
+};
+
+export type CreateWizardPayload = {
+  values: Record<string, string>;
+  assignments: Record<number, number>;
+  routes: CreateWizardRoute[];
+};
+
+export type CreateWizardAssignments = Record<
+  number,
+  TripAssignmentReference[]
+>;
+
+export function routePointLocationError(
+  points: readonly { locationId: number | null }[],
+): string | null {
+  const missingIndex = points.findIndex((point) => !point.locationId);
+  return missingIndex < 0
+    ? null
+    : `لطفاً مکان را برای نقطه ${missingIndex + 1} انتخاب کنید.`;
+}
 
 export const CREATE_WIZARD_STEPS = [
   { id: "request", label: "اطلاعات درخواست" },
   { id: "passengers", label: "مسافران" },
+  { id: "assignment", label: "راننده و خودرو" },
+  { id: "route", label: "مسیر" },
+  { id: "planning", label: "برنامه‌ریزی" },
   { id: "review", label: "مرور و تأیید" },
 ] as const;
 
 export const requestStepFieldLabels: Record<string, string> = {
   tripRequestTypeId: "نوع درخواست",
-  requestDay: "تاریخ ثبت درخواست",
-  requestTime: "ساعت ثبت",
-  requestedTravelDay: "تاریخ برنامه‌ریزی‌شده",
-  requestedTravelTime: "ساعت برنامه‌ریزی‌شده",
+  requestedTravelDay: "تاریخ درخواست سفر",
+  requestedTravelTime: "زمان درخواست سفر",
   commonOriginLocationId: "مبدأ مشترک",
   commonDestinationLocationId: "مقصد مشترک",
 };
@@ -151,8 +190,6 @@ export function requestStepGaps(
 ): string[] {
   const gaps: string[] = [];
   if (!values.tripRequestTypeId) gaps.push("tripRequestTypeId");
-  if (!values.requestDay) gaps.push("requestDay");
-  if (!values.requestTime) gaps.push("requestTime");
   if (!values.requestedTravelDay) gaps.push("requestedTravelDay");
   if (!values.requestedTravelTime) gaps.push("requestedTravelTime");
   if (sharesOrigin(typeCode) && !values.commonOriginLocationId) {
@@ -191,6 +228,14 @@ export function passengerStepGaps(
     ) {
       gaps.push(`passenger.${index}.destinationLocationId`);
     }
+    if (values[`passenger.${index}.pickupOverride`] === "true") {
+      if (!values[`passenger.${index}.pickupDay`]) {
+        gaps.push(`passenger.${index}.pickupDay`);
+      }
+      if (!values[`passenger.${index}.pickupTime`]) {
+        gaps.push(`passenger.${index}.pickupTime`);
+      }
+    }
   }
   return gaps;
 }
@@ -205,7 +250,9 @@ export function gapNotice(gaps: string[]) {
           ? "مبدأ"
           : gap.includes("destinationLocationId")
             ? "مقصد"
-            : "فیلد الزامی"),
+            : gap.includes("pickup")
+              ? "زمان سوارشدن متفاوت"
+              : "فیلد الزامی"),
   );
   const unique = [...new Set(labels)];
   return `برای ادامه، ${unique.join("، ")} را کامل کنید.`;
@@ -224,7 +271,6 @@ export type TripRequestReviewPassenger = {
 export type TripRequestReview = {
   requestTypeName: string;
   purpose: string | null;
-  requestAt: string;
   travelAt: string;
   commonOriginName: string | null;
   commonDestinationName: string | null;
@@ -284,7 +330,6 @@ export function createRequestReview(
   return {
     requestTypeName: requestType?.typeName ?? "",
     purpose: optional(values.purpose),
-    requestAt: jalaliWhen(values.requestDay, values.requestTime),
     travelAt: jalaliWhen(values.requestedTravelDay, values.requestedTravelTime),
     commonOriginName,
     commonDestinationName,
@@ -324,7 +369,6 @@ export function reviewContainsRawId(
 export type TripRequestSummaryPreview = {
   requestTypeName: string | null;
   purpose: string | null;
-  requestAt: string | null;
   travelAt: string | null;
   originName: string | null;
   destinationName: string | null;
@@ -340,6 +384,7 @@ const passengerFieldSuffixes = [
   "personId",
   "originLocationId",
   "destinationLocationId",
+  "pickupOverride",
   "pickupDay",
   "pickupTime",
   "pickupOrder",
@@ -388,6 +433,16 @@ export function dropPassengerSnapshot(
   return next;
 }
 
+export function hasPassengerPickupOverride(
+  requestedPickupDateTime: Date | null,
+  requestedTravelDateTime: Date,
+): boolean {
+  return (
+    requestedPickupDateTime !== null &&
+    requestedPickupDateTime.getTime() !== requestedTravelDateTime.getTime()
+  );
+}
+
 export function createRequestSummaryPreview(
   values: Record<string, string>,
   passengerCount: number,
@@ -413,7 +468,6 @@ export function createRequestSummaryPreview(
   return {
     requestTypeName: requestType?.typeName ?? null,
     purpose: optional(values.purpose),
-    requestAt: jalaliWhen(values.requestDay, values.requestTime) || null,
     travelAt:
       jalaliWhen(values.requestedTravelDay, values.requestedTravelTime) || null,
     originName: displayName(locations, originId) || null,

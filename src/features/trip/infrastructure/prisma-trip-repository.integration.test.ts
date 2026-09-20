@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "../../../generated/prisma/client";
 import { createMssqlConfigFromEnvironment } from "../../../infrastructure/database/prisma/mssql-config";
 import { ManageIncidents } from "../application/incident/manage-incidents";
+import { jalaliYearOf } from "../application/trip-lifecycle";
 import { ManageTrips } from "../application/manage-trips";
 import { PrismaIncidentRepository } from "./incident/prisma-incident-repository";
 import { PrismaTripRepository } from "./prisma-trip-repository";
@@ -87,12 +88,10 @@ async function createCoreFixture() {
   const requestType = await client.tripRequestType.findFirstOrThrow({
     where: { TypeCode: "COMMON_ORIGIN_DESTINATION" },
   });
-  const requestDateTime = new Date("2026-01-15T08:00:00Z");
   const requestedTravelDateTime = new Date("2026-02-01T08:00:00Z");
   const requestId = successfulId(
     await manage.createRequest({
       tripRequestTypeId: requestType.TripRequestTypeId,
-      requestDateTime,
       requestedTravelDateTime,
       purpose: `Purpose-${token}`,
       description: "Integration request",
@@ -309,6 +308,136 @@ describe.sequential("Trip SQL Server integration", () => {
   afterAll(async () => {
     await client.$disconnect();
   });
+
+  it(
+    "rolls back TripRequest and passenger Trips when work fails after creation",
+    async () => {
+      const fixture = await createCoreFixture();
+      const requestType = await client.tripRequestType.findFirstOrThrow({
+        where: { TypeCode: "COMMON_ORIGIN_DESTINATION" },
+      });
+      const rollbackToken = `Rollback-${randomUUID()}`;
+
+      await expect(
+        repository.atomic(async (session) => {
+          await session.createRequest({
+            tripRequestTypeId: requestType.TripRequestTypeId,
+            requestNo: `RB-${randomUUID()}`,
+            requestDateTime: new Date(),
+            requestedTravelDateTime: fixture.requestedTravelDateTime,
+            purpose: rollbackToken,
+            description: "must roll back",
+            status: "New",
+            passengers: [
+              {
+                passengerPersonId: fixture.person.PersonId,
+                originLocationId: fixture.origin.LocationId,
+                destinationLocationId: fixture.destination.LocationId,
+                requestedPickupDateTime: fixture.requestedTravelDateTime,
+                pickupOrder: 1,
+                dropoffOrder: 1,
+                status: null,
+                description: null,
+              },
+            ],
+          });
+          throw new Error("simulated failure after request and Trip creation");
+        }),
+      ).rejects.toThrow("simulated failure");
+
+      expect(
+        await client.tripRequest.count({ where: { Purpose: rollbackToken } }),
+      ).toBe(0);
+      expect(
+        await client.trip.count({
+          where: { TripRequest: { Purpose: rollbackToken } },
+        }),
+      ).toBe(0);
+    },
+    600_000,
+  );
+
+  it(
+    "atomically creates a complete planned request with execution, route, and points",
+    async () => {
+      const fixture = await createCoreFixture();
+      const assignment = await createAssignmentFixture(
+        fixture.token,
+        fixture.person.PersonId,
+        fixture.requestedTravelDateTime,
+      );
+      const requestType = await client.tripRequestType.findFirstOrThrow({
+        where: { TypeCode: "COMMON_ORIGIN_DESTINATION" },
+      });
+
+      const result = await manage.createCompleteRequest({
+        tripRequestTypeId: requestType.TripRequestTypeId,
+        requestedTravelDateTime: fixture.requestedTravelDateTime,
+        purpose: `Complete-${fixture.token}`,
+        description: "atomic complete request",
+        passengers: [
+          {
+            passengerPersonId: fixture.person.PersonId,
+            originLocationId: fixture.origin.LocationId,
+            destinationLocationId: fixture.destination.LocationId,
+            requestedPickupDateTime: fixture.requestedTravelDateTime,
+            pickupOrder: 1,
+            dropoffOrder: 1,
+            status: null,
+            description: null,
+            vehicleDriverAssignmentId: assignment.AssignmentId,
+            routes: [
+              {
+                routeName: `CompleteRoute-${fixture.token}`,
+                alternativeNo: null,
+                distanceKm: "12.50",
+                estimatedDurationMinute: 30,
+                isSelected: true,
+                description: null,
+                points: [
+                  {
+                    locationId: fixture.origin.LocationId,
+                    trafficZone: null,
+                    sequenceNo: 1,
+                    distanceFromStartKm: "0.00",
+                    description: null,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+      expect(result.success).toBe(true);
+      if (!result.success) throw new Error(result.error);
+      requestIds.push(result.id);
+
+      const details = await repository.details(result.id);
+      expect(details).toMatchObject({
+        status: "Assigned",
+        passengers: [
+          {
+            passenger: { personId: fixture.person.PersonId },
+            executions: [
+              {
+                status: "Planned",
+                assignment: { assignmentId: assignment.AssignmentId },
+              },
+            ],
+            routes: [
+              {
+                routeName: `CompleteRoute-${fixture.token}`,
+                points: [
+                  { location: { locationId: fixture.origin.LocationId } },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+    },
+    600_000,
+  );
 
   it(
     "creates, lists, routes, assigns, executes, surveys and reads exact decimals",
@@ -596,7 +725,6 @@ describe.sequential("Trip SQL Server integration", () => {
       });
       const command = {
         tripRequestTypeId: requestType.TripRequestTypeId,
-        requestDateTime: new Date("2026-01-15T08:00:00Z"),
         requestedTravelDateTime: new Date("2026-02-01T08:00:00Z"),
         purpose: null,
         description: null,
@@ -615,10 +743,7 @@ describe.sequential("Trip SQL Server integration", () => {
       };
       const [left, right] = await Promise.all([
         manage.createRequest(command),
-        manage.createRequest({
-          ...command,
-          requestDateTime: new Date("2026-01-16T08:00:00Z"),
-        }),
+        manage.createRequest(command),
       ]);
       expect(left.success && right.success).toBe(true);
       if (!left.success || !right.success) throw new Error("concurrent create");
@@ -630,9 +755,95 @@ describe.sequential("Trip SQL Server integration", () => {
       ]);
       const requestNos = numbers.map((row) => row?.requestNo);
       expect(new Set(requestNos).size).toBe(3);
-      expect(requestNos.every((value) => /^TR-1404-\d{4}$/.test(value ?? ""))).toBe(
-        true,
-      );
+      expect(
+        numbers.every(
+          (row) =>
+            row !== null &&
+            new RegExp(
+              `^TR-${jalaliYearOf(row.requestDateTime)}-\\d{4}$`,
+            ).test(row.requestNo),
+        ),
+      ).toBe(true);
+    },
+    600_000,
+  );
+
+  it(
+    "supports adding, updating, and safely deleting passengers with history protection",
+    async () => {
+      const fixture = await createCoreFixture();
+
+      // Create a second person
+      const secondPerson = await client.people.create({
+        data: {
+          FirstName: "Passenger2",
+          LastName: fixture.token,
+          PersonnelNo: `P2-${fixture.token}`,
+          IsActive: true,
+        },
+      });
+      personIds.push(secondPerson.PersonId);
+
+      // 1) Add passenger
+      const addResult = await manage.addPassenger({
+        tripRequestId: fixture.requestId,
+        passenger: {
+          passengerPersonId: secondPerson.PersonId,
+          originLocationId: fixture.origin.LocationId,
+          destinationLocationId: fixture.destination.LocationId,
+          requestedPickupDateTime: new Date("2026-02-01T08:30:00Z"),
+          pickupOrder: 2,
+          dropoffOrder: 2,
+          status: null,
+          description: "مسافر دوم تستی",
+        },
+      });
+      expect(addResult.success).toBe(true);
+      if (!addResult.success) throw new Error(addResult.error);
+      const newTripId = addResult.id;
+
+      // Verify persistence via repository.details
+      let details = await repository.details(fixture.requestId);
+      expect(details?.passengers).toHaveLength(2);
+      const addedTrip = details?.passengers.find((p) => p.tripId === newTripId);
+      expect(addedTrip).toBeDefined();
+      expect(addedTrip?.description).toBe("مسافر دوم تستی");
+
+      // 2) Update passenger
+      const updateResult = await manage.updatePassenger({
+        tripRequestId: fixture.requestId,
+        tripId: newTripId,
+        passenger: {
+          passengerPersonId: secondPerson.PersonId,
+          originLocationId: fixture.origin.LocationId,
+          destinationLocationId: fixture.destination.LocationId,
+          requestedPickupDateTime: new Date("2026-02-01T09:00:00Z"),
+          pickupOrder: 3,
+          dropoffOrder: 3,
+          status: null,
+          description: "توضیحات ویرایش‌شده",
+        },
+      });
+      expect(updateResult).toEqual({ success: true, id: newTripId });
+
+      // Verify update in DB
+      details = await repository.details(fixture.requestId);
+      const updatedTrip = details?.passengers.find((p) => p.tripId === newTripId);
+      expect(updatedTrip?.tripId).toBe(newTripId);
+      expect(updatedTrip?.description).toBe("توضیحات ویرایش‌شده");
+      expect(updatedTrip?.pickupOrder).toBe(3);
+
+      // 3) Safe delete passenger (transactional cleanup)
+      const deleteResult = await manage.deletePassenger({
+        tripRequestId: fixture.requestId,
+        tripId: newTripId,
+      });
+      expect(deleteResult).toEqual({ success: true, id: newTripId });
+
+      // Verify passenger row was deleted
+      details = await repository.details(fixture.requestId);
+      expect(details?.passengers).toHaveLength(1);
+      expect(details?.passengers.some((p) => p.tripId === newTripId)).toBe(false);
     },
     600_000,
   );

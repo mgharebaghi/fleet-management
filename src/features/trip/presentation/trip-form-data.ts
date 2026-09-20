@@ -167,10 +167,10 @@ export const tripMessages: Record<
   ACTIVE_EXECUTION_EXISTS:
     "برای این مسافر یک برنامه یا اجرای ناتمام وجود دارد.",
   EXECUTION_STATE_DATA: "اطلاعات واقعی با وضعیت انتخاب‌شده هم‌خوان نیست.",
-  MISSING_ACTUAL_PICKUP: "برای شروع اجرا، زمان واقعی حرکت را وارد کنید.",
-  MISSING_ACTUAL_DROPOFF: "برای تکمیل اجرا، زمان واقعی بازگشت را وارد کنید.",
+  MISSING_ACTUAL_PICKUP: "تاریخ و ساعت واقعی سوارشدن مسافر را وارد کنید.",
+  MISSING_ACTUAL_DROPOFF: "تاریخ و ساعت واقعی پیاده‌شدن مسافر را وارد کنید.",
   UNEXPECTED_ACTUAL_DROPOFF:
-    "تا وقتی اجرا در حال انجام است، زمان بازگشت واقعی ثبت نمی‌شود.",
+    "تا وقتی اجرا در حال انجام است، زمان واقعی پیاده‌شدن مسافر ثبت نمی‌شود.",
   UNEXPECTED_ACTUAL_START:
     "برنامه یا اجرای لغوشده نباید زمان یا کیلومتر واقعی داشته باشد.",
   MISSING_START_ODOMETER:
@@ -185,6 +185,9 @@ export const tripMessages: Record<
     "تکمیل درخواست فقط وقتی ممکن است که اجرای همهٔ مسافران تکمیل شده باشد.",
   SURVEY_NOT_ALLOWED: "نظرسنجی فقط پس از تکمیل اجرا ثبت می‌شود.",
   ROUTE_OWNER_CONFLICT: "مسیر نمی‌تواند همزمان به برنامه و اجرای واقعی وصل باشد.",
+  ROUTE_NOT_FOUND: "مسیر مورد نظر یافت نشد.",
+  ROUTE_IN_USE: "امکان حذف یا تغییر مسیر متصل به سابقهٔ اجرای سفر وجود ندارد.",
+  PASSENGER_IN_USE: "امکان حذف یا تغییر مسافر دارای سابقهٔ اجرای سفر وجود ندارد.",
   EXECUTION_NOT_FOUND:
     "سابقهٔ اجرای این سفر موجود نیست یا به این مسافر تعلق ندارد.",
   INVALID_EXECUTION_STATUS: "وضعیت اجرای سفر معتبر نیست.",
@@ -217,7 +220,7 @@ export const tripErrorFields: Partial<
   Record<TripFailure | "INVALID_FORM" | "UNEXPECTED", string>
 > = {
   PURPOSE_TOO_LONG: "purpose",
-  INVALID_DATE: "requestDay",
+  INVALID_DATE: "requestedTravelDay",
   REQUEST_TYPE_NOT_FOUND: "tripRequestTypeId",
   PERSON_NOT_FOUND: "passenger.0.personId",
   PERSON_INACTIVE: "passenger.0.personId",

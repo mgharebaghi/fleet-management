@@ -1,60 +1,45 @@
 import type { TripRequestSummaryPreview } from "./create-wizard";
 import styles from "./create-trip.module.css";
 
-function display(value: string | null | undefined) {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : "—";
-}
-
 export function CreateRequestSummary({
   preview,
-  step,
+  passengerCount,
 }: {
   preview: TripRequestSummaryPreview | null;
-  step: 1 | 2;
+  passengerCount: number;
 }) {
+  if (!preview) return null;
+
+  const route =
+    preview.originName && preview.destinationName
+      ? `${preview.originName} ← ${preview.destinationName}`
+      : null;
   return (
-    <aside className={styles.summaryCard} aria-label="خلاصه درخواست">
-      <h3>خلاصه درخواست</h3>
-      <dl className={styles.summaryList}>
-        <div>
-          <dt>نوع درخواست</dt>
-          <dd>{display(preview?.requestTypeName)}</dd>
-        </div>
-        <div>
-          <dt>هدف سفر</dt>
-          <dd>{display(preview?.purpose)}</dd>
-        </div>
-        <div>
-          <dt>تاریخ و ساعت درخواست</dt>
-          <dd>{display(preview?.requestAt)}</dd>
-        </div>
-        <div>
-          <dt>تاریخ و ساعت پیشنهادی سفر</dt>
-          <dd>{display(preview?.travelAt)}</dd>
-        </div>
-        <div>
-          <dt>مبدأ</dt>
-          <dd>{display(preview?.originName)}</dd>
-        </div>
-        <div>
-          <dt>مقصد</dt>
-          <dd>{display(preview?.destinationName)}</dd>
-        </div>
-        <div>
+    <aside className={styles.summaryStrip} aria-label="خلاصه درخواست">
+      <dl className={styles.summaryItems}>
+        {preview.requestTypeName && (
+          <div className={styles.summaryItem}>
+            <dt>نوع درخواست</dt>
+            <dd>{preview.requestTypeName}</dd>
+          </div>
+        )}
+        {preview.travelAt && (
+          <div className={styles.summaryItem}>
+            <dt>زمان درخواست سفر</dt>
+            <dd>{preview.travelAt}</dd>
+          </div>
+        )}
+        {route && (
+          <div className={styles.summaryItem}>
+            <dt>مسیر</dt>
+            <dd>{route}</dd>
+          </div>
+        )}
+        <div className={styles.summaryItem}>
           <dt>تعداد مسافران</dt>
-          <dd>
-            {preview?.passengerCount
-              ? `${preview.passengerCount} نفر`
-              : "—"}
-          </dd>
+          <dd>{passengerCount} نفر</dd>
         </div>
       </dl>
-      {step === 1 && (
-        <p className={styles.summaryHint}>
-          در مرحله بعد، اطلاعات مسافران را ثبت می‌کنید.
-        </p>
-      )}
     </aside>
   );
 }

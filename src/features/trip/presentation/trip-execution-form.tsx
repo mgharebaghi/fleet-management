@@ -12,30 +12,53 @@ import {
   FormField,
   formControlClassName,
 } from "@/components/ui/form-field/form-field";
-import { FormGrid } from "@/components/ui/form-grid/form-grid";
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
+import { StatusBadge } from "@/components/ui/status-badge/status-badge";
 import { TimeSelect } from "@/components/ui/time-select/time-select";
 import type {
   TripExecutionRecord,
   TripPassengerRecord,
 } from "../application/trip-records";
 import { saveTripExecutionAction } from "./trip.actions";
+import { formatTripDateTime } from "./trip-format";
 import { tehranDateTimeInputs, tripMessages } from "./trip-form-data";
 import { executionStatusLabel } from "./trip-status";
 import styles from "./trip-forms.module.css";
+
+function executionStatusTone(
+  status: string,
+): "positive" | "negative" | "warning" | "info" {
+  switch (status) {
+    case "Completed":
+      return "positive";
+    case "Cancelled":
+      return "negative";
+    case "InProgress":
+      return "info";
+    default:
+      return "warning";
+  }
+}
 
 export function TripExecutionForm({
   tripRequestId,
   trip,
   execution,
+  onCancel,
 }: {
   tripRequestId: number;
   trip: TripPassengerRecord;
   execution: TripExecutionRecord;
+  onCancel?: () => void;
 }) {
   const started = executionHasStarted(execution);
-  const targetStatus =
-    execution.status === "Planned" ? "InProgress" : "Completed";
+  const isCompleted = execution.status === "Completed";
+  const defaultStatus = isCompleted
+    ? "Completed"
+    : execution.actualDropoffDateTime
+      ? "Completed"
+      : "InProgress";
+
   const action = saveTripExecutionAction.bind(
     null,
     tripRequestId,
@@ -52,145 +75,234 @@ export function TripExecutionForm({
   const fieldInvalid = (name: string) => state.field === name;
 
   return (
-    <div className={styles.detailForm}>
-    <form
-      action={formAction}
-      noValidate
-      aria-label="اصلاح اجرای سفر"
-      aria-busy={pending}
-    >
-      <h3>
-        {execution.status === "Planned"
-          ? `ثبت زمان حرکت — ${trip.passenger.firstName} ${trip.passenger.lastName}`
-          : `ثبت بازگشت — ${trip.passenger.firstName} ${trip.passenger.lastName}`}
-      </h3>
-      <p className={styles.hint}>
-        راننده: {execution.assignment.driverFirstName}{" "}
-        {execution.assignment.driverLastName} — خودرو{" "}
-        {execution.assignment.vehicle.vehicleCode}. وضعیت فعلی:{" "}
-        {executionStatusLabel(execution.status)}
-      </p>
-      {state.error && (
-        <InlineNotice tone="danger" role="alert">
-          {tripMessages[state.error]}
-        </InlineNotice>
-      )}
-      <input
-        type="hidden"
-        name="assignmentId"
-        value={String(execution.assignment.assignmentId)}
-      />
-      <input type="hidden" name="executionStatus" value={targetStatus} />
-      <div className={styles.dateRows}>
-        <div className={styles.dateRow}>
-          <JalaliDatePicker
-            name="actualPickupDay"
-            label="تاریخ واقعی حرکت/سوارشدن (شمسی)"
-            defaultValue={value("actualPickupDay", pickup.day)}
-            disabled={pending}
-          />
-          <TimeSelect
-            id={`${prefix}-actual-pickup-time`}
-            name="actualPickupTime"
-            label="ساعت واقعی حرکت"
-            defaultValue={value("actualPickupTime", pickup.time)}
-            disabled={pending}
-          />
+    <div className={styles.executionForm}>
+      <div className={styles.executionContextBar}>
+        <div className={styles.executionContextFacts}>
+          <span className={styles.executionContextFact}>
+            <span>مسافر:</span>
+            <strong>
+              {trip.passenger.firstName} {trip.passenger.lastName}
+            </strong>
+            {trip.passenger.personnelNo && (
+              <span>({trip.passenger.personnelNo})</span>
+            )}
+          </span>
+          <span className={styles.executionContextFact}>
+            <span>راننده:</span>
+            <strong>
+              {execution.assignment.driverFirstName}{" "}
+              {execution.assignment.driverLastName}
+            </strong>
+          </span>
+          <span className={styles.executionContextFact}>
+            <span>خودرو:</span>
+            <strong>کد {execution.assignment.vehicle.vehicleCode}</strong>
+          </span>
         </div>
-        {started && (
-          <div className={styles.dateRow}>
+        <StatusBadge
+          label={executionStatusLabel(execution.status)}
+          tone={executionStatusTone(execution.status)}
+        />
+      </div>
+
+      <form
+        action={formAction}
+        noValidate
+        aria-label={
+          isCompleted
+            ? "ویرایش اطلاعات اجرای مسافر"
+            : "ثبت اطلاعات اجرای مسافر"
+        }
+        className={styles.executionForm}
+        aria-busy={pending}
+      >
+        {state.error && (
+          <InlineNotice tone="danger" role="alert">
+            {tripMessages[state.error]}
+          </InlineNotice>
+        )}
+        <input
+          type="hidden"
+          name="assignmentId"
+          value={String(execution.assignment.assignmentId)}
+        />
+
+        {/* Group 1: سوارشدن مسافر */}
+        <fieldset className={styles.executionGroup}>
+          <legend className={styles.executionGroupLegend}>سوارشدن مسافر</legend>
+          {trip.requestedPickupDateTime && (
+            <p className={styles.executionHelp}>
+              زمان برنامه‌ریزی‌شدهٔ سوارشدن:{" "}
+              {formatTripDateTime(trip.requestedPickupDateTime)}
+            </p>
+          )}
+          <div className={styles.executionGrid2Col}>
+            <JalaliDatePicker
+              name="actualPickupDay"
+              label="تاریخ واقعی سوارشدن"
+              defaultValue={value("actualPickupDay", pickup.day)}
+              disabled={pending}
+            />
+            <TimeSelect
+              id={`${prefix}-actual-pickup-time`}
+              name="actualPickupTime"
+              label="ساعت واقعی سوارشدن"
+              defaultValue={value("actualPickupTime", pickup.time)}
+              disabled={pending}
+            />
+          </div>
+        </fieldset>
+
+        {/* Group 2: پیاده‌شدن مسافر */}
+        <fieldset className={styles.executionGroup}>
+          <legend className={styles.executionGroupLegend}>پیاده‌شدن مسافر</legend>
+          <div className={styles.executionGrid2Col}>
             <JalaliDatePicker
               name="actualDropoffDay"
-              label="تاریخ واقعی بازگشت/پیاده‌شدن (شمسی)"
+              label="تاریخ واقعی پیاده‌شدن"
               defaultValue={value("actualDropoffDay", dropoff.day)}
               disabled={pending}
             />
             <TimeSelect
               id={`${prefix}-actual-dropoff-time`}
               name="actualDropoffTime"
-              label="ساعت واقعی بازگشت"
+              label="ساعت واقعی پیاده‌شدن"
               defaultValue={value("actualDropoffTime", dropoff.time)}
               disabled={pending}
             />
           </div>
-        )}
-      </div>
-      <FormGrid>
-        <FormField>
-          <FieldLabel htmlFor={`${prefix}-start-odometer`}>
-            کیلومتر شروع (اختیاری)
-          </FieldLabel>
-          <input
-            id={`${prefix}-start-odometer`}
-            name="startOdometer"
-            className={formControlClassName}
-            inputMode="decimal"
-            dir="ltr"
-            defaultValue={value("startOdometer", execution.startOdometer ?? "")}
-            disabled={pending}
-            aria-invalid={fieldInvalid("startOdometer")}
-          />
-          {fieldInvalid("startOdometer") && state.error && (
-            <FieldErrors
-              id={`${prefix}-start-error`}
-              messages={[tripMessages[state.error]]}
-            />
-          )}
-        </FormField>
-        {started && (
-          <FormField>
-            <FieldLabel htmlFor={`${prefix}-end-odometer`}>
-              کیلومتر پایان (اختیاری)
-            </FieldLabel>
-            <input
-              id={`${prefix}-end-odometer`}
-              name="endOdometer"
-              className={formControlClassName}
-              inputMode="decimal"
-              dir="ltr"
-              defaultValue={value("endOdometer", execution.endOdometer ?? "")}
-              disabled={pending}
-            />
-          </FormField>
-        )}
-      </FormGrid>
-      <FormField>
-        <FieldLabel htmlFor={`${prefix}-execution-description`}>
-          توضیحات عملیاتی قبض برگشتی (اختیاری)
-        </FieldLabel>
-        <textarea
-          id={`${prefix}-execution-description`}
-          name="executionDescription"
-          className={formControlClassName}
-          rows={3}
-          defaultValue={value("executionDescription", execution.description ?? "")}
-          disabled={pending}
-        />
-      </FormField>
-      <p className={styles.hint}>
-        اطلاعات کاغذ برگشتی را کارکنان در این فرم ثبت می‌کنند؛ تخصیص خودرو از
-        بخش «برنامه‌ریزی سفر» مدیریت می‌شود.
-      </p>
-      <FormActions separated>
-        <ActionButton type="submit" disabled={pending} pending={pending}>
-          {pending
-            ? "در حال ثبت…"
-            : execution.status === "Planned"
-              ? "شروع اجرا"
-              : "تکمیل اجرا"}
-        </ActionButton>
-        {execution.status === "Planned" && !started && (
-          <ActionButton
-            type="button"
-            variant="secondary"
-            disabled={pending}
-            onClick={() => setCancelOpen(true)}
-          >
-            لغو برنامه
+        </fieldset>
+
+        {/* Group 3: کیلومترشمار */}
+        <fieldset className={styles.executionGroup}>
+          <legend className={styles.executionGroupLegend}>کیلومترشمار</legend>
+          <div className={styles.executionGrid2Col}>
+            <FormField>
+              <FieldLabel htmlFor={`${prefix}-start-odometer`}>
+                کیلومتر خودرو در شروع اجرا
+              </FieldLabel>
+              <input
+                id={`${prefix}-start-odometer`}
+                name="startOdometer"
+                className={formControlClassName}
+                inputMode="decimal"
+                dir="ltr"
+                defaultValue={value(
+                  "startOdometer",
+                  execution.startOdometer ?? "",
+                )}
+                disabled={pending}
+                aria-invalid={fieldInvalid("startOdometer")}
+              />
+              {fieldInvalid("startOdometer") && state.error && (
+                <FieldErrors
+                  id={`${prefix}-start-error`}
+                  messages={[tripMessages[state.error]]}
+                />
+              )}
+            </FormField>
+
+            <FormField>
+              <FieldLabel htmlFor={`${prefix}-end-odometer`}>
+                کیلومتر خودرو در پایان اجرا
+              </FieldLabel>
+              <input
+                id={`${prefix}-end-odometer`}
+                name="endOdometer"
+                className={formControlClassName}
+                inputMode="decimal"
+                dir="ltr"
+                defaultValue={value("endOdometer", execution.endOdometer ?? "")}
+                disabled={pending}
+                aria-invalid={fieldInvalid("endOdometer")}
+              />
+              {fieldInvalid("endOdometer") && state.error && (
+                <FieldErrors
+                  id={`${prefix}-end-error`}
+                  messages={[tripMessages[state.error]]}
+                />
+              )}
+            </FormField>
+          </div>
+        </fieldset>
+
+        {/* Group 4: وضعیت و توضیحات */}
+        <fieldset className={styles.executionGroup}>
+          <legend className={styles.executionGroupLegend}>
+            وضعیت و توضیحات
+          </legend>
+          <div className={styles.executionGrid2Col}>
+            <FormField className={styles.executionFieldHalf}>
+              <FieldLabel htmlFor={`${prefix}-execution-status`}>
+                وضعیت اجرای مسافر
+              </FieldLabel>
+              <select
+                id={`${prefix}-execution-status`}
+                name="executionStatus"
+                className={formControlClassName}
+                defaultValue={value("executionStatus", defaultStatus)}
+                disabled={pending}
+              >
+                <option value="InProgress">در حال اجرا</option>
+                <option value="Completed">تکمیل‌شده</option>
+              </select>
+            </FormField>
+
+            <FormField className={styles.executionFieldFull}>
+              <FieldLabel htmlFor={`${prefix}-execution-description`}>
+                توضیحات عملیاتی قبض برگشتی
+              </FieldLabel>
+              <textarea
+                id={`${prefix}-execution-description`}
+                name="executionDescription"
+                className={formControlClassName}
+                rows={3}
+                defaultValue={value(
+                  "executionDescription",
+                  execution.description ?? "",
+                )}
+                disabled={pending}
+              />
+            </FormField>
+          </div>
+        </fieldset>
+
+        <p className={styles.executionHint}>
+          اطلاعات کاغذ برگشتی را کارکنان در این فرم ثبت می‌کنند؛ تخصیص خودرو از
+          بخش «برنامه‌ریزی سفر» مدیریت می‌شود.
+        </p>
+
+        <FormActions separated>
+          <ActionButton type="submit" disabled={pending} pending={pending}>
+            {pending
+              ? "در حال ثبت…"
+              : isCompleted
+                ? "ذخیره اصلاحات"
+                : "ثبت و ذخیره اطلاعات"}
           </ActionButton>
-        )}
-      </FormActions>
-    </form>
+          {execution.status === "Planned" && !started && (
+            <ActionButton
+              type="button"
+              variant="secondary"
+              disabled={pending}
+              onClick={() => setCancelOpen(true)}
+            >
+              لغو برنامه
+            </ActionButton>
+          )}
+          {onCancel && (
+            <ActionButton
+              type="button"
+              variant="secondary"
+              disabled={pending}
+              onClick={onCancel}
+            >
+              انصراف
+            </ActionButton>
+          )}
+        </FormActions>
+      </form>
+
       <ConfirmDialog
         open={cancelOpen}
         onClose={() => setCancelOpen(false)}

@@ -4,99 +4,214 @@
 
 .list {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
+  align-items: flex-start;
+  justify-content: space-between;
   margin: 0;
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-2) var(--space-3);
   list-style: none;
-  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-group);
   background: var(--app-surface-subtle);
+  border: 1px solid var(--app-border-subtle);
+  min-width: 0;
 }
 
 .item {
-  display: flex;
+  flex: 1 1 0;
   min-width: 0;
-  flex: 1 1 8rem;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-2);
+  text-align: center;
+  position: relative;
 }
 
-.connector {
-  display: none;
+.markerTrack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 32px;
+}
+
+.rail {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 50%;
+  height: 2px;
+  background: var(--app-border);
+  z-index: 1;
+  transition: background-color var(--app-motion-fast);
+}
+
+.railStart {
+  inset-inline-start: 0;
+}
+
+.railEnd {
+  inset-inline-end: 0;
+}
+
+.rail[data-state="complete"] {
+  background: var(--app-primary);
 }
 
 .marker {
+  position: relative;
+  z-index: 2;
   display: grid;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 auto;
   place-items: center;
-  border: 1px solid var(--app-border);
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
   border-radius: 50%;
+  border: 1.5px solid var(--app-border);
   background: var(--app-surface);
   color: var(--app-text-muted);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
+  transition:
+    border-color var(--app-motion-fast),
+    background-color var(--app-motion-fast),
+    box-shadow var(--app-motion-fast);
 }
 
-.label {
-  min-width: 0;
+.stepNumber {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.item[data-state="upcoming"] .marker {
+  border-color: var(--app-border);
+  background: var(--app-surface);
   color: var(--app-text-muted);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  line-height: 1.4;
 }
 
-.item[data-state="current"] .marker {
+.item[data-state="complete"] .marker {
   border-color: var(--app-primary);
   background: var(--app-primary);
   color: var(--app-on-primary);
 }
 
-.item[data-state="current"] .label {
-  color: var(--app-heading);
+.item[data-state="current"] .marker {
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--app-surface);
+  background: var(--app-primary);
+  color: var(--app-on-primary);
+  box-shadow: 0 0 0 3px var(--app-focus-ring);
 }
 
-.item[data-state="complete"] .marker {
-  border-color: var(--app-primary);
-  background: var(--app-info-background);
-  color: var(--app-primary);
+.currentDot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--app-on-primary);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  min-width: 0;
+  padding: 0 var(--space-1);
+}
+
+.label {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--app-text-muted);
+  line-height: 1.4;
+  white-space: nowrap;
 }
 
 .item[data-state="complete"] .label {
   color: var(--app-text);
+  font-weight: 600;
 }
 
-@media (min-width: 761px) {
+.item[data-state="current"] .label {
+  color: var(--app-heading);
+  font-weight: 700;
+}
+
+.currentBadge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 1px var(--space-2);
+  border-radius: 999px;
+  background: var(--app-info-background);
+  color: var(--app-info-text);
+  border: 1px solid rgb(17 58 109 / 12%);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
   .list {
-    flex-wrap: nowrap;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-3);
   }
 
   .item {
-    flex: 1 1 0;
-  }
-
-  .connector {
-    display: block;
+    flex: initial;
     width: 100%;
-    max-width: 2.5rem;
-    height: 2px;
-    flex: 1 1 1.25rem;
-    background: var(--app-border);
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--space-3);
+    text-align: right;
   }
 
-  .item[data-state="complete"] .connector,
-  .item[data-state="current"] .connector {
+  .markerTrack {
+    width: 28px;
+    height: auto;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+
+  .rail {
+    display: none;
+  }
+
+  .item:not(:last-child) .markerTrack::after {
+    content: "";
+    position: absolute;
+    top: 26px;
+    bottom: -16px;
+    left: calc(50% - 1px);
+    width: 2px;
+    background: var(--app-border);
+    z-index: 1;
+  }
+
+  .item:not(:last-child) .markerTrack[data-next-complete="true"]::after {
     background: var(--app-primary);
+  }
+
+  .content {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: 0;
+    min-height: 26px;
+    padding: 0;
+  }
+
+  .label {
+    white-space: normal;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .marker,
-  .label,
-  .connector {
+  .rail {
     transition: none;
   }
 }

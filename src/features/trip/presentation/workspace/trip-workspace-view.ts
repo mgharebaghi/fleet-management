@@ -4,9 +4,11 @@ import {
   requestHasStartedExecution,
 } from "../../application/trip-lifecycle";
 import type {
+  TripExecutionRecord,
   TripPassengerRecord,
   TripRequestDetails,
   TripRequestSummary,
+  TripRoute,
 } from "../../application/trip-records";
 import { persistedPlanningExecution } from "../trip-execution-current";
 import { locationSummary } from "../trip-format";
@@ -38,23 +40,80 @@ export const WORKFLOW_STAGE_LABELS: Record<WorkflowStageId, string> = {
 
 export type WorkspaceSectionId =
   | "details"
-  | "planning"
-  | "execution"
+  | "passengers"
+  | "assignment"
+  | "route"
   | "completion";
 
 export const WORKSPACE_TAB_ORDER: WorkspaceSectionId[] = [
   "details",
-  "planning",
-  "execution",
+  "passengers",
+  "assignment",
+  "route",
   "completion",
 ];
 
 export const WORKSPACE_TAB_LABELS: Record<WorkspaceSectionId, string> = {
   details: "جزئیات سفر",
-  planning: "برنامه‌ریزی",
-  execution: "اجرا",
+  passengers: "مسافران",
+  assignment: "راننده و خودرو",
+  route: "مسیر",
   completion: "تکمیل",
 };
+
+export type FinalTabTone = "positive" | "negative" | "warning" | "info";
+
+export type FinalTabMeta = {
+  label: string;
+  tone: FinalTabTone;
+  iconName: "check" | "warning" | "trips";
+};
+
+export function workspaceFinalTabMeta(status: string): FinalTabMeta {
+  switch (status) {
+    case "Completed":
+      return {
+        label: "تکمیل‌شده",
+        tone: "positive",
+        iconName: "check",
+      };
+    case "Cancelled":
+      return {
+        label: "لغوشده",
+        tone: "negative",
+        iconName: "warning",
+      };
+    case "InProgress":
+      return {
+        label: "در حال اجرا",
+        tone: "info",
+        iconName: "trips",
+      };
+    case "Assigned":
+      return {
+        label: "تخصیص‌یافته",
+        tone: "warning",
+        iconName: "trips",
+      };
+    case "New":
+    default:
+      return {
+        label: "جدید",
+        tone: "info",
+        iconName: "trips",
+      };
+  }
+}
+
+export function workspaceTabLabel(
+  section: WorkspaceSectionId,
+  status?: string,
+): string {
+  if (section === "completion" && status) {
+    return workspaceFinalTabMeta(status).label;
+  }
+  return WORKSPACE_TAB_LABELS[section];
+}
 
 export type TripNextActionId =
   | "plan-assignment"
@@ -141,12 +200,15 @@ export type TripListItemView = {
 
 const LEGACY_TAB_SECTIONS: Record<string, WorkspaceSectionId> = {
   general: "details",
-  passengers: "details",
   details: "details",
-  assignment: "planning",
-  route: "planning",
-  planning: "planning",
-  execution: "execution",
+  passengers: "passengers",
+  assignment: "assignment",
+  driver: "assignment",
+  vehicle: "assignment",
+  route: "route",
+  planning: "assignment",
+  execution: "completion",
+  status: "completion",
   survey: "completion",
   return: "completion",
   completion: "completion",
@@ -208,7 +270,6 @@ function stageState(
 function nextActionFor(details: TripRequestDetails): TripNextAction {
   const snapshot = lifecycleSnapshot(details);
   const hasPlan = everyPassengerHasPersistedPlan(snapshot);
-  const started = requestHasStartedExecution(snapshot);
   const executionsComplete = everyPassengerExecutionCompleted(snapshot);
 
   if (details.status === "Cancelled" || details.status === "Completed") {
@@ -225,7 +286,7 @@ function nextActionFor(details: TripRequestDetails): TripNextAction {
     return {
       id: "plan-assignment",
       label: "ثبت خودرو و راننده",
-      sectionId: "planning",
+      sectionId: "assignment",
       enabled: true,
       hint: "برای هر مسافر یک تخصیص واجد شرایط ذخیره کنید.",
     };
@@ -234,46 +295,40 @@ function nextActionFor(details: TripRequestDetails): TripNextAction {
   if (details.status === "New" && hasPlan) {
     return {
       id: "mark-assigned",
-      label: "ثبت تخصیص‌یافته",
-      sectionId: "planning",
+      label: "ثبت درخواست",
+      sectionId: "completion",
       enabled: true,
       hint: null,
     };
   }
 
-  if (details.status === "Assigned" && !started) {
-    return {
-      id: "record-departure",
-      label: "ثبت زمان حرکت",
-      sectionId: "execution",
-      enabled: true,
-      hint: "زمان واقعی حرکت را از برگهٔ کاغذی وارد کنید.",
-    };
-  }
-
-  if (details.status === "Assigned" && started) {
+  if (details.status === "Assigned") {
     return {
       id: "mark-in-progress",
-      label: "شروع درخواست",
-      sectionId: "execution",
-      enabled: true,
-      hint: null,
+      label: "شروع سفر",
+      sectionId: "completion",
+      enabled: hasPlan,
+      hint: hasPlan
+        ? null
+        : "برای همهٔ مسافران باید برنامهٔ معتبر وجود داشته باشد.",
     };
   }
 
-  if (details.status === "InProgress" && !executionsComplete) {
+  if (details.status === "InProgress") {
     return {
-      id: "record-return",
-      label: "ثبت بازگشت",
-      sectionId: "execution",
-      enabled: true,
-      hint: "زمان و کیلومتر واقعی بازگشت را ثبت کنید.",
+      id: "complete-request",
+      label: "تکمیل سفر",
+      sectionId: "completion",
+      enabled: executionsComplete,
+      hint: executionsComplete
+        ? null
+        : "اجرای همهٔ مسافران باید تکمیل شده باشد.",
     };
   }
 
   return {
     id: "complete-request",
-    label: "تکمیل درخواست",
+    label: "تکمیل سفر",
     sectionId: "completion",
     enabled: executionsComplete,
     hint: executionsComplete
@@ -295,9 +350,9 @@ function listNextActionHint(status: string) {
     case "New":
       return "ثبت خودرو و راننده";
     case "Assigned":
-      return "ثبت زمان حرکت";
+      return "شروع سفر";
     case "InProgress":
-      return "ثبت بازگشت";
+      return "تکمیل اجرای مسافران";
     default:
       return "مشاهده جزئیات سفر";
   }
@@ -305,7 +360,7 @@ function listNextActionHint(status: string) {
 
 export function shouldShowStatusControl(
   action: TripNextAction,
-  section: "planning" | "execution" | "completion",
+  section: WorkspaceSectionId | "planning" | "execution",
 ): boolean {
   switch (section) {
     case "planning":
@@ -313,7 +368,12 @@ export function shouldShowStatusControl(
     case "execution":
       return action.id === "mark-in-progress";
     case "completion":
-      return action.id === "complete-request" || action.id === "view-details";
+      return (
+        action.id === "mark-assigned" ||
+        action.id === "mark-in-progress" ||
+        action.id === "complete-request" ||
+        action.id === "view-details"
+      );
     default:
       return false;
   }
@@ -339,11 +399,11 @@ export function workspaceTabHref(
 /** First passenger still needing planning or execution work; else 0. */
 export function defaultPassengerTabIndex(
   passengers: PassengerWorkspaceItem[],
-  mode: "planning" | "execution",
+  mode: "assignment" | "planning" | "execution",
 ): number {
   if (passengers.length === 0) return 0;
   const index = passengers.findIndex((item) => {
-    if (mode === "planning") return !item.hasPlan;
+    if (mode === "assignment" || mode === "planning") return !item.hasPlan;
     const status = item.executionStatus;
     return status !== "Completed" && status !== "Cancelled";
   });
@@ -439,5 +499,284 @@ export function projectTripListItem(
     purpose: request.purpose,
     currentStageLabel: listStageLabel(request.status),
     nextActionHint: listNextActionHint(request.status),
+  };
+}
+
+export type DistinctAssignmentItem = {
+  assignmentId: number;
+  execution: TripExecutionRecord;
+  passengerNames: string[];
+};
+
+export function distinctAssignmentExecutions(
+  passengers: TripPassengerRecord[],
+): DistinctAssignmentItem[] {
+  const map = new Map<number, DistinctAssignmentItem>();
+
+  for (const trip of passengers) {
+    const passengerName =
+      `${trip.passenger.firstName} ${trip.passenger.lastName}`.trim();
+    for (const execution of trip.executions) {
+      const assignmentId = execution.assignment?.assignmentId;
+      if (assignmentId == null) continue;
+
+      const existing = map.get(assignmentId);
+      if (existing) {
+        if (passengerName && !existing.passengerNames.includes(passengerName)) {
+          existing.passengerNames.push(passengerName);
+        }
+      } else {
+        map.set(assignmentId, {
+          assignmentId,
+          execution,
+          passengerNames: passengerName ? [passengerName] : [],
+        });
+      }
+    }
+  }
+
+  return Array.from(map.values());
+}
+
+function normalizeRouteText(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+function normalizeRouteNumber(value: number | null | undefined): number | null {
+  if (value == null) return null;
+  return Number.isNaN(value) ? null : value;
+}
+
+function normalizeRouteDecimalString(
+  value: string | null | undefined,
+): string | null {
+  const text = normalizeRouteText(value);
+  if (text == null) return null;
+  const num = Number(text);
+  if (!Number.isNaN(num)) {
+    return String(num);
+  }
+  return text;
+}
+
+function sortRoutePoints(points: TripRoute["points"]): TripRoute["points"] {
+  return points
+    .map((point, index) => ({ point, index }))
+    .sort((a, b) => {
+      const seqA = a.point.sequenceNo;
+      const seqB = b.point.sequenceNo;
+      if (seqA != null && seqB != null) {
+        if (seqA !== seqB) return seqA - seqB;
+        return a.index - b.index;
+      }
+      if (seqA != null) return -1;
+      if (seqB != null) return 1;
+      return a.index - b.index;
+    })
+    .map((item) => item.point);
+}
+
+export function areRoutesEquivalent(
+  left: TripRoute,
+  right: TripRoute,
+): boolean {
+  if (left === right) return true;
+  if (left.routeId && right.routeId && left.routeId === right.routeId) {
+    return true;
+  }
+
+  if (normalizeRouteText(left.routeName) !== normalizeRouteText(right.routeName)) {
+    return false;
+  }
+  if (Boolean(left.isSelected) !== Boolean(right.isSelected)) {
+    return false;
+  }
+  if (
+    normalizeRouteNumber(left.alternativeNo) !==
+    normalizeRouteNumber(right.alternativeNo)
+  ) {
+    return false;
+  }
+  if (
+    normalizeRouteDecimalString(left.distanceKm) !==
+    normalizeRouteDecimalString(right.distanceKm)
+  ) {
+    return false;
+  }
+  if (
+    normalizeRouteNumber(left.estimatedDurationMinute) !==
+    normalizeRouteNumber(right.estimatedDurationMinute)
+  ) {
+    return false;
+  }
+  if (
+    normalizeRouteText(left.description) !== normalizeRouteText(right.description)
+  ) {
+    return false;
+  }
+
+  const leftPoints = sortRoutePoints(left.points ?? []);
+  const rightPoints = sortRoutePoints(right.points ?? []);
+
+  if (leftPoints.length !== rightPoints.length) {
+    return false;
+  }
+
+  for (let index = 0; index < leftPoints.length; index++) {
+    const pLeft = leftPoints[index];
+    const pRight = rightPoints[index];
+
+    if (pLeft.location.locationId !== pRight.location.locationId) {
+      return false;
+    }
+    if (
+      normalizeRouteNumber(pLeft.sequenceNo) !==
+      normalizeRouteNumber(pRight.sequenceNo)
+    ) {
+      return false;
+    }
+    if (
+      normalizeRouteText(pLeft.trafficZone) !==
+      normalizeRouteText(pRight.trafficZone)
+    ) {
+      return false;
+    }
+    if (
+      normalizeRouteDecimalString(pLeft.distanceFromStartKm) !==
+      normalizeRouteDecimalString(pRight.distanceFromStartKm)
+    ) {
+      return false;
+    }
+    if (
+      normalizeRouteText(pLeft.description) !==
+      normalizeRouteText(pRight.description)
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export type DisplayRouteGroup = {
+  route: TripRoute;
+  passengerNames: string[];
+  label?: string;
+};
+
+export function groupRoutesForDisplay(
+  passengers: TripPassengerRecord[],
+): DisplayRouteGroup[] {
+  const groups: DisplayRouteGroup[] = [];
+
+  for (const trip of passengers) {
+    const passengerName =
+      `${trip.passenger.firstName} ${trip.passenger.lastName}`.trim();
+
+    const allRoutesForTrip = [
+      ...trip.routes,
+      ...trip.executions.flatMap((e) => e.routes),
+    ];
+
+    for (const route of allRoutesForTrip) {
+      const existingGroup = groups.find((group) =>
+        areRoutesEquivalent(group.route, route),
+      );
+
+      if (existingGroup) {
+        if (passengerName && !existingGroup.passengerNames.includes(passengerName)) {
+          existingGroup.passengerNames.push(passengerName);
+        }
+      } else {
+        groups.push({
+          route,
+          passengerNames: passengerName ? [passengerName] : [],
+        });
+      }
+    }
+  }
+
+  const hasMultipleRoutes = groups.length > 1;
+
+  for (const group of groups) {
+    if (!hasMultipleRoutes) {
+      group.label = undefined;
+    } else {
+      if (group.passengerNames.length === 1) {
+        group.label = `مسافر: ${group.passengerNames[0]}`;
+      } else if (group.passengerNames.length > 1) {
+        group.label = `مسافران: ${group.passengerNames.join("، ")}`;
+      } else {
+        group.label = undefined;
+      }
+    }
+  }
+
+  return groups;
+}
+
+export type TripLifecycleVisualStage = {
+  id: "request" | "assignment" | "execution" | "completion";
+  label: string;
+  isComplete: boolean;
+  isCurrent: boolean;
+};
+
+export type TripLifecycleVisualModel =
+  | {
+      isCancelled: false;
+      stages: TripLifecycleVisualStage[];
+    }
+  | {
+      isCancelled: true;
+      statusLabel: string;
+      description: string;
+    };
+
+export function buildTripLifecycleVisualModel(
+  status: string,
+): TripLifecycleVisualModel {
+  if (status === "Cancelled") {
+    return {
+      isCancelled: true,
+      statusLabel: "لغوشده",
+      description: "این درخواست سفر لغو شده و فرآیند اجرایی آن پایان یافته است.",
+    };
+  }
+
+  const stageDefinitions = [
+    { id: "request" as const, label: "ثبت درخواست" },
+    { id: "assignment" as const, label: "تخصیص‌یافته" },
+    { id: "execution" as const, label: "در حال اجرا" },
+    { id: "completion" as const, label: "تکمیل‌شده" },
+  ];
+
+  let currentStageIndex = 0;
+  if (status === "Assigned") currentStageIndex = 1;
+  else if (status === "InProgress") currentStageIndex = 2;
+  else if (status === "Completed") currentStageIndex = 3;
+
+  const stages: TripLifecycleVisualStage[] = stageDefinitions.map(
+    (def, index) => {
+      const isComplete =
+        index < currentStageIndex ||
+        (status === "Assigned" && index === 1) ||
+        (status === "Completed" && index === 3);
+      const isCurrent = index === currentStageIndex;
+
+      return {
+        id: def.id,
+        label: def.label,
+        isComplete,
+        isCurrent,
+      };
+    },
+  );
+
+  return {
+    isCancelled: false,
+    stages,
   };
 }

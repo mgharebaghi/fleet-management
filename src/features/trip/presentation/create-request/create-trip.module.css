@@ -1,52 +1,24 @@
 .createShell {
   display: grid;
-  gap: var(--space-5);
-}
-
-.createLayout {
-  display: grid;
-  gap: var(--space-5);
-  align-items: start;
-}
-
-@media (min-width: 961px) {
-  .createLayout {
-    grid-template-columns: minmax(0, 1fr) minmax(240px, 17.5rem);
-  }
-}
-
-.createMain {
-  display: grid;
   min-width: 0;
-  gap: var(--space-5);
+  gap: var(--space-4);
 }
 
-.createAside {
+.createProgress {
   min-width: 0;
-}
-
-.createProgress :global(nav) {
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  padding: 0;
-  border-bottom: 1px solid var(--app-border);
-  padding-bottom: var(--space-4);
-}
-
-.createProgress :global(ol) {
-  padding: 0;
-  border: none;
-  background: transparent;
 }
 
 .createSurface {
   display: grid;
-  gap: var(--space-5);
-  padding: var(--space-5);
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-group);
-  background: var(--app-surface);
+  min-width: 0;
+  gap: var(--space-4);
+}
+
+/* The surface's explicit grid display would otherwise override the browser's
+   native [hidden] rule and paint every wizard step as one long page. Keeping
+   inactive steps mounted preserves their uncontrolled form values. */
+.createSurface[hidden] {
+  display: none;
 }
 
 .createSurfaceHeading {
@@ -54,65 +26,53 @@
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .createSurfaceHeading h2 {
   color: var(--app-heading);
-  font-size: var(--font-size-lg);
-  font-weight: 800;
+  font-size: var(--font-size-md);
+  font-weight: 700;
 }
 
 .createSurfaceHeading p {
   color: var(--app-text-muted);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
 }
 
-.summaryCard {
-  display: grid;
-  gap: var(--space-4);
-  padding: var(--space-5);
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-group);
+.summaryStrip {
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--app-radius-control);
   background: var(--app-surface-subtle);
 }
 
-.summaryCard h3 {
-  color: var(--app-heading);
-  font-size: var(--font-size-md);
-  font-weight: 800;
-}
-
-.summaryList {
+.summaryItems {
   display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-3);
   margin: 0;
 }
 
-.summaryList > div {
+.summaryItem {
   display: grid;
+  min-width: 0;
   gap: 2px;
 }
 
-.summaryList dt {
+.summaryItem dt {
   color: var(--app-text-muted);
   font-size: var(--font-size-xs);
+  font-weight: 600;
 }
 
-.summaryList dd {
+.summaryItem dd {
+  min-width: 0;
   margin: 0;
   color: var(--app-text);
-  font-weight: 700;
-  overflow-wrap: anywhere;
-}
-
-.summaryHint {
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--app-info-background);
-  color: var(--app-text-muted);
   font-size: var(--font-size-sm);
-  line-height: 1.5;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .passengerSwitcher {
@@ -128,6 +88,11 @@
 
 .passengerTab {
   display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
@@ -165,34 +130,87 @@
 
 .passengerStepHeader {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
-.passengerEditor {
-  display: grid;
-  gap: var(--space-4);
-}
-
-.passengerEditorHeading {
+.passengerControls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
-.passengerEditorHeading h3 {
-  color: var(--app-heading);
-  font-size: var(--font-size-md);
-  font-weight: 800;
+.passengerControls > .passengerSwitcher {
+  flex: 1 1 28rem;
 }
 
-.passengerInfo {
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--app-info-background);
+.passengerEditor {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+}
+
+.passengerHelp {
+  margin: 0;
   color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.7;
+}
+
+.passengerRouteField {
+  grid-column: span 6;
+}
+
+.passengerPickupGroup {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.passengerPickupGroup legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  color: var(--app-label);
   font-size: var(--font-size-sm);
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.passengerPickupToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--app-text);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.passengerPickupToggle input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--app-primary);
+}
+
+.passengerPickupToggle:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.passengerPickupControls {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  align-items: end;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.passengerPickupGroup .passengerHelp {
+  margin-top: var(--space-2);
 }
 
 .createActions {
@@ -217,15 +235,38 @@
   line-height: 1.5;
 }
 
-.dateRows {
+.requestBasics {
   display: grid;
-  gap: var(--space-4);
+  min-width: 0;
+  gap: var(--space-2);
 }
 
-.dateRow {
+.requestDateTimeGroup {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-4);
+  min-width: 0;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.requestDateTimeFieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.requestDateTimeFieldset legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  color: var(--app-label);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.requestLocationField {
+  grid-column: span 6;
 }
 
 .review {
@@ -248,13 +289,8 @@
   margin: 0;
 }
 
-.reviewGrid {
-  display: grid;
-  gap: var(--space-4);
-}
-
 @media (min-width: 640px) {
-  .reviewGrid {
+  .reviewList {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -315,16 +351,68 @@
 
 .reviewTable td {
   color: var(--app-text);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 639px) {
+  .reviewTableWrap {
+    border: 0;
+    overflow: visible;
+  }
+
+  .reviewTable {
+    min-width: 0;
+  }
+
+  .reviewTable thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .reviewTable tbody,
+  .reviewTable tr {
+    display: block;
+  }
+
+  .reviewTable tr {
+    padding-block: var(--space-3);
+    border-top: 1px solid var(--app-border);
+  }
+
+  .reviewTable td {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    gap: var(--space-3);
+    padding: var(--space-1) 0;
+    border: 0;
+  }
+
+  .reviewTable td::before {
+    content: attr(data-label);
+    color: var(--app-text-muted);
+    font-size: var(--font-size-xs);
+  }
+}
+
+@media (max-width: 900px) {
+  .summaryItems {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
-  .createSurface {
-    padding: var(--space-4);
+  .summaryItems {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .dateRow {
-    grid-template-columns: 1fr;
+  .requestDateTimeGroup,
+  .passengerPickupControls {
+    grid-template-columns: minmax(0, 1fr);
   }
+
 
   .createActions {
     flex-direction: column-reverse;
@@ -334,5 +422,567 @@
   .createActionsEnd {
     width: 100%;
     flex-direction: column;
+  }
+}
+
+/* Progressive 6-step wizard additions */
+.stepContainer {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+}
+
+.stepHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.stepHeader h2 {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: var(--font-size-md);
+  font-weight: 700;
+}
+
+.stepDescription {
+  margin: var(--space-1) 0 0;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+}
+
+.readinessBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.assignmentPanel {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-md);
+  background: var(--app-surface);
+}
+
+.assignmentContext {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.assignmentContext > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.selectedAssignmentCard {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--app-surface-subtle);
+}
+
+.cardHeader > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.assignmentDetailsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.assignmentForm {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+}
+
+.formButtonRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ineligibleDetails {
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--app-text-muted);
+}
+
+.ineligibleDetails summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.ineligibleList {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ineligibleList li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.assignmentCard {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-md);
+  background: var(--app-surface-subtle);
+}
+
+.cardHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.cardHeader h3,
+.cardHeader strong {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+}
+
+.detailBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.detailLabel {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.plateWrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  align-self: flex-start;
+}
+
+.vehicleDetailContent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.stepActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--app-border);
+}
+
+/* Route step cards */
+.groupCard {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-md);
+  background: var(--app-surface);
+}
+
+.summaryHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.summaryHeader h3 {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.muted {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.routeSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.routeSummary div {
+  display: grid;
+  gap: 2px;
+}
+
+.routeSummary dt {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.routeSummary dd {
+  margin: 0;
+  color: var(--app-heading);
+  font-weight: 700;
+}
+
+.routePoints {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.routePoints li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  border-top: 1px solid var(--app-border-subtle);
+}
+
+.routeDescription {
+  margin: var(--space-1) 0 0;
+  color: var(--app-text);
+  font-size: var(--font-size-xs);
+}
+
+.routeList {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+}
+
+.routeDraftForm {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+}
+
+.modalSection {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.modalSection:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.modalSectionTitle {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.routePointsHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.routePointsHeader .modalSectionTitle {
+  margin: 0;
+}
+
+.compactPointsEmpty {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--app-border);
+  border-radius: var(--radius-md);
+  background: var(--app-surface-subtle);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  text-align: center;
+}
+
+.routePointsEditorList {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+}
+
+.pointCard {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--app-surface-subtle);
+}
+
+.pointCardHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.pointCardHeader h4 {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.spanFull {
+  grid-column: 1 / -1;
+}
+
+/* Planning step */
+.planningSection {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+}
+
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sectionHeader h3 {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.sectionHeader p {
+  margin: var(--space-1) 0 0;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.planningPassengerList {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+}
+
+.planningPassengerCard {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-md);
+  background: var(--app-surface);
+}
+
+.passengerRouteText {
+  display: block;
+  margin-top: 2px;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.planningAssignmentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--app-border-subtle);
+}
+
+.voucherOutputsList {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+}
+
+.voucherOutputRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-md);
+  background: var(--app-surface);
+}
+
+.voucherOutputRow > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Review step */
+.reviewGridSections {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+}
+
+.reviewCard {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-md);
+  background: var(--app-surface);
+}
+
+.reviewCardHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.reviewCardHeader h3 {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.reviewMetaList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.reviewMetaList div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.reviewMetaList dt {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.reviewMetaList dd {
+  margin: 0;
+  color: var(--app-text);
+  font-weight: 600;
+}
+
+.reviewWide {
+  grid-column: 1 / -1;
+}
+
+.reviewPassengerTableWrapper {
+  overflow-x: auto;
+}
+
+.vehicleReviewCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.warningText {
+  color: var(--app-warning);
+  font-weight: 600;
+}
+
+@media (max-width: 639px) {
+  .stepHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .routeSummary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cardGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .planningAssignmentGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .assignmentContext,
+  .assignmentDetailsGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .voucherOutputRow {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

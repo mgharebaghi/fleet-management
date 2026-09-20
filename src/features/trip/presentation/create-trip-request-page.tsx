@@ -14,7 +14,7 @@ export async function CreateTripRequestPage() {
   ]);
 
   return (
-    <PageShell width="narrow">
+    <PageShell>
       <PageHeader
         eyebrow="مدیریت سفر"
         title="ثبت درخواست سفر"

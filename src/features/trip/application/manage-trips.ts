@@ -1,12 +1,15 @@
 import type { TripRepository } from "./trip-repository";
 import type {
+  CreateCompleteTripRequestCommand,
   CreateTripRequestCommand,
   NewTripRoute,
   SavePassengerSurveyInput,
   SaveTripExecutionInput,
+  SaveTripRouteInput,
   TripFailure,
   TripLocationInputFailure,
   TripLocationInputRole,
+  TripPassengerInput,
   TripResult,
 } from "./trip-records";
 import {
@@ -28,13 +31,17 @@ import {
   isValidTripDate,
   isValidTripId,
   normalizeTripExecution,
+  normalizeTripPassenger,
   normalizeTripRequest,
   normalizeTripRoute,
+  normalizeTripRouteDetails,
   requestTypeGroupingError,
   tripExecutionError,
   tripExecutionStateError,
+  tripPassengerError,
   tripRequestError,
   tripRouteError,
+  tripRouteDetailsError,
 } from "./trip-validation";
 
 const failure = (error: TripFailure, field?: string): TripResult => ({
@@ -81,7 +88,14 @@ export class ManageTrips {
   constructor(private readonly repository: TripRepository) {}
 
   async createRequest(input: CreateTripRequestCommand): Promise<TripResult> {
-    const value = normalizeTripRequest(input);
+    const value = normalizeTripRequest({
+      ...input,
+      passengers: input.passengers.map((passenger) => ({
+        ...passenger,
+        requestedPickupDateTime:
+          passenger.requestedPickupDateTime ?? input.requestedTravelDateTime,
+      })),
+    });
     const validationError = tripRequestError(value);
     if (validationError) {
       return failure(
@@ -90,7 +104,8 @@ export class ManageTrips {
       );
     }
 
-    const jalaliYear = jalaliYearOf(value.requestDateTime);
+    const requestDateTime = new Date();
+    const jalaliYear = jalaliYearOf(requestDateTime);
     return this.repository.atomic(
       async (session) => {
         const requestNo = nextTripRequestNo(
@@ -151,17 +166,354 @@ export class ManageTrips {
           }
         }
 
-        return {
-          success: true,
-          id: await session.createRequest({
-            ...value,
-            requestNo,
-            status: "New",
-          }),
-        };
+        const created = await session.createRequest({
+          ...value,
+          requestDateTime,
+          requestNo,
+          status: "New",
+        });
+        return { success: true, id: created.tripRequestId };
       },
       { requestNoYear: jalaliYear },
     );
+  }
+
+  async createCompleteRequest(
+    input: CreateCompleteTripRequestCommand,
+  ): Promise<TripResult> {
+    const value = normalizeTripRequest({
+      ...input,
+      passengers: input.passengers.map((passenger) => ({
+        ...passenger,
+        requestedPickupDateTime:
+          passenger.requestedPickupDateTime ?? input.requestedTravelDateTime,
+      })),
+    });
+    const routesByPassenger = input.passengers.map((passenger) =>
+      passenger.routes.map(normalizeTripRouteDetails),
+    );
+    const requestValidationError = tripRequestError(value);
+    if (requestValidationError) {
+      return failure(
+        requestValidationError,
+        requestValidationError === "PURPOSE_TOO_LONG" ? "purpose" : undefined,
+      );
+    }
+    for (const [passengerIndex, passenger] of input.passengers.entries()) {
+      if (!isValidTripId(passenger.vehicleDriverAssignmentId)) {
+        return failure("INVALID_ID", `passenger.${passengerIndex}.assignmentId`);
+      }
+      for (const route of routesByPassenger[passengerIndex]) {
+        const routeError = tripRouteDetailsError(route);
+        if (routeError) return failure(routeError);
+      }
+    }
+
+    return this.repository.atomic(async (session) => {
+      const requestDateTime = new Date();
+      const jalaliYear = jalaliYearOf(requestDateTime);
+      await session.lockRequestNumberYear(jalaliYear);
+      const requestNo = nextTripRequestNo(
+        jalaliYear,
+        await session.requestNumbers(jalaliYear),
+      );
+      if (!requestNo) return failure("REQUEST_SEQUENCE_EXHAUSTED");
+      if (await session.requestNoExists(requestNo)) {
+        return failure("REQUEST_NO_DUPLICATE");
+      }
+
+      const requestType = await session.requestType(value.tripRequestTypeId);
+      if (!requestType) return failure("REQUEST_TYPE_NOT_FOUND");
+      const groupingError = requestTypeGroupingError(
+        requestType,
+        value.passengers,
+      );
+      if (groupingError) return failure(groupingError);
+
+      for (const [passengerIndex, passenger] of value.passengers.entries()) {
+        const person = await session.person(passenger.passengerPersonId);
+        if (!person) return failure("PERSON_NOT_FOUND");
+        if (!person.isActive) return failure("PERSON_INACTIVE");
+
+        const origin = await session.location(passenger.originLocationId);
+        if (!origin) {
+          return locationInputFailure(
+            "LOCATION_NOT_FOUND",
+            passengerIndex,
+            "origin",
+          );
+        }
+        if (origin.isActive === false) {
+          return locationInputFailure(
+            "LOCATION_INACTIVE",
+            passengerIndex,
+            "origin",
+          );
+        }
+
+        const destination = await session.location(
+          passenger.destinationLocationId,
+        );
+        if (!destination) {
+          return locationInputFailure(
+            "LOCATION_NOT_FOUND",
+            passengerIndex,
+            "destination",
+          );
+        }
+        if (destination.isActive === false) {
+          return locationInputFailure(
+            "LOCATION_INACTIVE",
+            passengerIndex,
+            "destination",
+          );
+        }
+
+        const activeAt =
+          passenger.requestedPickupDateTime ?? value.requestedTravelDateTime;
+        const assignment = await session.assignment(
+          input.passengers[passengerIndex].vehicleDriverAssignmentId,
+          activeAt,
+        );
+        if (!assignment) return failure("ASSIGNMENT_NOT_FOUND");
+        const assignmentError = assignmentFailure(
+          assignment,
+          activeAt,
+          assignment.fromDateTime,
+          assignment.toDateTime,
+        );
+        if (assignmentError) return failure(assignmentError);
+
+        for (const route of routesByPassenger[passengerIndex]) {
+          for (const point of route.points) {
+            const location = await session.location(point.locationId);
+            if (!location) return failure("LOCATION_NOT_FOUND");
+            if (location.isActive === false) {
+              return failure("LOCATION_INACTIVE");
+            }
+          }
+        }
+      }
+
+      const created = await session.createRequest({
+        ...value,
+        requestDateTime,
+        requestNo,
+        status: "New",
+      });
+      if (created.tripIds.length !== value.passengers.length) {
+        throw new Error("Created passenger Trip count did not match the command.");
+      }
+
+      for (const [passengerIndex, tripId] of created.tripIds.entries()) {
+        await session.createExecution({
+          tripId,
+          tripExecutionId: null,
+          vehicleDriverAssignmentId:
+            input.passengers[passengerIndex].vehicleDriverAssignmentId,
+          actualPickupDateTime: null,
+          actualDropoffDateTime: null,
+          startOdometer: null,
+          endOdometer: null,
+          status: "Planned",
+          description: null,
+        });
+
+        for (const route of routesByPassenger[passengerIndex]) {
+          if (route.isSelected) {
+            await session.deselectOtherSelectedRoutes({
+              tripId,
+              tripExecutionId: null,
+            });
+          }
+          await session.createRoute({
+            ...route,
+            tripId,
+            tripExecutionId: null,
+          });
+        }
+      }
+
+      await session.updateRequestStatus(created.tripRequestId, "Assigned");
+      return { success: true, id: created.tripRequestId };
+    });
+  }
+
+  async addPassenger(input: {
+    tripRequestId: number;
+    passenger: TripPassengerInput;
+  }): Promise<TripResult> {
+    if (!isValidTripId(input.tripRequestId)) return failure("INVALID_ID");
+    const passenger = normalizeTripPassenger(input.passenger);
+    const validationError = tripPassengerError(passenger);
+    if (validationError) return failure(validationError);
+
+    return this.repository.atomic(async (session) => {
+      const request = await session.request(input.tripRequestId);
+      if (!request) return failure("REQUEST_NOT_FOUND");
+      if (
+        request.status === "InProgress" ||
+        isTerminalTripRequestStatus(request.status)
+      ) {
+        return failure("REQUEST_TERMINAL");
+      }
+
+      const person = await session.person(passenger.passengerPersonId);
+      if (!person) return failure("PERSON_NOT_FOUND");
+      if (!person.isActive) return failure("PERSON_INACTIVE");
+
+      const origin = await session.location(passenger.originLocationId);
+      if (!origin) return failure("LOCATION_NOT_FOUND");
+      if (origin.isActive === false) return failure("LOCATION_INACTIVE");
+
+      const destination = await session.location(passenger.destinationLocationId);
+      if (!destination) return failure("LOCATION_NOT_FOUND");
+      if (destination.isActive === false) return failure("LOCATION_INACTIVE");
+
+      const requestType = await session.requestType(request.tripRequestTypeId);
+      if (requestType) {
+        const groupingError = requestTypeGroupingError(requestType, [
+          ...request.passengers.map((p) => ({
+            passengerPersonId: p.passengerPersonId,
+            originLocationId: p.originLocationId,
+            destinationLocationId: p.destinationLocationId,
+            requestedPickupDateTime: null,
+            pickupOrder: null,
+            dropoffOrder: null,
+            status: null,
+            description: null,
+          })),
+          passenger,
+        ]);
+        if (groupingError) return failure(groupingError);
+      }
+
+      const id = await session.createPassenger({
+        tripRequestId: input.tripRequestId,
+        passenger,
+      });
+      return { success: true, id };
+    });
+  }
+
+  async updatePassenger(input: {
+    tripRequestId: number;
+    tripId: number;
+    passenger: TripPassengerInput;
+  }): Promise<TripResult> {
+    if (!isValidTripId(input.tripRequestId) || !isValidTripId(input.tripId)) {
+      return failure("INVALID_ID");
+    }
+    const passenger = normalizeTripPassenger(input.passenger);
+    const validationError = tripPassengerError(passenger);
+    if (validationError) return failure(validationError);
+
+    return this.repository.atomic(async (session) => {
+      const trip = await session.trip(input.tripId);
+      if (!trip || trip.requestId !== input.tripRequestId) {
+        return failure("TRIP_NOT_FOUND");
+      }
+      const hasStarted = trip.executions.some(executionHasStarted);
+      if (hasStarted) {
+        if (
+          trip.passengerPersonId !== passenger.passengerPersonId ||
+          trip.originLocationId !== passenger.originLocationId ||
+          trip.destinationLocationId !== passenger.destinationLocationId
+        ) {
+          return failure("PASSENGER_IN_USE");
+        }
+      }
+
+      if (isTerminalTripRequestStatus(trip.requestStatus)) {
+        return failure("REQUEST_TERMINAL");
+      }
+
+      const person = await session.person(passenger.passengerPersonId);
+      if (!person) return failure("PERSON_NOT_FOUND");
+      if (!person.isActive) return failure("PERSON_INACTIVE");
+
+      const origin = await session.location(passenger.originLocationId);
+      if (!origin) return failure("LOCATION_NOT_FOUND");
+      if (origin.isActive === false) return failure("LOCATION_INACTIVE");
+
+      const destination = await session.location(
+        passenger.destinationLocationId,
+      );
+      if (!destination) return failure("LOCATION_NOT_FOUND");
+      if (destination.isActive === false) return failure("LOCATION_INACTIVE");
+
+      const request = await session.request(input.tripRequestId);
+      if (request) {
+        const requestType = await session.requestType(request.tripRequestTypeId);
+        if (requestType) {
+          const otherPassengers = request.passengers
+            .filter((p) => p.tripId !== input.tripId)
+            .map((p) => ({
+              passengerPersonId: p.passengerPersonId,
+              originLocationId: p.originLocationId,
+              destinationLocationId: p.destinationLocationId,
+              requestedPickupDateTime: null,
+              pickupOrder: null,
+              dropoffOrder: null,
+              status: null,
+              description: null,
+            }));
+          const groupingError = requestTypeGroupingError(requestType, [
+            ...otherPassengers,
+            passenger,
+          ]);
+          if (groupingError) return failure(groupingError);
+        }
+      }
+
+      await session.updatePassenger({
+        tripId: input.tripId,
+        passenger,
+      });
+      return { success: true, id: input.tripId };
+    });
+  }
+
+  async deletePassenger(input: {
+    tripRequestId: number;
+    tripId: number;
+  }): Promise<TripResult> {
+    if (!isValidTripId(input.tripRequestId) || !isValidTripId(input.tripId)) {
+      return failure("INVALID_ID");
+    }
+
+    return this.repository.atomic(async (session) => {
+      const trip = await session.trip(input.tripId);
+      if (!trip || trip.requestId !== input.tripRequestId) {
+        return failure("TRIP_NOT_FOUND");
+      }
+      const hasHistory = trip.executions.some(
+        (e) =>
+          executionHasStarted(e) ||
+          e.status === "Completed" ||
+          e.actualDropoffDateTime !== null,
+      );
+      if (hasHistory) {
+        return failure("PASSENGER_IN_USE");
+      }
+
+      const hasExecutionRoutes = trip.executions.some(
+        (e) => e.routes && e.routes.length > 0,
+      );
+      if (hasExecutionRoutes) {
+        return failure("PASSENGER_IN_USE");
+      }
+
+      if (
+        trip.requestStatus === "InProgress" ||
+        isTerminalTripRequestStatus(trip.requestStatus)
+      ) {
+        return failure("REQUEST_TERMINAL");
+      }
+
+      await session.deletePassenger(input.tripId);
+      return { success: true, id: input.tripId };
+    });
   }
 
   async changeRequestStatus(
@@ -195,8 +547,11 @@ export class ManageTrips {
       ) {
         return failure("PLANNING_REQUIRED");
       }
-      if (targetStatus === "InProgress" && !hasStartedExecution) {
-        return failure("EXECUTION_NOT_STARTED");
+      if (targetStatus === "InProgress") {
+        if (!everyPassengerHasPersistedPlan(current)) {
+          return failure("PLANNING_REQUIRED");
+        }
+        await session.startTripExecutions(tripRequestId);
       }
       if (
         targetStatus === "Completed" &&
@@ -215,24 +570,57 @@ export class ManageTrips {
     });
   }
 
-  async addRoute(input: NewTripRoute): Promise<TripResult> {
+  async startTrip(tripRequestId: number): Promise<TripResult> {
+    return this.changeRequestStatus(tripRequestId, "InProgress");
+  }
+
+  async saveRoute(input: SaveTripRouteInput): Promise<TripResult> {
+    const { routeId, ...routeFields } = input;
     const value = normalizeTripRoute({
-      ...input,
+      ...routeFields,
       tripExecutionId: input.tripExecutionId ?? null,
     });
     const validationError = tripRouteError(value);
     if (validationError) return failure(validationError);
+    if (
+      routeId !== null &&
+      routeId !== undefined &&
+      !isValidTripId(routeId)
+    ) {
+      return failure("INVALID_ID");
+    }
 
     return this.repository.atomic(async (session) => {
       const trip = await session.trip(value.tripId);
       if (!trip) return failure("TRIP_NOT_FOUND");
-      if (isTerminalTripRequestStatus(trip.requestStatus)) {
+      if (
+        value.tripExecutionId === null &&
+        (trip.requestStatus === "InProgress" ||
+          isTerminalTripRequestStatus(trip.requestStatus))
+      ) {
+        return failure("REQUEST_TERMINAL");
+      }
+      if (
+        value.tripExecutionId !== null &&
+        isTerminalTripRequestStatus(trip.requestStatus)
+      ) {
         return failure("REQUEST_TERMINAL");
       }
       if (value.tripExecutionId !== null) {
         const execution = await session.execution(value.tripExecutionId);
         if (!execution || execution.tripId !== value.tripId) {
           return failure("EXECUTION_NOT_FOUND");
+        }
+      }
+
+      if (input.routeId !== null && input.routeId !== undefined) {
+        const existingRoute = await session.route(input.routeId);
+        if (!existingRoute) return failure("ROUTE_NOT_FOUND");
+        if (existingRoute.tripId !== value.tripId) {
+          return failure("TRIP_NOT_FOUND");
+        }
+        if (existingRoute.tripExecutionId !== null) {
+          return failure("ROUTE_IN_USE");
         }
       }
 
@@ -249,10 +637,59 @@ export class ManageTrips {
         });
       }
 
+      if (input.routeId !== null && input.routeId !== undefined) {
+        await session.updateRoute({
+          ...value,
+          routeId: input.routeId,
+        });
+        return {
+          success: true,
+          id: input.routeId,
+        };
+      }
+
       return {
         success: true,
         id: await session.createRoute(value),
       };
+    });
+  }
+
+  async addRoute(input: NewTripRoute): Promise<TripResult> {
+    return this.saveRoute({ ...input, routeId: null });
+  }
+
+  async deleteRoute(input: {
+    tripRequestId: number;
+    routeId: number;
+  }): Promise<TripResult> {
+    if (!isValidTripId(input.routeId) || !isValidTripId(input.tripRequestId)) {
+      return failure("INVALID_ID");
+    }
+
+    return this.repository.atomic(async (session) => {
+      const existingRoute = await session.route(input.routeId);
+      if (!existingRoute) return failure("ROUTE_NOT_FOUND");
+
+      if (existingRoute.tripId !== null) {
+        const trip = await session.trip(existingRoute.tripId);
+        if (!trip || trip.requestId !== input.tripRequestId) {
+          return failure("REQUEST_NOT_FOUND");
+        }
+        if (
+          trip.requestStatus === "InProgress" ||
+          isTerminalTripRequestStatus(trip.requestStatus)
+        ) {
+          return failure("REQUEST_TERMINAL");
+        }
+      }
+
+      if (existingRoute.tripExecutionId !== null) {
+        return failure("ROUTE_IN_USE");
+      }
+
+      await session.deleteRoute(input.routeId);
+      return { success: true, id: input.routeId };
     });
   }
 
@@ -276,6 +713,12 @@ export class ManageTrips {
       const trip = await session.trip(value.tripId);
       if (!trip) return failure("TRIP_NOT_FOUND");
       if (isTerminalTripRequestStatus(trip.requestStatus)) {
+        return failure("REQUEST_TERMINAL");
+      }
+      if (
+        value.tripExecutionId === null &&
+        trip.requestStatus === "InProgress"
+      ) {
         return failure("REQUEST_TERMINAL");
       }
 
@@ -372,6 +815,7 @@ export class ManageTrips {
     }
     if (
       value.surveyDateTime !== null &&
+      value.surveyDateTime !== undefined &&
       !isValidTripDate(value.surveyDateTime)
     ) {
       return failure("INVALID_DATE");
@@ -386,7 +830,12 @@ export class ManageTrips {
       if (execution.requestStatus === "Cancelled") {
         return failure("REQUEST_TERMINAL");
       }
-      await session.updateSurvey(value);
+      const surveyDateTime =
+        execution.surveyDateTime ?? value.surveyDateTime ?? new Date();
+      await session.updateSurvey({
+        ...value,
+        surveyDateTime,
+      });
       return { success: true, id: value.tripExecutionId };
     });
   }

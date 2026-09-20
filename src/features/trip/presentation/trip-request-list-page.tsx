@@ -1,4 +1,5 @@
 import { ActionLink } from "@/components/ui/action-link/action-link";
+import { DataTable } from "@/components/ui/data-table/data-table";
 import { PageHeader } from "@/components/ui/page-header/page-header";
 import { PageShell } from "@/components/ui/page-shell/page-shell";
 import { Pagination } from "@/components/ui/pagination/pagination";
@@ -7,7 +8,7 @@ import { makeReadTrips } from "../composition/trip.factory";
 import { singleSearchParam } from "./trip-format";
 import { TripFilters } from "./trip-filters";
 import styles from "./trip-list.module.css";
-import { TripRequestListRow } from "./trip-request-list-row";
+import { TripRequestCards, TripRequestListRow } from "./trip-request-list-row";
 import { projectTripListItem } from "./workspace/trip-workspace-view";
 
 const PAGE_SIZE = 20;
@@ -60,19 +61,33 @@ export async function TripsPage({
         />
       ) : (
         <section className={styles.listPanel} aria-label="درخواست‌های سفر">
-          <p className={styles.listSummary}>
+          <p className={styles.listSummary} aria-live="polite">
             نمایش {numberFormatter.format(rows.length)} مورد از{" "}
             {numberFormatter.format(result.totalCount)} سفر
           </p>
-          <div className={styles.list}>
-            {rows.map((row) => (
-              <TripRequestListRow
-                key={row.view.tripRequestId}
-                request={row.view}
-                status={row.status}
-              />
-            ))}
-          </div>
+          <DataTable caption="فهرست درخواست‌های سفر" minWidth={800}>
+            <thead>
+              <tr>
+                <th scope="col">شماره درخواست</th>
+                <th scope="col">وضعیت</th>
+                <th scope="col">تاریخ و زمان سفر</th>
+                <th scope="col">مسیر</th>
+                <th scope="col">نوع درخواست</th>
+                <th scope="col">تعداد مسافر</th>
+                <th scope="col">عملیات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <TripRequestListRow
+                  key={row.view.tripRequestId}
+                  request={row.view}
+                  status={row.status}
+                />
+              ))}
+            </tbody>
+          </DataTable>
+          <TripRequestCards rows={rows} />
         </section>
       )}
       <Pagination

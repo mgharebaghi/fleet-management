@@ -10,7 +10,7 @@ import type { TripRequestDetails } from "../../application/trip-records";
 import { changeTripRequestStatusAction } from "../trip.actions";
 import { tripMessages } from "../trip-form-data";
 import styles from "./trip-workspace.module.css";
-import type { TripNextAction, TripWorkspaceView } from "./trip-workspace-view";
+import type { TripWorkspaceView } from "./trip-workspace-view";
 
 export function TripRequestStatusControl({
   details,
