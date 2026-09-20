@@ -76,6 +76,14 @@ export function BackIcon(props: IconProps) {
   );
 }
 
+export function CheckIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M5 12.5l4.2 4.2L19 7" />
+    </Icon>
+  );
+}
+
 export function WarningIcon(props: IconProps) {
   return (
     <Icon {...props}>

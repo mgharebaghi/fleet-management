@@ -50,4 +50,13 @@ describe("isAdminNavSectionActive", () => {
       false,
     );
   });
+
+  it("keeps Trip landing and nested request routes in one section", () => {
+    const tripSection = ADMIN_NAV_SECTIONS.find(
+      (section) => section.label === "سفرها",
+    )!;
+
+    expect(isAdminNavSectionActive("/trips", tripSection)).toBe(true);
+    expect(isAdminNavSectionActive("/trips/123", tripSection)).toBe(true);
+  });
 });

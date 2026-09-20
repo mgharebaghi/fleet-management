@@ -6,16 +6,21 @@ import { createUniqueToken } from "./support/person-fixtures";
 
 test.describe.serial("Fleet Catalogs", () => {
   let e2eDatabaseAdapter: E2EDatabaseAdapter;
+  const createdBrandNames = new Set<string>();
 
   test.beforeAll(async () => {
     e2eDatabaseAdapter = await connectToE2EDatabase();
   });
 
   test.afterEach(async () => {
-    await e2eDatabaseAdapter
-      .underlyingDriver()
-      .request()
-      .query("DELETE FROM fleet.VehicleBrand WHERE BrandName LIKE 'E2E-%'");
+    for (const brandName of createdBrandNames) {
+      await e2eDatabaseAdapter
+        .underlyingDriver()
+        .request()
+        .input("brandName", brandName)
+        .query("DELETE FROM fleet.VehicleBrand WHERE BrandName = @brandName");
+    }
+    createdBrandNames.clear();
   });
 
   test.afterAll(async () => {
@@ -28,6 +33,7 @@ test.describe.serial("Fleet Catalogs", () => {
     page,
   }) => {
     const brandName = `E2E-${createUniqueToken()}`;
+    createdBrandNames.add(brandName);
 
     await page.goto("/fleet/catalogs");
     const brandCard = page.getByRole("region", { name: "برند خودرو" });
@@ -69,6 +75,7 @@ test.describe.serial("Fleet Catalogs", () => {
     page,
   }) => {
     const brandName = `E2E-${createUniqueToken()}`;
+    createdBrandNames.add(brandName);
 
     await e2eDatabaseAdapter
       .underlyingDriver()
@@ -110,6 +117,9 @@ test.describe.serial("Fleet Catalogs", () => {
       { length: 30 },
       () => `E2E-${createUniqueToken()}`,
     );
+    for (const name of brandNames) {
+      createdBrandNames.add(name);
+    }
 
     const insertRequest = e2eDatabaseAdapter.underlyingDriver().request();
     const valuePlaceholders = brandNames.map((brandName, index) => {

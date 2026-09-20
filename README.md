@@ -194,6 +194,22 @@ The national-code checksum lives in one place (`src/features/people/
 application/national-code.ts`) so Create and Update can never validate it
 differently.
 
+## Trips
+
+Trip management starts at `/trips`: staff can create a request with one or
+more passenger-specific Trips, create Locations inline when the catalog is
+empty, persist vehicle/driver planning as a Planned execution, print the
+driver mission sheet from that persisted plan, reconcile the returned paper,
+and optionally record accident/violation rows already present in the contract.
+
+Request numbers use `TR-{JalaliYear}-{4-digit sequence}` and reset each Jalali
+year. Request and execution lifecycles are enforced in Application while
+stored statuses remain English and the Persian UI translates them. No schema
+change is made; RequestNo uniqueness is an Application pre-check and therefore
+still has a race for external writers until SQL Server receives an approved
+unique constraint. See [docs/trips.md](./docs/trips.md) for the full data
+semantics, paper workflow, limitations and focused test commands.
+
 ## Shared presentation foundation
 
 Every page builds on the primitives under `src/components/ui`: `PageShell`

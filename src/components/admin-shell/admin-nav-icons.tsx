@@ -71,6 +71,14 @@ const NAV_ICONS: Record<AdminNavIconName, React.ReactNode> = {
       <path d="M12 3.7v5.2M5 16.1l4.4-2.6M19 16.1l-4.4-2.6" />
     </>
   ),
+  trips: (
+    <>
+      <path d="M5 19.5V7.8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v11.7" />
+      <path d="M5 11h14M8 15h8" />
+      <circle cx="8" cy="19.5" r="1.5" />
+      <circle cx="16" cy="19.5" r="1.5" />
+    </>
+  ),
 };
 
 export function AdminNavIcon({ name }: { name: AdminNavIconName }) {

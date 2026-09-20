@@ -34,7 +34,8 @@ export function ActionButton({
       className={`${styles.button} ${styles[variant]} ${styles[size]}`}
       type={type}
       form={form}
-      disabled={disabled}
+      disabled={disabled || pending}
+      aria-busy={pending}
       onClick={onClick}
     >
       {pending && <span className={styles.spinner} aria-hidden="true" />}

@@ -1,0 +1,115 @@
+.landing {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+
+.landingCard {
+  display: grid;
+  min-height: 230px;
+  place-items: center;
+  align-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface-subtle);
+  text-align: center;
+  transition:
+    border-color var(--app-motion-fast),
+    box-shadow var(--app-motion-fast),
+    transform var(--app-motion-fast);
+}
+
+.landingCard:hover {
+  border-color: var(--app-accent);
+  box-shadow: var(--app-shadow-control);
+  transform: translateY(-2px);
+}
+
+.landingIcon {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--app-primary);
+  background: var(--app-info-background);
+  font-size: 36px;
+  font-weight: 700;
+}
+
+.landingCard strong {
+  color: var(--app-heading);
+  font-size: var(--font-size-xl);
+}
+
+.landingCard span {
+  color: var(--app-text-muted);
+}
+
+.recordLink {
+  color: var(--app-primary);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.listTable :global(td) {
+  overflow-wrap: break-word;
+}
+
+.stack {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.entityCard {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-md);
+  background: var(--app-surface-subtle);
+}
+
+.entityHeader,
+.entityActions,
+.assignmentMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.entityHeader h3 {
+  color: var(--app-heading);
+  font-size: var(--font-size-md);
+}
+
+.entityActions {
+  justify-content: flex-start;
+}
+
+.muted {
+  color: var(--app-text-muted);
+}
+
+.assignmentMeta {
+  justify-content: flex-start;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 760px) {
+  .landing {
+    grid-template-columns: 1fr;
+  }
+
+  .entityHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

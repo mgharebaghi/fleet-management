@@ -26,6 +26,7 @@ type SearchableSelectProps = {
   disabled?: boolean;
   invalid?: boolean;
   describedBy?: string;
+  onValueChange?: (value: string) => void;
 };
 
 /**
@@ -46,6 +47,7 @@ export function SearchableSelect({
   disabled = false,
   invalid = false,
   describedBy,
+  onValueChange,
 }: SearchableSelectProps) {
   const fieldId = useId();
   const panelId = `${fieldId}-panel`;
@@ -166,6 +168,7 @@ export function SearchableSelect({
       return;
     }
     setSelectedValue(option.value);
+    onValueChange?.(option.value);
     setIsOpen(false);
     triggerRef.current?.focus();
   }

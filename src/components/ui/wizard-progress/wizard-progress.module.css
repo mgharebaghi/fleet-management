@@ -1,0 +1,217 @@
+.progress {
+  min-width: 0;
+}
+
+.list {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: 0;
+  padding: var(--space-4) var(--space-2) var(--space-3);
+  list-style: none;
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface-subtle);
+  border: 1px solid var(--app-border-subtle);
+  min-width: 0;
+}
+
+.item {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+}
+
+.markerTrack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 32px;
+}
+
+.rail {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 50%;
+  height: 2px;
+  background: var(--app-border);
+  z-index: 1;
+  transition: background-color var(--app-motion-fast);
+}
+
+.railStart {
+  inset-inline-start: 0;
+}
+
+.railEnd {
+  inset-inline-end: 0;
+}
+
+.rail[data-state="complete"] {
+  background: var(--app-primary);
+}
+
+.marker {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 1.5px solid var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-text-muted);
+  transition:
+    border-color var(--app-motion-fast),
+    background-color var(--app-motion-fast),
+    box-shadow var(--app-motion-fast);
+}
+
+.stepNumber {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.item[data-state="upcoming"] .marker {
+  border-color: var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-text-muted);
+}
+
+.item[data-state="complete"] .marker {
+  border-color: var(--app-primary);
+  background: var(--app-primary);
+  color: var(--app-on-primary);
+}
+
+.item[data-state="current"] .marker {
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--app-surface);
+  background: var(--app-primary);
+  color: var(--app-on-primary);
+  box-shadow: 0 0 0 3px var(--app-focus-ring);
+}
+
+.currentDot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--app-on-primary);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  min-width: 0;
+  padding: 0 var(--space-1);
+}
+
+.label {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--app-text-muted);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.item[data-state="complete"] .label {
+  color: var(--app-text);
+  font-weight: 600;
+}
+
+.item[data-state="current"] .label {
+  color: var(--app-heading);
+  font-weight: 700;
+}
+
+.currentBadge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 1px var(--space-2);
+  border-radius: 999px;
+  background: var(--app-info-background);
+  color: var(--app-info-text);
+  border: 1px solid rgb(17 58 109 / 12%);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .list {
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-3);
+  }
+
+  .item {
+    flex: initial;
+    width: 100%;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--space-3);
+    text-align: right;
+  }
+
+  .markerTrack {
+    width: 28px;
+    height: auto;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+
+  .rail {
+    display: none;
+  }
+
+  .item:not(:last-child) .markerTrack::after {
+    content: "";
+    position: absolute;
+    top: 26px;
+    bottom: -16px;
+    left: calc(50% - 1px);
+    width: 2px;
+    background: var(--app-border);
+    z-index: 1;
+  }
+
+  .item:not(:last-child) .markerTrack[data-next-complete="true"]::after {
+    background: var(--app-primary);
+  }
+
+  .content {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: 0;
+    min-height: 26px;
+    padding: 0;
+  }
+
+  .label {
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marker,
+  .rail {
+    transition: none;
+  }
+}
