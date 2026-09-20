@@ -399,3 +399,47 @@ describe("Wizard Step 6: ReviewStep", () => {
     expect(markup).toContain("ثبت نهایی درخواست");
   });
 });
+
+describe("Wizard Step 1: RequestStep", () => {
+  it("renders purpose error and aria-invalid when PURPOSE_TOO_LONG", () => {
+    const markup = renderToStaticMarkup(
+      <RequestStep
+        hidden={false}
+        prefix="trip-create-wizard"
+        pending={false}
+        requestTypes={[
+          {
+            tripRequestTypeId: 1,
+            typeCode: "COMMON_ORIGIN",
+            typeName: "مبدأ مشترک",
+            description: null,
+          },
+        ]}
+        locations={[mockLocation1]}
+        selectedTypeId="1"
+        typeRestoreNonce={0}
+        selectedType={{
+          tripRequestTypeId: 1,
+          typeCode: "COMMON_ORIGIN",
+          typeName: "مبدأ مشترک",
+          description: null,
+        }}
+        shareOrigin
+        shareDestination={false}
+        state={{ error: "PURPOSE_TOO_LONG", field: "purpose" }}
+        value={(name) => (name === "purpose" ? "الف".repeat(501) : "")}
+        fieldInvalid={(name) => name === "purpose"}
+        fieldErrorId={(name) =>
+          name === "purpose" ? "trip-create-wizard-purpose-error" : undefined
+        }
+        onTypeChange={noop}
+        onNext={noop}
+      />,
+    );
+
+    expect(markup).toContain('aria-invalid="true"');
+    expect(markup).toContain('id="trip-create-wizard-purpose-error"');
+    expect(markup).toContain("هدف سفر حداکثر ۵۰۰ نویسه است.");
+    expect(markup).toContain("اطلاعات اصلی");
+  });
+});

@@ -15,6 +15,7 @@ import {
   passengerIndexFromField,
   passengerStepGaps,
   preservedLocationValue,
+  prunePassengerValues,
   requestStepGaps,
   routePointLocationError,
   reviewContainsRawId,
@@ -373,6 +374,20 @@ describe("Trip create wizard presentation", () => {
     expect(
       dropPassengerSnapshot(merged, 1)[1],
     ).toBeUndefined();
+    expect(
+      prunePassengerValues(
+        {
+          "passenger.0.personId": "44",
+          "passenger.1.personId": "55",
+          "passenger.2.personId": "66",
+          tripRequestTypeId: "3",
+        },
+        1,
+      ),
+    ).toEqual({
+      "passenger.0.personId": "44",
+      tripRequestTypeId: "3",
+    });
     expect(
       createRequestSummaryPreview(
         {

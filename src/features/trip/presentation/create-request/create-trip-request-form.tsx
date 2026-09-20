@@ -10,7 +10,7 @@ import type {
   TripRequestTypeReference,
 } from "../../application/trip-records";
 import { loadCreateTripAssignmentsAction } from "../trip.actions";
-import { consecutiveFormIndexes, tripFormValues, type TripActionState } from "../trip-form-data";
+import { consecutiveFormIndexes, tripFormValues, tripMessages, type TripActionState } from "../trip-form-data";
 import { LOCATION_CREATED_EVENT } from "../location/location-picker";
 import { AssignmentStep } from "./assignment-step";
 import { CreateRequestSummary } from "./create-request-summary";
@@ -25,6 +25,7 @@ import {
   passengerIndexFromField,
   passengerStepGaps,
   preservedLocationValue,
+  prunePassengerValues,
   requestStepGaps,
   sharesDestination,
   sharesOrigin,
@@ -78,7 +79,7 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
   const [keptLocations, setKeptLocations] = useState<Record<string, string>>({});
   const [typeRestoreNonce, setTypeRestoreNonce] = useState(0);
   const selectedTypeIdRef = useRef(selectedTypeId);
-  const [formErrorState] = useState<TripActionState>({});
+  const [formErrorState, setFormErrorState] = useState<TripActionState>({});
 
   useInsertionEffect(() => {
     selectedTypeIdRef.current = selectedTypeId || "";
@@ -123,10 +124,13 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
     return () => window.removeEventListener(LOCATION_CREATED_EVENT, addLocation);
   }, []);
 
-  function readValues() {
+  function readValues(count = passengerCount) {
     const form = formRef.current;
-    if (!form) return formValuesState;
-    return { ...formValuesState, ...(tripFormValues(new FormData(form)) ?? {}) };
+    if (!form) return prunePassengerValues(formValuesState, count);
+    return prunePassengerValues(
+      { ...formValuesState, ...(tripFormValues(new FormData(form)) ?? {}) },
+      count,
+    );
   }
 
   function refreshSummary(values = readValues()) {
@@ -147,8 +151,20 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
 
   function goToPassengers() {
     const values = readValues();
+    if ((values.purpose?.length ?? 0) > 500) {
+      setFormValuesState(values);
+      setFormErrorState({
+        error: "PURPOSE_TOO_LONG",
+        field: "purpose",
+        values,
+      });
+      setStepNotice(tripMessages.PURPOSE_TOO_LONG);
+      return;
+    }
+    setFormErrorState({});
     const gaps = requestStepGaps(values, selectedType?.typeCode);
     if (gaps.length) {
+      setFormValuesState(values);
       setStepNotice(gapNotice(gaps));
       return;
     }
@@ -170,13 +186,15 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
   }
 
   function removeLastPassenger() {
-    snapshotActivePassenger();
     const removedIndex = passengerCount - 1;
-    setPassengerCount((count) => Math.max(1, count - 1));
+    const nextCount = Math.max(1, passengerCount - 1);
+    const values = readValues(nextCount);
+    setPassengerCount(nextCount);
     setPassengerSnapshots((current) => dropPassengerSnapshot(current, removedIndex));
     setSelectedAssignments((current) => Object.fromEntries(Object.entries(current).filter(([key]) => Number(key) !== removedIndex)));
     setRoutes((current) => current.filter((route) => route.passengerKey !== removedIndex));
-    setActivePassengerIndex((index) => Math.min(index, Math.max(0, passengerCount - 2)));
+    setFormValuesState(values);
+    setActivePassengerIndex((index) => Math.min(index, Math.max(0, nextCount - 1)));
   }
 
   function buildPendingPassengers(values: Record<string, string>, nextReview: TripRequestReview): CreateWizardPassenger[] {

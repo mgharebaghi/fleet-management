@@ -63,8 +63,36 @@ describe("Trip execution lifecycle", () => {
 });
 
 describe("Trip RequestNo sequence", () => {
-  it("uses the request date's Tehran Jalali year", () => {
-    expect(jalaliYearOf(new Date("2025-03-21T00:00:00Z"))).toBe(1404);
+  describe("jalaliYearOf", () => {
+    it("resolves a standard mid-year date", () => {
+      expect(jalaliYearOf(new Date("2025-07-15T12:00:00Z"))).toBe(1404);
+    });
+
+    it("resolves exact Jalali year boundary / Nowruz transition for 1403/1404 in Tehran timezone", () => {
+      // 1403 is a leap year (Esfand has 30 days).
+      // 1403/12/30 23:59:59 in Tehran (UTC+03:30) is 2025-03-20T20:29:59Z.
+      expect(jalaliYearOf(new Date("2025-03-20T20:29:59Z"))).toBe(1403);
+      // 1404/01/01 00:00:00 in Tehran (UTC+03:30) is 2025-03-20T20:30:00Z.
+      expect(jalaliYearOf(new Date("2025-03-20T20:30:00Z"))).toBe(1404);
+      expect(jalaliYearOf(new Date("2025-03-21T00:00:00Z"))).toBe(1404);
+    });
+
+    it("resolves exact Jalali year boundary / Nowruz transition for 1404/1405 in Tehran timezone", () => {
+      // 1404 is a standard year (Esfand has 29 days).
+      // 1404/12/29 23:59:59 in Tehran (UTC+03:30) is 2026-03-20T20:29:59Z.
+      expect(jalaliYearOf(new Date("2026-03-20T20:29:59Z"))).toBe(1404);
+      // 1405/01/01 00:00:00 in Tehran (UTC+03:30) is 2026-03-20T20:30:00Z.
+      expect(jalaliYearOf(new Date("2026-03-20T20:30:00Z"))).toBe(1405);
+    });
+
+    it("throws when given an invalid date", () => {
+      expect(() => jalaliYearOf(new Date("invalid"))).toThrow(
+        /Invalid time value|The request date has no supported Jalali year/,
+      );
+      expect(() => jalaliYearOf(new Date(Number.NaN))).toThrow(
+        /Invalid time value|The request date has no supported Jalali year/,
+      );
+    });
   });
 
   it("normalizes existing numbers and increments the yearly maximum", () => {

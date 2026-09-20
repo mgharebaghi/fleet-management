@@ -433,6 +433,19 @@ export function dropPassengerSnapshot(
   return next;
 }
 
+export function prunePassengerValues(
+  values: Record<string, string>,
+  passengerCount: number,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(values).filter(([key]) => {
+      const match = key.match(/^passenger\.(\d+)\./);
+      if (!match) return true;
+      return Number(match[1]) < passengerCount;
+    }),
+  );
+}
+
 export function hasPassengerPickupOverride(
   requestedPickupDateTime: Date | null,
   requestedTravelDateTime: Date,
