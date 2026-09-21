@@ -4,7 +4,7 @@ import type {
   TripLocationReference,
   TripPersonReference,
 } from "../../application/trip-records";
-import { TripPassengerSwitcher } from "../trip-passenger-switcher";
+import { TripPassengerSwitcher } from "../passenger/trip-passenger-switcher";
 import styles from "./create-trip.module.css";
 import { PassengerEditor } from "./passenger-editor";
 

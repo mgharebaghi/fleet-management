@@ -1,7 +1,7 @@
 "use client";
 
-import { ActionButton } from "../../../components/ui/action-button/action-button";
-import styles from "./create-request/create-trip.module.css";
+import { ActionButton } from "../../../../components/ui/action-button/action-button";
+import styles from "../create-request/create-trip.module.css";
 
 export type TripPassengerSwitcherProps = {
   passengerCount: number;

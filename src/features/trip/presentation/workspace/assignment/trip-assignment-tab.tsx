@@ -8,7 +8,7 @@ import type {
   TripExecutionRecord,
   TripRequestDetails,
 } from "../../../application/trip-records";
-import { TripAssignmentPlanner } from "../../trip-assignment-form";
+import { TripAssignmentPlanner } from "./trip-assignment-form";
 import { formatTripDateTime } from "../../trip-format";
 import { tripRequestStatusTone } from "../../trip-list-status-tone";
 import { executionStatusLabel } from "../../trip-status";

@@ -8,9 +8,9 @@ import { FormActions } from "@/components/ui/form-field/form-field";
 import { IconActionButton } from "@/components/ui/icon-action-button/icon-action-button";
 import { DeleteIcon } from "@/components/ui/icon/icons";
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
-import type { TripRoute } from "../application/trip-records";
-import { deleteTripRouteAction } from "./trip.actions";
-import { tripMessages, type TripActionState } from "./trip-form-data";
+import type { TripRoute } from "../../application/trip-records";
+import { deleteTripRouteAction } from "../trip.actions";
+import { tripMessages, type TripActionState } from "../trip-form-data";
 
 export function DeleteRouteButton({
   tripRequestId,

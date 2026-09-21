@@ -2,7 +2,7 @@
 
 import { Children, useState, type ReactNode } from "react";
 
-import { TripPassengerSwitcher } from "../trip-passenger-switcher";
+import { TripPassengerSwitcher } from "../passenger/trip-passenger-switcher";
 import styles from "./trip-workspace.module.css";
 
 export function TripWorkspacePassengerPanel({

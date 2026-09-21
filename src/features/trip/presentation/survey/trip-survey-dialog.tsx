@@ -16,11 +16,11 @@ import { TechnicalValue } from "@/components/ui/technical-value/technical-value"
 import type {
   TripExecutionRecord,
   TripPersonReference,
-} from "../application/trip-records";
-import { formatTripDateTime } from "./trip-format";
-import { tripMessages, type TripActionState } from "./trip-form-data";
-import { savePassengerSurveyAction } from "./trip.actions";
-import styles from "./trip-forms.module.css";
+} from "../../application/trip-records";
+import { formatTripDateTime } from "../trip-format";
+import { tripMessages, type TripActionState } from "../trip-form-data";
+import { savePassengerSurveyAction } from "../trip.actions";
+import styles from "../trip-forms.module.css";
 
 const RATING_OPTIONS = [
   { value: 1, label: "خیلی ضعیف", number: "۱" },

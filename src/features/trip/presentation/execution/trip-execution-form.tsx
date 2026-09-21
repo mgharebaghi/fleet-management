@@ -18,12 +18,12 @@ import { TimeSelect } from "@/components/ui/time-select/time-select";
 import type {
   TripExecutionRecord,
   TripPassengerRecord,
-} from "../application/trip-records";
-import { saveTripExecutionAction } from "./trip.actions";
-import { formatTripDateTime } from "./trip-format";
-import { tehranDateTimeInputs, tripMessages } from "./trip-form-data";
-import { executionStatusLabel } from "./trip-status";
-import styles from "./trip-forms.module.css";
+} from "../../application/trip-records";
+import { saveTripExecutionAction } from "../trip.actions";
+import { formatTripDateTime } from "../trip-format";
+import { tehranDateTimeInputs, tripMessages } from "../trip-form-data";
+import { executionStatusLabel } from "../trip-status";
+import styles from "../trip-forms.module.css";
 
 function executionStatusTone(
   status: string,

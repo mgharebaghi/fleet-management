@@ -3,7 +3,7 @@ import type {
   TripLocationReference,
   TripRequestDetails,
 } from "../../../application/trip-records";
-import { TripRouteDialog } from "../../trip-route-dialog";
+import { TripRouteDialog } from "../../route/trip-route-dialog";
 import { RouteCard } from "../trip-route-card";
 import styles from "../trip-workspace.module.css";
 import { groupRoutesForDisplay } from "../trip-workspace-view";

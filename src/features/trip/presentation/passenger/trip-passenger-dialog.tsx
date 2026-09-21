@@ -7,23 +7,23 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog/confirm-dialog";
 import { Dialog } from "@/components/ui/dialog/dialog";
 import { FormActions } from "@/components/ui/form-field/form-field";
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
-import { executionHasStarted } from "../application/trip-lifecycle";
+import { executionHasStarted } from "../../application/trip-lifecycle";
 import type {
   TripLocationReference,
   TripPassengerRecord,
   TripPersonReference,
-} from "../application/trip-records";
-import { PassengerEditor } from "./create-request/passenger-editor";
+} from "../../application/trip-records";
+import { PassengerEditor } from "../create-request/passenger-editor";
 import {
   tehranDateTimeInputs,
   tripMessages,
-} from "./trip-form-data";
+} from "../trip-form-data";
 import {
   addTripPassengerAction,
   deleteTripPassengerAction,
   updateTripPassengerAction,
-} from "./trip.actions";
-import styles from "./trip-forms.module.css";
+} from "../trip.actions";
+import styles from "../trip-forms.module.css";
 
 function TripPassengerForm({
   tripRequestId,

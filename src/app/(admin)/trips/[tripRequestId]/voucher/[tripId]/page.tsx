@@ -1,4 +1,4 @@
-import { TripVoucherPage } from "@/features/trip/presentation/trip-voucher";
+import { TripVoucherPage } from "@/features/trip/presentation/voucher/trip-voucher";
 
 export const metadata = { title: "برگه مأموریت سفر — نسخه راننده" };
 

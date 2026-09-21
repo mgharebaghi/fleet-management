@@ -1,13 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { projectTripListItem } from "./workspace/trip-workspace-view";
+import { projectTripListItem } from "../workspace/trip-workspace-view";
 import {
   TripRequestCard,
   TripRequestCards,
   TripRequestListRow,
 } from "./trip-request-list-row";
-import { tripRequestStatusTone } from "./trip-list-status-tone";
+import { tripRequestStatusTone } from "../trip-list-status-tone";
 
 describe("TripRequestListRow", () => {
   it("renders compact row fields from the list read model projection as table row", () => {

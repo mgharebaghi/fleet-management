@@ -5,7 +5,7 @@ import type {
   TripLocationReference,
   TripPassengerRecord,
   TripRoute,
-} from "../application/trip-records";
+} from "../../application/trip-records";
 import {
   hydrateRouteFormValues,
   resolveTargetRoute,
@@ -15,33 +15,33 @@ import {
 
 // Resolve component mocks using relative paths
 vi.mock("@/components/ui/dialog/dialog", () =>
-  import("../../../components/ui/dialog/dialog"),
+  import("../../../../components/ui/dialog/dialog"),
 );
 vi.mock("@/components/ui/action-button/action-button", () =>
-  import("../../../components/ui/action-button/action-button"),
+  import("../../../../components/ui/action-button/action-button"),
 );
 vi.mock("@/components/ui/form-field/form-field", () =>
-  import("../../../components/ui/form-field/form-field"),
+  import("../../../../components/ui/form-field/form-field"),
 );
 vi.mock("@/components/ui/form-grid/form-grid", () =>
-  import("../../../components/ui/form-grid/form-grid"),
+  import("../../../../components/ui/form-grid/form-grid"),
 );
 vi.mock("@/components/ui/inline-notice/inline-notice", () =>
-  import("../../../components/ui/inline-notice/inline-notice"),
+  import("../../../../components/ui/inline-notice/inline-notice"),
 );
 vi.mock("@/components/ui/searchable-select/searchable-select", () =>
-  import("../../../components/ui/searchable-select/searchable-select"),
+  import("../../../../components/ui/searchable-select/searchable-select"),
 );
 vi.mock("@/components/ui/status-badge/status-badge", () =>
-  import("../../../components/ui/status-badge/status-badge"),
+  import("../../../../components/ui/status-badge/status-badge"),
 );
 vi.mock("@/components/ui/technical-value/technical-value", () =>
-  import("../../../components/ui/technical-value/technical-value"),
+  import("../../../../components/ui/technical-value/technical-value"),
 );
-vi.mock("./location/location.actions", () => ({
+vi.mock("../location/location.actions", () => ({
   createLocationAction: vi.fn(),
 }));
-vi.mock("./trip.actions", () => ({
+vi.mock("../trip.actions", () => ({
   addTripRouteAction: vi.fn(),
 }));
 

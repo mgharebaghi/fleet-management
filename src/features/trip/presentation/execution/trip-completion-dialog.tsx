@@ -4,14 +4,14 @@ import { useId, useState } from "react";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
 import { Dialog } from "@/components/ui/dialog/dialog";
-import type { TripPassengerRecord } from "../application/trip-records";
+import type { TripPassengerRecord } from "../../application/trip-records";
 import {
   persistedPlanningExecution,
-} from "./trip-execution-current";
+} from "../trip-execution-current";
 import { TripExecutionForm } from "./trip-execution-form";
-import { executionStatusLabel } from "./trip-status";
-import styles from "./trip-forms.module.css";
-import workspaceStyles from "./workspace/trip-workspace.module.css";
+import { executionStatusLabel } from "../trip-status";
+import styles from "../trip-forms.module.css";
+import workspaceStyles from "../workspace/trip-workspace.module.css";
 
 export function TripCompletionButton({
   tripRequestId,

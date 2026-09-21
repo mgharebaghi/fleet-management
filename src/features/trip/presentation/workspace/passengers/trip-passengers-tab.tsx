@@ -19,7 +19,7 @@ import {
   AddPassengerButton,
   DeletePassengerButton,
   EditPassengerButton,
-} from "../../trip-passenger-dialog";
+} from "../../passenger/trip-passenger-dialog";
 import styles from "../trip-workspace.module.css";
 import {
   presentPlanningExecutionStatusLabel,

@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { ActionLink } from "@/components/ui/action-link/action-link";
 import { TechnicalValue } from "@/components/ui/technical-value/technical-value";
 import { VehiclePlate } from "@/components/ui/vehicle-plate/vehicle-plate";
-import { makeReadTrips } from "../composition/trip.factory";
-import { persistedPlanningExecution } from "./trip-execution-current";
+import { makeReadTrips } from "../../composition/trip.factory";
+import { persistedPlanningExecution } from "../trip-execution-current";
 import { PrintTripVoucherButton } from "./print-trip-voucher-button";
 import styles from "./trip-voucher.module.css";
 

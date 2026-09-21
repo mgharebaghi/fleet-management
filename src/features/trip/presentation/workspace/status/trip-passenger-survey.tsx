@@ -1,7 +1,7 @@
 import { StatusBadge } from "@/components/ui/status-badge/status-badge";
 import type { TripRequestDetails } from "../../../application/trip-records";
 import { formatTripDateTime } from "../../trip-format";
-import { TripSurveyButton } from "../../trip-survey-dialog";
+import { TripSurveyButton } from "../../survey/trip-survey-dialog";
 import styles from "../trip-workspace.module.css";
 
 export function PassengerSurveySection({

@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { TripPassengerSwitcher } from "../trip-passenger-switcher";
+import { TripPassengerSwitcher } from "../passenger/trip-passenger-switcher";
 
 const noop = () => {};
 

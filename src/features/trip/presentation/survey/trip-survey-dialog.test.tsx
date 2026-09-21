@@ -4,28 +4,28 @@ import { describe, expect, it, vi } from "vitest";
 import type {
   TripExecutionRecord,
   TripPersonReference,
-} from "../application/trip-records";
+} from "../../application/trip-records";
 import { TripSurveyDialog } from "./trip-survey-dialog";
 
 vi.mock("@/components/ui/dialog/dialog", () =>
-  import("../../../components/ui/dialog/dialog"),
+  import("../../../../components/ui/dialog/dialog"),
 );
 vi.mock("@/components/ui/action-button/action-button", () =>
-  import("../../../components/ui/action-button/action-button"),
+  import("../../../../components/ui/action-button/action-button"),
 );
 vi.mock("@/components/ui/form-field/form-field", () =>
-  import("../../../components/ui/form-field/form-field"),
+  import("../../../../components/ui/form-field/form-field"),
 );
 vi.mock("@/components/ui/inline-notice/inline-notice", () =>
-  import("../../../components/ui/inline-notice/inline-notice"),
+  import("../../../../components/ui/inline-notice/inline-notice"),
 );
 vi.mock("@/components/ui/status-badge/status-badge", () =>
-  import("../../../components/ui/status-badge/status-badge"),
+  import("../../../../components/ui/status-badge/status-badge"),
 );
 vi.mock("@/components/ui/technical-value/technical-value", () =>
-  import("../../../components/ui/technical-value/technical-value"),
+  import("../../../../components/ui/technical-value/technical-value"),
 );
-vi.mock("./trip.actions", () => ({
+vi.mock("../trip.actions", () => ({
   savePassengerSurveyAction: vi.fn(),
 }));
 

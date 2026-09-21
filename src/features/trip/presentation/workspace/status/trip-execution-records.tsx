@@ -1,6 +1,6 @@
 import { StatusBadge } from "@/components/ui/status-badge/status-badge";
 import type { TripRequestDetails } from "../../../application/trip-records";
-import { TripCompletionButton } from "../../trip-completion-dialog";
+import { TripCompletionButton } from "../../execution/trip-completion-dialog";
 import { persistedPlanningExecution } from "../../trip-execution-current";
 import { formatTripDateTime } from "../../trip-format";
 import { tripRequestStatusTone } from "../../trip-list-status-tone";

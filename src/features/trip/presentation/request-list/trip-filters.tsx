@@ -6,7 +6,7 @@ import {
   ListSelectField,
 } from "@/components/ui/list-filters/list-filter-bar";
 import { useListFilters } from "@/components/ui/list-filters/use-list-filters";
-import { requestStatusLabel } from "./trip-status";
+import { requestStatusLabel } from "../trip-status";
 
 export function TripFilters({
   search,
