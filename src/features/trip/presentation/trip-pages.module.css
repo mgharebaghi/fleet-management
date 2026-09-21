@@ -45,8 +45,35 @@
   font-size: var(--font-size-xl);
 }
 
+.landingTitleWrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.landingBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 9999px;
+  background: var(--app-danger);
+  color: #ffffff !important;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgb(180 35 53 / 30%);
+}
+
 .landingCard span {
   color: var(--app-text-muted);
+}
+
+.landingCard .landingBadge {
+  color: #ffffff !important;
 }
 
 .recordLink {

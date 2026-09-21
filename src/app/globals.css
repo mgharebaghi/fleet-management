@@ -71,6 +71,9 @@
   --app-danger-text: #9e2937;
   --app-warning-background: #fff8e6;
   --app-warning-text: #875a06;
+  --app-purple-background: #ede9fe;
+  --app-purple-text: #581c87;
+  --app-purple-border: #c4b5fd;
   --app-on-primary: #ffffff;
   --app-card-shadow: 0 18px 48px rgb(13 27 42 / 9%);
   --app-shadow-control: 0 1px 2px rgb(13 27 42 / 5%);

@@ -358,6 +358,147 @@ export type CreateCompleteTripRequestResult =
       };
     };
 
+export type CreateTripRequestResult =
+  | {
+      success: true;
+    }
+  | {
+      success: false;
+      error: string;
+      field?: string;
+      failedLocation?: {
+        passengerIndex: number;
+        locationRole: "origin" | "destination";
+      };
+    };
+
+export async function createTripRequestAction(
+  values: Record<string, string>,
+): Promise<CreateTripRequestResult> {
+  const passengerIndexes = consecutiveFormIndexes(
+    values,
+    (index) => `passenger.${index}.personId`,
+  );
+  const commonOrigin = values.commonOriginLocationId;
+  const commonDestination = values.commonDestinationLocationId;
+  const travelDateTime = requestedTravelDateTime(values);
+
+  let result: TripResult;
+  try {
+    result = await makeManageTrips().createRequest({
+      tripRequestTypeId: Number(values.tripRequestTypeId),
+      requestedTravelDateTime: travelDateTime,
+      purpose: values.purpose ?? null,
+      description: values.requestDescription ?? null,
+      passengers: passengerIndexes.map((index) => ({
+        passengerPersonId: Number(values[`passenger.${index}.personId`]),
+        originLocationId: Number(
+          commonOrigin || values[`passenger.${index}.originLocationId`],
+        ),
+        destinationLocationId: Number(
+          commonDestination ||
+            values[`passenger.${index}.destinationLocationId`],
+        ),
+        requestedPickupDateTime: passengerRequestedPickupDateTime(
+          values,
+          index,
+          travelDateTime,
+        ),
+        pickupOrder: parseOptionalInteger(
+          values[`passenger.${index}.pickupOrder`],
+        ),
+        dropoffOrder: parseOptionalInteger(
+          values[`passenger.${index}.dropoffOrder`],
+        ),
+        status: null,
+        description: values[`passenger.${index}.description`] ?? null,
+      })),
+    });
+  } catch {
+    return { success: false, error: "UNEXPECTED" };
+  }
+
+  if (!result.success) {
+    return {
+      success: false,
+      error: result.error,
+      field: result.failedLocation
+        ? wizardFieldForLocationFailure(
+            values.requestTypeCode,
+            result.failedLocation,
+          )
+        : result.field ?? tripErrorFields[result.error],
+      failedLocation: result.failedLocation,
+    };
+  }
+  revalidatePath("/trips", "layout");
+  redirect("/trips");
+}
+
+export type AssignInitialTripRequestPayload = {
+  tripRequestId: number;
+  assignments: Record<number, number>;
+  routes: Array<{
+    tripId: number;
+    routeName: string;
+    alternativeNo: number | null;
+    distanceKm: string | null;
+    estimatedDurationMinute: number | null;
+    isSelected: boolean;
+    description: string | null;
+    points: Array<{
+      locationId: number;
+      trafficZone: string | null;
+      sequenceNo: number | null;
+      distanceFromStartKm: string | null;
+      description: string | null;
+    }>;
+  }>;
+};
+
+export async function assignInitialTripRequestAction(
+  payload: AssignInitialTripRequestPayload,
+): Promise<{ success: true } | { success: false; error: string; field?: string }> {
+  let result: TripResult;
+  try {
+    const passengers = Object.entries(payload.assignments).map(
+      ([tripIdStr, assignmentId]) => {
+        const tripId = Number(tripIdStr);
+        const passengerRoutes = payload.routes
+          .filter((route) => route.tripId === tripId)
+          .map((route) => ({
+            routeName: route.routeName,
+            alternativeNo: route.alternativeNo,
+            distanceKm: route.distanceKm,
+            estimatedDurationMinute: route.estimatedDurationMinute,
+            isSelected: route.isSelected,
+            description: route.description,
+            points: route.points,
+          }));
+        return {
+          tripId,
+          vehicleDriverAssignmentId: assignmentId,
+          routes: passengerRoutes,
+        };
+      },
+    );
+
+    result = await makeManageTrips().assignInitialRequest({
+      tripRequestId: payload.tripRequestId,
+      passengers,
+    });
+  } catch {
+    return { success: false, error: "UNEXPECTED" };
+  }
+
+  if (!result.success) {
+    return { success: false, error: result.error, field: result.field };
+  }
+
+  revalidatePath("/trips", "layout");
+  redirect(`/trips/${payload.tripRequestId}`);
+}
+
 export async function createCompleteTripRequestAction(
   payload: CreateWizardPayload,
 ): Promise<CreateCompleteTripRequestResult> {

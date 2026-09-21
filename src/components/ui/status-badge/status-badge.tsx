@@ -1,8 +1,15 @@
 import styles from "./status-badge.module.css";
 
-type StatusBadgeProps = {
+export type StatusBadgeTone =
+  | "positive"
+  | "negative"
+  | "warning"
+  | "info"
+  | "purple";
+
+export type StatusBadgeProps = {
   label: string;
-  tone: "positive" | "negative" | "warning" | "info";
+  tone: StatusBadgeTone;
 };
 
 export function StatusBadge({ label, tone }: StatusBadgeProps) {

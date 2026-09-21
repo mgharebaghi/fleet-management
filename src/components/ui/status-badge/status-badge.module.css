@@ -1,12 +1,16 @@
 .positive,
 .negative,
 .warning,
-.info {
+.info,
+.purple {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 3px 10px;
   border-radius: 999px;
   font-size: var(--font-size-xs);
   font-weight: 700;
+  border: 1px solid transparent;
 }
 
 .positive {
@@ -27,4 +31,10 @@
 .info {
   background: var(--app-info-background);
   color: var(--app-info-text);
+}
+
+.purple {
+  background: var(--app-purple-background);
+  color: var(--app-purple-text);
+  border-color: var(--app-purple-border);
 }

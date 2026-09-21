@@ -470,6 +470,8 @@ describe.sequential("Trip SQL Server integration", () => {
         origins: [fixture.origin.LocationName],
         destinations: [fixture.destination.LocationName],
       });
+      const pendingCount = await repository.countPendingRequests();
+      expect(pendingCount).toBeGreaterThanOrEqual(1);
 
       const routeId = successfulId(
         await manage.addRoute({

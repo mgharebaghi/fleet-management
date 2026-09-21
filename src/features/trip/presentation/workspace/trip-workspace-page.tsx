@@ -96,11 +96,6 @@ function WorkspaceIdentity({
           <strong>{view.passengerCount} نفر</strong>
         </article>
       </div>
-      {view.purpose && (
-        <p className={styles.purposeLine}>
-          <span className={styles.muted}>هدف سفر:</span> {view.purpose}
-        </p>
-      )}
     </header>
   );
 }

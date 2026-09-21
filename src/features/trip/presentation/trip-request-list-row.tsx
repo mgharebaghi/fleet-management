@@ -32,6 +32,8 @@ export function TripRequestListRow({
     request.purpose,
     request.requestTypeName,
   );
+  const isPendingHandling = status === "New";
+  const actionLabel = isPendingHandling ? "رسیدگی" : "مشاهده";
 
   return (
     <tr>
@@ -65,10 +67,14 @@ export function TripRequestListRow({
         </div>
       </td>
       <td>{formatTripListPassengerCount(request.passengerCount)}</td>
-      <td>
-        <ActionLink href={`/trips/${request.tripRequestId}`} variant="secondary">
+      <td className={styles.actionCell}>
+        <ActionLink
+          href={`/trips/${request.tripRequestId}`}
+          variant="secondary"
+          size="sm"
+        >
           <ViewIcon />
-          مشاهده جزئیات
+          {actionLabel}
         </ActionLink>
       </td>
     </tr>
@@ -89,6 +95,8 @@ export function TripRequestCard({
     request.purpose,
     request.requestTypeName,
   );
+  const isPendingHandling = status === "New";
+  const actionLabel = isPendingHandling ? "رسیدگی" : "مشاهده";
 
   return (
     <RecordCard>
@@ -123,9 +131,10 @@ export function TripRequestCard({
         <ActionLink
           href={`/trips/${request.tripRequestId}`}
           variant="secondary"
+          size="sm"
         >
           <ViewIcon />
-          مشاهده جزئیات
+          {actionLabel}
         </ActionLink>
       </div>
     </RecordCard>

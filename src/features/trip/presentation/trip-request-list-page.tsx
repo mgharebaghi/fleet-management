@@ -74,7 +74,7 @@ export async function TripsPage({
                 <th scope="col">مسیر</th>
                 <th scope="col">نوع درخواست</th>
                 <th scope="col">تعداد مسافر</th>
-                <th scope="col">عملیات</th>
+                <th scope="col" className={styles.actionHeader}>عملیات</th>
               </tr>
             </thead>
             <tbody>

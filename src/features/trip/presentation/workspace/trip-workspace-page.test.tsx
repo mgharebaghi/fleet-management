@@ -916,4 +916,13 @@ describe("Trip workspace presentation", () => {
     expect(markup).not.toContain('data-stage="execution"');
     expect(markup).not.toContain('data-stage="completion"');
   });
+
+  it("renders purpose in details section and does not duplicate it in header summary", async () => {
+    reader.details.mockResolvedValue(details({ purpose: "مأموریت اداری ویژه" }));
+    const markup = await renderWorkspace("details");
+
+    expect(markup).toContain("<dt>هدف سفر</dt>");
+    expect(markup).toContain("<dd>مأموریت اداری ویژه</dd>");
+    expect(markup).not.toContain("purposeLine");
+  });
 });

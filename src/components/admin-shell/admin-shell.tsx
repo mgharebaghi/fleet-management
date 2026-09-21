@@ -6,6 +6,7 @@ import styles from "./admin-shell.module.css";
 
 type AdminShellProps = {
   children: ReactNode;
+  pendingTripRequestsCount?: number;
 };
 
 /**
@@ -14,12 +15,12 @@ type AdminShellProps = {
  * navigation behind a drawer on narrow screens. It only arranges navigation
  * and content — every page keeps its own PageShell/PageHeader inside.
  */
-export function AdminShell({ children }: AdminShellProps) {
+export function AdminShell({ children, pendingTripRequestsCount }: AdminShellProps) {
   return (
     <div className={styles.shell} lang="fa" dir="rtl" data-admin-shell>
       <header className={styles.topBar} data-admin-chrome>
         <div className={styles.topBarStart}>
-          <AdminMobileNav />
+          <AdminMobileNav pendingTripRequestsCount={pendingTripRequestsCount} />
           <BrandMark />
         </div>
         <AdminBreadcrumb />
@@ -28,7 +29,7 @@ export function AdminShell({ children }: AdminShellProps) {
       <div className={styles.body} data-admin-body>
         <aside className={styles.sidebar} aria-label="نوار کناری پنل مدیریت" data-admin-chrome>
           <p className={styles.sidebarTitle}>بخش‌های سامانه</p>
-          <AdminSidebarNav />
+          <AdminSidebarNav pendingTripRequestsCount={pendingTripRequestsCount} />
         </aside>
         <div className={styles.content} data-admin-content>{children}</div>
       </div>

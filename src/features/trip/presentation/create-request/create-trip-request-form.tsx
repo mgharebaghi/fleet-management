@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useInsertionEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useInsertionEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
@@ -9,10 +9,8 @@ import type {
   TripPersonReference,
   TripRequestTypeReference,
 } from "../../application/trip-records";
-import { loadCreateTripAssignmentsAction } from "../trip.actions";
-import { consecutiveFormIndexes, tripFormValues, tripMessages, type TripActionState } from "../trip-form-data";
+import { tripFormValues, tripMessages, type TripActionState } from "../trip-form-data";
 import { LOCATION_CREATED_EVENT } from "../location/location-picker";
-import { AssignmentStep } from "./assignment-step";
 import { CreateRequestSummary } from "./create-request-summary";
 import {
   createRequestReview,
@@ -30,18 +28,13 @@ import {
   sharesDestination,
   sharesOrigin,
   wizardErrorNavigation,
-  type CreateWizardAssignments,
-  type CreateWizardPassenger,
-  type CreateWizardRoute,
   type CreateWizardStep,
   type TripRequestReview,
   type TripRequestSummaryPreview,
 } from "./create-wizard";
 import { PassengersStep } from "./passengers-step";
-import { PlanningStep } from "./planning-step";
 import { RequestStep } from "./request-step";
 import { ReviewStep } from "./review-step";
-import { RouteStep } from "./route-step";
 import { TripCreateProgress } from "./trip-create-progress";
 import styles from "./create-trip.module.css";
 
@@ -50,12 +43,6 @@ type CreateTripRequestFormProps = {
   people: TripPersonReference[];
   locations: TripLocationReference[];
 };
-
-function tehranIso(day: string | undefined, time: string | undefined) {
-  if (!day || !time) return "";
-  const value = new Date(`${day}T${time}:00+03:30`);
-  return Number.isFinite(value.getTime()) ? value.toISOString() : "";
-}
 
 export function CreateTripRequestForm({ requestTypes, people, locations }: CreateTripRequestFormProps) {
   const router = useRouter();
@@ -70,11 +57,6 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
   const [passengerSnapshots, setPassengerSnapshots] = useState<Record<number, Record<string, string>>>({});
   const [summaryPreview, setSummaryPreview] = useState<TripRequestSummaryPreview | null>(null);
   const [review, setReview] = useState<TripRequestReview | null>(null);
-  const [pendingPassengers, setPendingPassengers] = useState<CreateWizardPassenger[]>([]);
-  const [assignmentsByPassenger, setAssignmentsByPassenger] = useState<CreateWizardAssignments>({});
-  const [selectedAssignments, setSelectedAssignments] = useState<Record<number, number>>({});
-  const [routes, setRoutes] = useState<CreateWizardRoute[]>([]);
-  const [isLoadingAssignments, startLoadingAssignments] = useTransition();
   const [selectedTypeId, setSelectedTypeId] = useState("");
   const [keptLocations, setKeptLocations] = useState<Record<string, string>>({});
   const [typeRestoreNonce, setTypeRestoreNonce] = useState(0);
@@ -191,33 +173,11 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
     const values = readValues(nextCount);
     setPassengerCount(nextCount);
     setPassengerSnapshots((current) => dropPassengerSnapshot(current, removedIndex));
-    setSelectedAssignments((current) => Object.fromEntries(Object.entries(current).filter(([key]) => Number(key) !== removedIndex)));
-    setRoutes((current) => current.filter((route) => route.passengerKey !== removedIndex));
     setFormValuesState(values);
     setActivePassengerIndex((index) => Math.min(index, Math.max(0, nextCount - 1)));
   }
 
-  function buildPendingPassengers(values: Record<string, string>, nextReview: TripRequestReview): CreateWizardPassenger[] {
-    const indexes = consecutiveFormIndexes(values, (index) => `passenger.${index}.personId`);
-    const travelAt = tehranIso(values.requestedTravelDay, values.requestedTravelTime);
-    return indexes.map((index) => {
-      const person = people.find((item) => item.personId === Number(values[`passenger.${index}.personId`]));
-      const reviewed = nextReview.passengers[index];
-      const hasOverride = values[`passenger.${index}.pickupOverride`] === "true";
-      return {
-        key: index,
-        personId: person?.personId ?? Number.NaN,
-        personName: reviewed?.personName ?? "",
-        personnelNo: person?.personnelNo ?? null,
-        originName: reviewed?.originName ?? "",
-        destinationName: reviewed?.destinationName ?? "",
-        requestedPickupAt: hasOverride ? tehranIso(values[`passenger.${index}.pickupDay`], values[`passenger.${index}.pickupTime`]) : travelAt,
-        requestedPickupLabel: reviewed?.pickup ?? nextReview.travelAt,
-      };
-    });
-  }
-
-  function goToAssignments() {
+  function goToReview() {
     const values = snapshotActivePassenger();
     const gaps = passengerStepGaps(values, selectedType?.typeCode);
     if (gaps.length) {
@@ -228,23 +188,12 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
     }
     const nextReview = createRequestReview(values, { requestTypes, people, locations: catalogLocations });
     setReview(nextReview);
-    setPendingPassengers(buildPendingPassengers(values, nextReview));
     setFormValuesState(values);
     setStepNotice(null);
-    startLoadingAssignments(async () => {
-      try {
-        const available = await loadCreateTripAssignmentsAction(values);
-        setAssignmentsByPassenger(available);
-        setSelectedAssignments((current) => Object.fromEntries(Object.entries(current).filter(([key, id]) => (available[Number(key)] ?? []).some((item) => item.assignmentId === id))));
-        navigateStep(3);
-      } catch {
-        setStepNotice("دریافت فهرست تخصیص‌های واجد شرایط انجام نشد.");
-      }
-    });
+    navigateStep(3);
   }
 
   const completeReview = review ?? createRequestReview(formValuesState, { requestTypes, people, locations: catalogLocations });
-  const payload = { values: formValuesState, assignments: selectedAssignments, routes };
 
   return (
     <div className={styles.createShell}>
@@ -253,7 +202,6 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
         ref={formRef}
         noValidate
         hidden={step > 2}
-        aria-busy={isLoadingAssignments}
         aria-label="ثبت درخواست سفر"
         className={styles.createSurface}
         onSubmit={(event) => event.preventDefault()}
@@ -263,7 +211,7 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
         <RequestStep
           hidden={step !== 1}
           prefix={prefix}
-          pending={isLoadingAssignments}
+          pending={false}
           requestTypes={requestTypes}
           locations={catalogLocations}
           selectedTypeId={selectedTypeId}
@@ -281,12 +229,12 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
             setSelectedTypeId(typeId);
           }}
           onNext={goToPassengers}
-          onCancel={() => router.push("/trips/requests")}
+          onCancel={() => router.push("/trips")}
         />
         <PassengersStep
           hidden={step !== 2}
           prefix={prefix}
-          pending={isLoadingAssignments}
+          pending={false}
           people={people}
           locations={catalogLocations}
           passengerCount={passengerCount}
@@ -300,22 +248,16 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
           onAddPassenger={addPassenger}
           onRemoveLastPassenger={removeLastPassenger}
           onBack={() => { snapshotActivePassenger(); navigateStep(1); refreshSummary(); }}
-          onReview={goToAssignments}
+          onReview={goToReview}
         />
       </form>
 
-      <AssignmentStep
+      <ReviewStep
         hidden={step !== 3}
-        passengers={pendingPassengers}
-        assignmentsByPassenger={assignmentsByPassenger}
-        selectedAssignments={selectedAssignments}
-        onSelectionChange={(key, assignmentId) => setSelectedAssignments((current) => ({ ...current, [key]: assignmentId }))}
+        review={completeReview}
+        formValues={formValuesState}
         onBack={() => navigateStep(2)}
-        onNext={() => navigateStep(4)}
       />
-      <RouteStep hidden={step !== 4} passengers={pendingPassengers} locations={catalogLocations} routes={routes} onRoutesChange={setRoutes} onBack={() => navigateStep(3)} onNext={() => navigateStep(5)} />
-      <PlanningStep hidden={step !== 5} passengers={pendingPassengers} assignmentsByPassenger={assignmentsByPassenger} selectedAssignments={selectedAssignments} routes={routes} onBack={() => navigateStep(4)} onNext={() => navigateStep(6)} />
-      <ReviewStep hidden={step !== 6} review={completeReview} passengers={pendingPassengers} assignmentsByPassenger={assignmentsByPassenger} payload={payload} onBack={() => navigateStep(5)} />
     </div>
   );
 }

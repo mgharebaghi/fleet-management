@@ -42,6 +42,7 @@ type RouteStepProps = {
   onRoutesChange: (routes: CreateWizardRoute[]) => void;
   onBack: () => void;
   onNext: () => void;
+  nextLabel?: string;
 };
 
 export function RouteStep({
@@ -52,6 +53,7 @@ export function RouteStep({
   onRoutesChange,
   onBack,
   onNext,
+  nextLabel = "بعدی: برنامه‌ریزی",
 }: RouteStepProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [passengerKey, setPassengerKey] = useState(passengers[0]?.key ?? 0);
@@ -292,7 +294,7 @@ export function RouteStep({
       <div className={styles.stepActions}>
         <FormActions>
           <ActionButton type="button" variant="secondary" onClick={onBack}>قبلی: راننده و خودرو</ActionButton>
-          <ActionButton type="button" onClick={onNext}>بعدی: برنامه‌ریزی</ActionButton>
+          <ActionButton type="button" onClick={onNext}>{nextLabel}</ActionButton>
         </FormActions>
       </div>
     </div>

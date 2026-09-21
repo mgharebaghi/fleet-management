@@ -138,6 +138,28 @@
   transition: color var(--app-motion-fast);
 }
 
+.navBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-inline-start: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  background: var(--app-danger);
+  color: #ffffff !important;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgb(180 35 53 / 30%);
+}
+
+.navLink .navBadge,
+.navLink[aria-current="page"] .navBadge {
+  color: #ffffff !important;
+}
+
 .navLabel {
   min-width: 0;
   overflow: hidden;

@@ -9,7 +9,9 @@ import type {
 } from "../../application/trip-records";
 import { consecutiveFormIndexes } from "../trip-form-data";
 
-export type CreateWizardStep = 1 | 2 | 3 | 4 | 5 | 6;
+export type CreateWizardStep = 1 | 2 | 3;
+
+export type HandlingWizardStep = 1 | 2 | 3 | 4;
 
 export type CreateWizardPassenger = {
   key: number;
@@ -50,10 +52,14 @@ export function routePointLocationError(
 export const CREATE_WIZARD_STEPS = [
   { id: "request", label: "اطلاعات درخواست" },
   { id: "passengers", label: "مسافران" },
+  { id: "review", label: "مرور و تأیید" },
+] as const;
+
+export const HANDLING_WIZARD_STEPS = [
+  { id: "review", label: "بررسی درخواست" },
   { id: "assignment", label: "راننده و خودرو" },
   { id: "route", label: "مسیر" },
-  { id: "planning", label: "برنامه‌ریزی" },
-  { id: "review", label: "مرور و تأیید" },
+  { id: "planning", label: "تأیید و تخصیص" },
 ] as const;
 
 export const requestStepFieldLabels: Record<string, string> = {

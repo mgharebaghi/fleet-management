@@ -365,13 +365,13 @@ test.describe.serial("Trip management", () => {
       await page.goto("/trips");
       await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
       await expect(
-        page.getByRole("link", { name: /ثبت درخواست سفر/ }),
+        page.getByRole("link", { name: /ثبت (درخواست )?سفر/ }),
       ).toBeVisible();
       await expect(
-        page.getByRole("link", { name: /مشاهده سفرها/ }),
+        page.getByRole("link", { name: /رسیدگی به درخواست‌ها|مشاهده و رسیدگی|مشاهده سفرها/ }),
       ).toBeVisible();
 
-      await page.getByRole("link", { name: /ثبت درخواست سفر/ }).click();
+      await page.getByRole("link", { name: /ثبت (درخواست )?سفر/ }).click();
       await expect(page).toHaveURL(/\/trips\/create$/, { timeout: 60_000 });
       const form = page.locator('form[aria-label="ثبت درخواست سفر"]');
       const requestStep = form.getByRole("region", { name: "اطلاعات اصلی" });
@@ -500,9 +500,65 @@ test.describe.serial("Trip management", () => {
 
       await selectSearchableOption(passengersStep, "مسافر", token, token);
       await passengersStep
-        .getByRole("button", { name: "بعدی: راننده و خودرو", exact: true })
+        .getByRole("button", { name: "بعدی: مرور و تأیید", exact: true })
         .click();
 
+      const reviewStep = page
+        .getByRole("heading", { name: "مرور و تأیید درخواست سفر" })
+        .locator("xpath=ancestor::*[contains(@class, 'stepContainer')][1]");
+      await eventually(
+        reviewStep.getByRole("heading", { name: "مرور و تأیید درخواست سفر" }),
+      ).toBeVisible();
+      await eventually(reviewStep.getByText("مبدأ و مقصد مشترک")).toBeVisible();
+      await eventually(reviewStep.getByText(`مسافر ${token}`).first()).toBeVisible();
+      await eventually(reviewStep.getByText(inlineOriginName)).toBeVisible();
+      await eventually(reviewStep.getByText(inlineDestinationName)).toBeVisible();
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(
+        page.getByRole("button", { name: "ثبت درخواست سفر", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "قبلی: مسافران", exact: true }),
+      ).toBeVisible();
+      const reviewHasHorizontalOverflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth + 1,
+      );
+      expect(reviewHasHorizontalOverflow).toBe(false);
+      await page.setViewportSize({ width: 1280, height: 720 });
+
+      expect(await tripRequestCountForFixturePerson()).toBe(0);
+
+      // Requester submits the request
+      await page
+        .getByRole("button", { name: "ثبت درخواست سفر", exact: true })
+        .click();
+
+      // Redirects back to /trips
+      await eventually(page).toHaveURL(/\/trips$/);
+      expect(await tripRequestCountForFixturePerson()).toBe(1);
+
+      // Dispatcher flow: navigate to /trips/requests
+      await page.getByRole("link", { name: /رسیدگی به درخواست‌ها|مشاهده و رسیدگی/ }).click();
+      await eventually(page).toHaveURL(/\/trips\/requests/);
+
+      // Dispatcher sees the pending request and clicks "رسیدگی"
+      const handlingLink = page.getByRole("link", { name: /^رسیدگی$|^رسیدگی به درخواست$/ }).first();
+      await eventually(handlingLink).toBeVisible();
+      await handlingLink.click();
+
+      // Handling wizard opens on /trips/[id]
+      await eventually(page).toHaveURL(/\/trips\/\d+$/);
+      requestId = Number(page.url().split("/").pop());
+
+      // Handling Step 1: بررسی درخواست
+      await eventually(page.getByRole("heading", { name: "بررسی درخواست سفر" })).toBeVisible();
+      await eventually(page.getByText("نیازمند رسیدگی").first()).toBeVisible();
+      await page.getByRole("button", { name: "بعدی: راننده و خودرو", exact: true }).click();
+
+      // Handling Step 2: راننده و خودرو
       await eventually(
         page.getByRole("heading", { name: "راننده و خودرو" }),
       ).toBeVisible();
@@ -519,56 +575,24 @@ test.describe.serial("Trip management", () => {
         .getByRole("button", { name: "بعدی: مسیر سفر", exact: true })
         .click();
 
+      // Handling Step 3: مسیر سفر
       await eventually(
         page.getByRole("heading", { name: "مسیر سفر (اختیاری)" }),
       ).toBeVisible();
       await page
-        .getByRole("button", { name: "بعدی: برنامه‌ریزی", exact: true })
+        .getByRole("button", { name: /بعدی: (تأیید و تخصیص|برنامه‌ریزی)/ })
         .click();
 
+      // Handling Step 4: تأیید و تخصیص
       await eventually(
-        page.getByRole("heading", { name: "برنامه‌ریزی و برگه مأموریت" }),
+        page.getByRole("heading", { name: "تأیید و تخصیص نهایی سفر" }),
       ).toBeVisible();
-      await eventually(page.getByText("برنامه‌ریزی کامل")).toBeVisible();
       await page
-        .getByRole("button", { name: "بعدی: مرور و تأیید نهایی", exact: true })
+        .getByRole("button", { name: "تأیید و تخصیص سفر", exact: true })
         .click();
 
-      const reviewStep = page
-        .getByRole("heading", { name: "مرور و تأیید نهایی" })
-        .locator("xpath=ancestor::*[contains(@class, 'stepContainer')][1]");
-      await eventually(
-        reviewStep.getByRole("heading", { name: "مرور و تأیید نهایی" }),
-      ).toBeVisible();
-      await eventually(reviewStep.getByText("مبدأ و مقصد مشترک")).toBeVisible();
-      await eventually(reviewStep.getByText(`مسافر ${token}`).first()).toBeVisible();
-      await eventually(reviewStep.getByText(inlineOriginName)).toBeVisible();
-      await eventually(reviewStep.getByText(inlineDestinationName)).toBeVisible();
-
-      await page.setViewportSize({ width: 390, height: 844 });
-      await expect(
-        page.getByRole("button", { name: "ثبت نهایی درخواست", exact: true }),
-      ).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "قبلی: برنامه‌ریزی", exact: true }),
-      ).toBeVisible();
-      const reviewHasHorizontalOverflow = await page.evaluate(
-        () =>
-          document.documentElement.scrollWidth >
-          document.documentElement.clientWidth + 1,
-      );
-      expect(reviewHasHorizontalOverflow).toBe(false);
-      await page.setViewportSize({ width: 1280, height: 720 });
-
-      expect(await tripRequestCountForFixturePerson()).toBe(0);
-
-      await page
-        .getByRole("button", { name: "ثبت نهایی درخواست", exact: true })
-        .click();
-
+      // Upon completion, redirects to /trips/[id] where status is now Assigned
       await eventually(page).toHaveURL(/\/trips\/\d+$/);
-      requestId = Number(page.url().split("/").pop());
-      expect(await tripRequestCountForFixturePerson()).toBe(1);
       const createdLocations = await request()
         .input("requestId", requestId)
         .query<{ origin: number; destination: number }>(
@@ -764,7 +788,7 @@ test.describe.serial("Trip management", () => {
         page.getByText(inlineOriginName).first(),
       ).toBeVisible();
       await expect(
-        page.getByRole("link", { name: "مشاهده جزئیات" }).first(),
+        page.getByRole("link", { name: /مشاهده/ }).first(),
       ).toBeVisible();
       await page.getByLabel("وضعیت درخواست").selectOption("Completed");
       await eventually(page).toHaveURL(/status=Completed/);

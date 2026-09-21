@@ -115,4 +115,5 @@ export interface TripRepository {
   availablePeople(): Promise<TripPersonReference[]>;
   availableLocations(): Promise<TripLocationReference[]>;
   assignmentsActiveAt(dateTime: Date): Promise<TripAssignmentReference[]>;
+  countPendingRequests(): Promise<number>;
 }

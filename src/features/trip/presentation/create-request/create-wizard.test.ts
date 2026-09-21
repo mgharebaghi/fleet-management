@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CREATE_WIZARD_STEPS,
+  HANDLING_WIZARD_STEPS,
   createRequestReview,
   createRequestSummaryPreview,
   dropPassengerSnapshot,
@@ -486,15 +487,22 @@ describe("Trip create wizard presentation", () => {
     });
   });
 
-  it("defines the six sequential progressive wizard steps with exact Persian labels", () => {
-    expect(CREATE_WIZARD_STEPS).toHaveLength(6);
+  it("defines the three requester wizard steps with exact Persian labels", () => {
+    expect(CREATE_WIZARD_STEPS).toHaveLength(3);
     expect(CREATE_WIZARD_STEPS.map((s) => s.label)).toEqual([
       "اطلاعات درخواست",
       "مسافران",
+      "مرور و تأیید",
+    ]);
+  });
+
+  it("defines the four handling progressive steps for the dispatcher with exact Persian labels", () => {
+    expect(HANDLING_WIZARD_STEPS).toHaveLength(4);
+    expect(HANDLING_WIZARD_STEPS.map((s) => s.label)).toEqual([
+      "بررسی درخواست",
       "راننده و خودرو",
       "مسیر",
-      "برنامه‌ریزی",
-      "مرور و تأیید",
+      "تأیید و تخصیص",
     ]);
   });
 });

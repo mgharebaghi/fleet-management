@@ -161,7 +161,7 @@ export function PassengersStep({
             pending={pending}
             onClick={onReview}
           >
-            بعدی: راننده و خودرو
+            بعدی: مرور و تأیید
           </ActionButton>
         </div>
       </div>
