@@ -66,4 +66,14 @@ describe("AdminShell", () => {
     expect(markup).toContain("۵ درخواست جدید");
     expect(markup).toContain("۵");
   });
+
+  it("renders a custom tripBadge slot when provided", () => {
+    const markup = renderToStaticMarkup(
+      <AdminShell tripBadge={<span data-testid="custom-badge">۳</span>}>
+        <p>با اسلات</p>
+      </AdminShell>,
+    );
+    expect(markup).toContain('data-testid="custom-badge"');
+    expect(markup).toContain("۳");
+  });
 });

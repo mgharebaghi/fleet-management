@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { Dialog } from "../ui/dialog/dialog";
 import { AdminNavIcon } from "./admin-nav-icons";
@@ -19,11 +19,17 @@ const numberFormatter = new Intl.NumberFormat("fa-IR");
 type NavListProps = {
   pathname: string;
   pendingTripRequestsCount?: number;
+  tripBadge?: ReactNode;
   onNavigate?: () => void;
 };
 
 /** The link list itself, shared by the desktop sidebar and the mobile drawer. */
-function NavList({ pathname, pendingTripRequestsCount, onNavigate }: NavListProps) {
+function NavList({
+  pathname,
+  pendingTripRequestsCount,
+  tripBadge,
+  onNavigate,
+}: NavListProps) {
   return (
     <ul className={styles.navList}>
       {ADMIN_NAV_SECTIONS.map((section) => {
@@ -42,15 +48,17 @@ function NavList({ pathname, pendingTripRequestsCount, onNavigate }: NavListProp
               </span>
               <span className={styles.navLabel}>{section.label}</span>
               {section.href === "/trips" &&
-                pendingTripRequestsCount !== undefined &&
-                pendingTripRequestsCount > 0 && (
-                  <span
-                    className={styles.navBadge}
-                    aria-label={`${numberFormatter.format(pendingTripRequestsCount)} درخواست جدید`}
-                  >
-                    {numberFormatter.format(pendingTripRequestsCount)}
-                  </span>
-                )}
+                (tripBadge !== undefined
+                  ? tripBadge
+                  : pendingTripRequestsCount !== undefined &&
+                    pendingTripRequestsCount > 0 && (
+                      <span
+                        className={styles.navBadge}
+                        aria-label={`${numberFormatter.format(pendingTripRequestsCount)} درخواست جدید`}
+                      >
+                        {numberFormatter.format(pendingTripRequestsCount)}
+                      </span>
+                    ))}
             </Link>
 
             {section.children && (
@@ -88,15 +96,23 @@ function NavList({ pathname, pendingTripRequestsCount, onNavigate }: NavListProp
 
 type AdminNavComponentProps = {
   pendingTripRequestsCount?: number;
+  tripBadge?: ReactNode;
 };
 
 /** Always-visible desktop sidebar navigation; CSS hides it under the mobile breakpoint. */
-export function AdminSidebarNav({ pendingTripRequestsCount }: AdminNavComponentProps = {}) {
+export function AdminSidebarNav({
+  pendingTripRequestsCount,
+  tripBadge,
+}: AdminNavComponentProps = {}) {
   const pathname = usePathname() ?? "";
 
   return (
     <nav className={styles.sidebarNav} aria-label="پیمایش اصلی">
-      <NavList pathname={pathname} pendingTripRequestsCount={pendingTripRequestsCount} />
+      <NavList
+        pathname={pathname}
+        pendingTripRequestsCount={pendingTripRequestsCount}
+        tripBadge={tripBadge}
+      />
     </nav>
   );
 }
@@ -132,7 +148,10 @@ export function AdminBreadcrumb() {
  * the drawer inherits its focus trap, Escape handling and scroll lock instead
  * of growing a second set of them, and it closes itself on every navigation.
  */
-export function AdminMobileNav({ pendingTripRequestsCount }: AdminNavComponentProps = {}) {
+export function AdminMobileNav({
+  pendingTripRequestsCount,
+  tripBadge,
+}: AdminNavComponentProps = {}) {
   const pathname = usePathname() ?? "";
   const [open, setOpen] = useState(false);
   // Adjusted during render (not an effect) so the drawer closes on the same
@@ -168,6 +187,7 @@ export function AdminMobileNav({ pendingTripRequestsCount }: AdminNavComponentPr
           <NavList
             pathname={pathname}
             pendingTripRequestsCount={pendingTripRequestsCount}
+            tripBadge={tripBadge}
             onNavigate={() => setOpen(false)}
           />
         </nav>
