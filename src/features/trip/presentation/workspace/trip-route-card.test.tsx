@@ -16,14 +16,14 @@ vi.mock("@/components/ui/icon-action-button/icon-action-button", () =>
 vi.mock("@/components/ui/icon/icons", () =>
   import("../../../../components/ui/icon/icons"),
 );
-vi.mock("../trip-route-dialog", () => ({
+vi.mock("../route/trip-route-dialog", () => ({
   TripRouteDialog: vi.fn(({ triggerLabel }) => (
     <button data-testid="edit-dialog" aria-label={triggerLabel ?? "ویرایش مسیر"}>
       {triggerLabel ?? "ویرایش مسیر"}
     </button>
   )),
 }));
-vi.mock("../delete-route-dialog", () => ({
+vi.mock("../route/delete-route-dialog", () => ({
   DeleteRouteButton: vi.fn(() => (
     <button data-testid="delete-dialog" aria-label="حذف مسیر">
       حذف مسیر

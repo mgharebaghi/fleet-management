@@ -1,21 +1,21 @@
-import { ActionLink } from "../../../components/ui/action-link/action-link";
-import { ViewIcon } from "../../../components/ui/icon/icons";
+import { ActionLink } from "../../../../components/ui/action-link/action-link";
+import { ViewIcon } from "../../../../components/ui/icon/icons";
 import {
   RecordCard,
   RecordCardDetail,
   RecordCardDetails,
   RecordCardHeader,
   RecordCardList,
-} from "../../../components/ui/record-cards/record-cards";
-import { StatusBadge } from "../../../components/ui/status-badge/status-badge";
-import { TechnicalValue } from "../../../components/ui/technical-value/technical-value";
+} from "../../../../components/ui/record-cards/record-cards";
+import { StatusBadge } from "../../../../components/ui/status-badge/status-badge";
+import { TechnicalValue } from "../../../../components/ui/technical-value/technical-value";
 import {
   formatTripListPassengerCount,
   formatTripListSchedule,
   tripListPurposeOrTypeLine,
 } from "./trip-list-format";
-import { tripRequestStatusTone } from "./trip-list-status-tone";
-import type { TripListItemView } from "./workspace/trip-workspace-view";
+import { tripRequestStatusTone } from "../trip-list-status-tone";
+import type { TripListItemView } from "../workspace/trip-workspace-view";
 import styles from "./trip-list.module.css";
 
 export type TripRequestListRowProps = {

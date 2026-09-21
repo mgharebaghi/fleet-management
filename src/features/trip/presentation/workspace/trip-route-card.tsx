@@ -12,8 +12,8 @@ import type {
   TripPassengerRecord,
   TripRoute,
 } from "../../application/trip-records";
-import { DeleteRouteButton } from "../delete-route-dialog";
-import { TripRouteDialog } from "../trip-route-dialog";
+import { DeleteRouteButton } from "../route/delete-route-dialog";
+import { TripRouteDialog } from "../route/trip-route-dialog";
 import styles from "./trip-workspace.module.css";
 
 export function togglePointsDisclosure(currentlyOpen: boolean): boolean {

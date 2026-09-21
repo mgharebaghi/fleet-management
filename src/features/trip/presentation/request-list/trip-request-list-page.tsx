@@ -4,12 +4,12 @@ import { PageHeader } from "@/components/ui/page-header/page-header";
 import { PageShell } from "@/components/ui/page-shell/page-shell";
 import { Pagination } from "@/components/ui/pagination/pagination";
 import { ResultState } from "@/components/ui/result-state/result-state";
-import { makeReadTrips } from "../composition/trip.factory";
-import { singleSearchParam } from "./trip-format";
+import { makeReadTrips } from "../../composition/trip.factory";
+import { singleSearchParam } from "../trip-format";
 import { TripFilters } from "./trip-filters";
 import styles from "./trip-list.module.css";
 import { TripRequestCards, TripRequestListRow } from "./trip-request-list-row";
-import { projectTripListItem } from "./workspace/trip-workspace-view";
+import { projectTripListItem } from "../workspace/trip-workspace-view";
 
 const PAGE_SIZE = 20;
 

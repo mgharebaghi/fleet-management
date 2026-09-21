@@ -16,11 +16,11 @@ import type {
   TripLocationReference,
   TripPassengerRecord,
   TripRoute,
-} from "../application/trip-records";
-import { addTripRouteAction } from "./trip.actions";
-import { tripMessages, type TripActionState } from "./trip-form-data";
-import { LocationPicker, LOCATION_CREATED_EVENT } from "./location/location-picker";
-import styles from "./trip-forms.module.css";
+} from "../../application/trip-records";
+import { addTripRouteAction } from "../trip.actions";
+import { tripMessages, type TripActionState } from "../trip-form-data";
+import { LocationPicker, LOCATION_CREATED_EVENT } from "../location/location-picker";
+import styles from "../trip-forms.module.css";
 
 export type RouteActionState = TripActionState & { success?: boolean };
 

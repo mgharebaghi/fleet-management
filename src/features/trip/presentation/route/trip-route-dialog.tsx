@@ -10,8 +10,8 @@ import type {
   TripLocationReference,
   TripPassengerRecord,
   TripRoute,
-} from "../application/trip-records";
-import styles from "./trip-forms.module.css";
+} from "../../application/trip-records";
+import styles from "../trip-forms.module.css";
 import { TripRouteForm } from "./trip-route-form";
 
 export function TripRouteDialog({

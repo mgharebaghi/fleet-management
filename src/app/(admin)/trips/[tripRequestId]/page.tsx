@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { makeReadTrips } from "@/features/trip/composition/trip.factory";
 import type { TripAssignmentReference } from "@/features/trip/application/trip-records";
 import { TripRequestHandlingPage } from "@/features/trip/presentation/handling/trip-request-handling-page";
-import { TripRequestDetailsPage } from "@/features/trip/presentation/trip-request-details-page";
+import { TripRequestDetailsPage } from "@/features/trip/presentation/workspace/trip-request-details-page";
 
 export const metadata = { title: "پرونده سفر" };
 

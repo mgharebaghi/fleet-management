@@ -14,19 +14,19 @@ import { VehiclePlate } from "@/components/ui/vehicle-plate/vehicle-plate";
 import {
   assignmentIneligibilityReasons,
   isAssignmentEligible,
-} from "../application/trip-assignment-eligibility";
+} from "../../../application/trip-assignment-eligibility";
 import type {
   TripAssignmentReference,
   TripExecutionRecord,
   TripPassengerRecord,
-} from "../application/trip-records";
-import { saveTripExecutionAction } from "./trip.actions";
+} from "../../../application/trip-records";
+import { saveTripExecutionAction } from "../../trip.actions";
 import {
   assignmentIneligibilityMessages,
   tripMessages,
-} from "./trip-form-data";
-import styles from "./trip-forms.module.css";
-import pageStyles from "./trip-pages.module.css";
+} from "../../trip-form-data";
+import styles from "../../trip-forms.module.css";
+import pageStyles from "../../trip-pages.module.css";
 
 function assignmentLabel(assignment: TripAssignmentReference) {
   return `${assignment.driverFirstName} ${assignment.driverLastName} — ${assignment.vehicle.brandName} ${assignment.vehicle.modelName} — ${assignment.vehicle.vehicleCode}`;

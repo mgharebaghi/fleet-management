@@ -10,10 +10,10 @@ import {
   formControlClassName,
 } from "@/components/ui/form-field/form-field";
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
-import type { TripExecutionRecord } from "../application/trip-records";
-import { savePassengerSurveyAction } from "./trip.actions";
-import { tripMessages } from "./trip-form-data";
-import styles from "./trip-forms.module.css";
+import type { TripExecutionRecord } from "../../application/trip-records";
+import { savePassengerSurveyAction } from "../trip.actions";
+import { tripMessages } from "../trip-form-data";
+import styles from "../trip-forms.module.css";
 
 export { TripSurveyButton, TripSurveyDialog } from "./trip-survey-dialog";
 

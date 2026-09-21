@@ -15,7 +15,7 @@ import {
 } from "../../application/trip-assignment-eligibility";
 import type { TripAssignmentReference } from "../../application/trip-records";
 import { assignmentIneligibilityMessages } from "../trip-form-data";
-import { TripPassengerSwitcher } from "../trip-passenger-switcher";
+import { TripPassengerSwitcher } from "../passenger/trip-passenger-switcher";
 import type {
   CreateWizardAssignments,
   CreateWizardPassenger,
