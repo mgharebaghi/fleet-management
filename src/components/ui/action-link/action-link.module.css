@@ -2,7 +2,6 @@
 .secondary,
 .quiet {
   display: inline-flex;
-  min-height: 44px;
   align-items: center;
   justify-content: center;
   border-radius: var(--app-radius-control);
@@ -12,6 +11,17 @@
     border-color var(--app-motion-fast),
     box-shadow var(--app-motion-fast),
     transform var(--app-motion-fast);
+}
+
+.md {
+  min-height: 44px;
+}
+
+.sm {
+  min-height: 32px;
+  padding: 4px var(--space-3) !important;
+  font-size: var(--font-size-xs);
+  gap: var(--space-1);
 }
 
 .primary {

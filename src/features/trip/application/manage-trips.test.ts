@@ -122,6 +122,7 @@ const repository = {
   availablePeople: vi.fn(),
   availableLocations: vi.fn(),
   assignmentsActiveAt: vi.fn(),
+  countPendingRequests: vi.fn(),
 } satisfies TripRepository;
 
 const manage = new ManageTrips(repository);
@@ -1573,6 +1574,93 @@ describe("Trip execution and survey", () => {
         passengerComment: "عالی شد",
         surveyDateTime: originalTimestamp,
       });
+    });
+  });
+
+  describe("assignInitialRequest", () => {
+    it("rejects invalid request identity or empty passenger assignments", async () => {
+      expect(
+        await manage.assignInitialRequest({
+          tripRequestId: 0,
+          passengers: [{ tripId: 1, vehicleDriverAssignmentId: 1 }],
+        }),
+      ).toEqual({ success: false, error: "INVALID_ID" });
+
+      expect(
+        await manage.assignInitialRequest({
+          tripRequestId: 1,
+          passengers: [],
+        }),
+      ).toEqual({ success: false, error: "PASSENGER_REQUIRED" });
+    });
+
+    it("rejects when request is not found or is not in New status", async () => {
+      session.request.mockResolvedValue(null);
+      expect(
+        await manage.assignInitialRequest({
+          tripRequestId: 1,
+          passengers: [{ tripId: 1, vehicleDriverAssignmentId: 1 }],
+        }),
+      ).toEqual({ success: false, error: "REQUEST_NOT_FOUND" });
+
+      session.request.mockResolvedValue({
+        tripRequestId: 1,
+        status: "Assigned",
+        tripRequestTypeId: 1,
+        passengers: [{ tripId: 1 }],
+      });
+      expect(
+        await manage.assignInitialRequest({
+          tripRequestId: 1,
+          passengers: [{ tripId: 1, vehicleDriverAssignmentId: 1 }],
+        }),
+      ).toEqual({ success: false, error: "INVALID_REQUEST_TRANSITION" });
+    });
+
+    it("atomically creates planned executions, routes, and updates request status to Assigned", async () => {
+      session.request.mockResolvedValue({
+        tripRequestId: 1,
+        status: "New",
+        tripRequestTypeId: 1,
+        passengers: [{ tripId: 1 }],
+      });
+      session.trip.mockResolvedValue(trip);
+      session.assignment.mockResolvedValue(assignment);
+
+      const result = await manage.assignInitialRequest({
+        tripRequestId: 1,
+        passengers: [
+          {
+            tripId: 1,
+            vehicleDriverAssignmentId: 1,
+            routes: [
+              {
+                routeName: "مسیر اصلی",
+                alternativeNo: 1,
+                distanceKm: "12",
+                estimatedDurationMinute: 20,
+                isSelected: true,
+                description: null,
+                points: [{ locationId: 1, trafficZone: null, sequenceNo: 1, distanceFromStartKm: null, description: null }],
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(result).toEqual({ success: true, id: 1 });
+      expect(session.createExecution).toHaveBeenCalledWith({
+        tripId: 1,
+        tripExecutionId: null,
+        vehicleDriverAssignmentId: 1,
+        actualPickupDateTime: null,
+        actualDropoffDateTime: null,
+        startOdometer: null,
+        endOdometer: null,
+        status: "Planned",
+        description: null,
+      });
+      expect(session.updateRequestStatus).toHaveBeenCalledWith(1, "Assigned");
     });
   });
 });

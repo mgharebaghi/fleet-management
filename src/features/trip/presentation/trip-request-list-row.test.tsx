@@ -41,10 +41,38 @@ describe("TripRequestListRow", () => {
     expect(markup).toContain("مسافر");
     expect(markup).toContain("جدید");
     expect(markup).toContain('href="/trips/12"');
-    expect(markup).toContain("مشاهده جزئیات");
+    expect(markup).toContain("رسیدگی");
+    expect(markup).not.toContain("رسیدگی به درخواست");
     expect(markup.indexOf("TR-1405-0012")).toBeLessThan(markup.indexOf("تهران"));
     expect(markup).not.toContain("اقدام بعدی");
     expect(markup).not.toContain("مرحله");
+  });
+
+  it("renders standard status label and مشاهده for non-New requests", () => {
+    const request = projectTripListItem({
+      tripRequestId: 14,
+      requestNo: "TR-1405-0014",
+      requestTypeName: "مبدأ و مقصد مشترک",
+      requestDateTime: new Date("2026-05-17T04:30:00Z"),
+      requestedTravelDateTime: new Date("2026-05-18T04:30:00Z"),
+      purpose: "ماموریت",
+      status: "Assigned",
+      passengerCount: 1,
+      origins: ["تهران"],
+      destinations: ["کرج"],
+    });
+
+    const markup = renderToStaticMarkup(
+      <table>
+        <tbody>
+          <TripRequestListRow request={request} status="Assigned" />
+        </tbody>
+      </table>,
+    );
+
+    expect(markup).toContain("تخصیص‌یافته");
+    expect(markup).toContain("مشاهده");
+    expect(markup).not.toContain("رسیدگی");
   });
 
   it("renders pure tr element without outer table wrapper", () => {
@@ -116,6 +144,30 @@ describe("TripRequestCard and TripRequestCards", () => {
     expect(markup).toContain("مشهد");
   });
 
+  it("renders mobile record card with جدید and رسیدگی for New requests", () => {
+    const request = projectTripListItem({
+      tripRequestId: 16,
+      requestNo: "TR-1405-0016",
+      requestTypeName: "مبدأ مشترک",
+      requestDateTime: new Date("2026-05-17T04:30:00Z"),
+      requestedTravelDateTime: new Date("2026-05-18T04:30:00Z"),
+      purpose: "بازدید",
+      status: "New",
+      passengerCount: 1,
+      origins: ["شیراز"],
+      destinations: ["مرودشت"],
+    });
+
+    const markup = renderToStaticMarkup(
+      <TripRequestCard request={request} status="New" />,
+    );
+
+    expect(markup).toContain("TR-1405-0016");
+    expect(markup).toContain("جدید");
+    expect(markup).toContain("رسیدگی");
+    expect(markup).not.toContain("رسیدگی به درخواست");
+  });
+
   it("renders mobile record cards with details and link", () => {
     const request = projectTripListItem({
       tripRequestId: 15,
@@ -143,13 +195,13 @@ describe("TripRequestCard and TripRequestCards", () => {
     expect(markup).toContain("بازدید پروژه");
     expect(markup).toContain("تعداد مسافر");
     expect(markup).toContain('href="/trips/15"');
-    expect(markup).toContain("مشاهده جزئیات");
+    expect(markup).toContain("مشاهده");
   });
 });
 
 describe("Trip request status colors", () => {
   it.each([
-    ["New", "info"],
+    ["New", "purple"],
     ["Assigned", "warning"],
     ["InProgress", "info"],
     ["Completed", "positive"],

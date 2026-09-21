@@ -269,4 +269,10 @@ export class PrismaTripRepository implements TripRepository {
     });
     return rows.map((row) => mapAssignment(row, dateTime));
   }
+
+  async countPendingRequests(): Promise<number> {
+    return this.client.tripRequest.count({
+      where: { Status: "New" },
+    });
+  }
 }

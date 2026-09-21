@@ -432,6 +432,10 @@
   gap: var(--space-4);
 }
 
+.stepContainer[hidden] {
+  display: none !important;
+}
+
 .stepHeader {
   display: flex;
   flex-wrap: wrap;

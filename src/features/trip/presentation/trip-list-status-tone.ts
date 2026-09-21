@@ -1,9 +1,8 @@
+import type { StatusBadgeTone } from "@/components/ui/status-badge/status-badge";
 import type { TripRequestStatus } from "../application/trip-lifecycle";
 
-type StatusBadgeTone = "positive" | "negative" | "warning" | "info";
-
 const statusTones: Record<TripRequestStatus, StatusBadgeTone> = {
-  New: "info",
+  New: "purple",
   Assigned: "warning",
   InProgress: "info",
   Completed: "positive",

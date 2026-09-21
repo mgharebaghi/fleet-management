@@ -11,6 +11,7 @@ const repository = {
   availablePeople: vi.fn(),
   availableLocations: vi.fn(),
   assignmentsActiveAt: vi.fn(),
+  countPendingRequests: vi.fn(),
 } as unknown as TripRepository;
 
 describe("ReadTrips", () => {
@@ -40,5 +41,13 @@ describe("ReadTrips", () => {
     ).resolves.toEqual([]);
     expect(repository.details).not.toHaveBeenCalled();
     expect(repository.assignmentsActiveAt).not.toHaveBeenCalled();
+  });
+
+  it("delegates countPendingRequests to the repository", async () => {
+    vi.mocked(repository.countPendingRequests).mockResolvedValue(5);
+    const reader = new ReadTrips(repository);
+
+    await expect(reader.countPendingRequests()).resolves.toBe(5);
+    expect(repository.countPendingRequests).toHaveBeenCalled();
   });
 });

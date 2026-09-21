@@ -23,4 +23,13 @@ describe("StatusBadge", () => {
     expect(positiveMarkup).not.toBe(negativeMarkup);
     expect(negativeMarkup).toContain("غیرفعال");
   });
+
+  it("supports purple tone for distinct new request state", () => {
+    const purpleMarkup = renderToStaticMarkup(
+      <StatusBadge label="جدید" tone="purple" />,
+    );
+
+    expect(purpleMarkup).toContain("جدید");
+    expect(purpleMarkup).toContain("purple");
+  });
 });

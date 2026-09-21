@@ -72,6 +72,17 @@ export type CreateCompleteTripRequestCommand = Omit<
   passengers: CreateCompleteTripPassengerInput[];
 };
 
+export type AssignInitialPassengerInput = {
+  tripId: number;
+  vehicleDriverAssignmentId: number;
+  routes?: NewTripRouteDetails[];
+};
+
+export type AssignInitialTripRequestCommand = {
+  tripRequestId: number;
+  passengers: AssignInitialPassengerInput[];
+};
+
 export type CreateTripRequestInput = CreateTripRequestCommand & {
   requestDateTime: Date;
   requestNo: string;

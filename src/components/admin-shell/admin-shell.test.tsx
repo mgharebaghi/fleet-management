@@ -40,4 +40,40 @@ describe("AdminShell", () => {
     expect(markup).toContain("پیمایش اصلی (موبایل)");
     expect(markup).not.toContain("<dialog open");
   });
+
+  it("does not render a badge when pendingTripRequestsCount is not provided or zero", () => {
+    const withoutCount = renderToStaticMarkup(
+      <AdminShell>
+        <p>بدون بج</p>
+      </AdminShell>,
+    );
+    expect(withoutCount).not.toContain("درخواست جدید");
+
+    const zeroCount = renderToStaticMarkup(
+      <AdminShell pendingTripRequestsCount={0}>
+        <p>تعداد صفر</p>
+      </AdminShell>,
+    );
+    expect(zeroCount).not.toContain("درخواست جدید");
+  });
+
+  it("renders a badge with formatted count when pendingTripRequestsCount is positive", () => {
+    const markup = renderToStaticMarkup(
+      <AdminShell pendingTripRequestsCount={5}>
+        <p>با بج</p>
+      </AdminShell>,
+    );
+    expect(markup).toContain("۵ درخواست جدید");
+    expect(markup).toContain("۵");
+  });
+
+  it("renders a custom tripBadge slot when provided", () => {
+    const markup = renderToStaticMarkup(
+      <AdminShell tripBadge={<span data-testid="custom-badge">۳</span>}>
+        <p>با اسلات</p>
+      </AdminShell>,
+    );
+    expect(markup).toContain('data-testid="custom-badge"');
+    expect(markup).toContain("۳");
+  });
 });

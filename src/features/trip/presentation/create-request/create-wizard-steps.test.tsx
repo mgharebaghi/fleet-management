@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AssignmentStep } from "./assignment-step";
 import { CreateRequestSummary } from "./create-request-summary";
+import { PassengersStep } from "./passengers-step";
 import { PlanningStep } from "./planning-step";
 import { RequestStep } from "./request-step";
 import { ReviewStep } from "./review-step";
@@ -398,6 +399,25 @@ describe("Wizard Step 6: ReviewStep", () => {
     expect(markup).toContain("با تأیید نهایی، درخواست و اطلاعات برنامه‌ریزی ثبت می‌شوند.");
     expect(markup).toContain("ثبت نهایی درخواست");
   });
+
+  it("renders requester review mode with passenger list and submit button", () => {
+    const markup = renderToStaticMarkup(
+      <ReviewStep
+        hidden={false}
+        review={mockReview}
+        formValues={{ tripRequestTypeId: "1" }}
+        onBack={noop}
+      />,
+    );
+
+    expect(markup).toContain("مرور و تأیید درخواست سفر");
+    expect(markup).toContain("آماده ثبت درخواست");
+    expect(markup).toContain("فهرست مسافران");
+    expect(markup).toContain("رضا کریمی");
+    expect(markup).toContain("دفتر مرکزی ← کارخانه");
+    expect(markup).toContain("ثبت درخواست سفر");
+    expect(markup).toContain("قبلی: مسافران");
+  });
 });
 
 describe("Wizard Step 1: RequestStep", () => {
@@ -441,5 +461,32 @@ describe("Wizard Step 1: RequestStep", () => {
     expect(markup).toContain('id="trip-create-wizard-purpose-error"');
     expect(markup).toContain("هدف سفر حداکثر ۵۰۰ نویسه است.");
     expect(markup).toContain("اطلاعات اصلی");
+  });
+
+  it("renders PassengersStep with next button labeled 'بعدی: مرور و تأیید'", () => {
+    const markup = renderToStaticMarkup(
+      <PassengersStep
+        hidden={false}
+        prefix="trip-create-wizard"
+        pending={false}
+        people={[]}
+        locations={[]}
+        passengerCount={1}
+        activePassengerIndex={0}
+        passengerSnapshots={{}}
+        shareOrigin
+        shareDestination
+        value={() => ""}
+        fieldInvalid={() => false}
+        onSelectPassenger={noop}
+        onAddPassenger={noop}
+        onRemoveLastPassenger={noop}
+        onBack={noop}
+        onReview={noop}
+      />,
+    );
+
+    expect(markup).toContain("بعدی: مرور و تأیید");
+    expect(markup).not.toContain("بعدی: راننده و خودرو");
   });
 });

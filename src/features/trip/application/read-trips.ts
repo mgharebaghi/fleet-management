@@ -40,4 +40,8 @@ export class ReadTrips {
       ? this.repository.assignmentsActiveAt(dateTime)
       : Promise.resolve([]);
   }
+
+  countPendingRequests() {
+    return this.repository.countPendingRequests();
+  }
 }
