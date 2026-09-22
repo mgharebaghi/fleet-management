@@ -2,7 +2,7 @@ import type {
   TripFailure,
   TripLocationInputFailure,
 } from "../application/trip-records";
-import { TRIP_REQUEST_VEHICLE_PASSENGER_LIMIT } from "../application/trip-vehicle-capacity";
+import { VEHICLE_ACTIVE_PASSENGER_LIMIT } from "../application/trip-vehicle-capacity";
 
 export type TripActionState = {
   error?: TripFailure | "INVALID_FORM" | "UNEXPECTED";
@@ -200,7 +200,7 @@ export const tripMessages: Record<
     "کیلومتر باید عدد نامنفی با حداکثر ۱۶ رقم صحیح و ۲ رقم اعشار باشد.",
   ODOMETER_DECREASE: "کیلومتر پایان نباید کمتر از کیلومتر شروع باشد.",
   INVALID_RATING: "امتیاز باید عدد صحیح معتبر باشد.",
-  VEHICLE_PASSENGER_CAPACITY_EXCEEDED: `هر خودرو در یک درخواست سفر حداکثر می‌تواند به ${TRIP_REQUEST_VEHICLE_PASSENGER_LIMIT.toLocaleString("fa-IR")} مسافر تخصیص داده شود.`,
+  VEHICLE_PASSENGER_CAPACITY_EXCEEDED: `هر خودرو در یک درخواست سفر حداکثر می‌تواند به ${VEHICLE_ACTIVE_PASSENGER_LIMIT.toLocaleString("fa-IR")} مسافر تخصیص داده شود.`,
   INVALID_FORM: "اطلاعات فرم قابل پردازش نیست.",
   UNEXPECTED: "ثبت انجام نشد. دوباره تلاش کنید.",
 };

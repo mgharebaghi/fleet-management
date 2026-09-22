@@ -22,6 +22,7 @@ import {
   readDecimalMaps,
   tripSelect,
 } from "./prisma-trip-mapping";
+import { readActivePassengerCountsByVehicle } from "./prisma-active-vehicle-occupancy";
 import { PrismaTripWriteSession } from "./prisma-trip-write-session";
 
 export class PrismaTripRepository implements TripRepository {
@@ -256,6 +257,10 @@ export class PrismaTripRepository implements TripRepository {
       orderBy: [{ LocationName: "asc" }, { LocationId: "asc" }],
     });
     return rows.map(mapLocation);
+  }
+
+  activePassengerCountsByVehicle(vehicleIds: readonly number[]) {
+    return readActivePassengerCountsByVehicle(this.client, vehicleIds);
   }
 
   async assignmentsActiveAt(dateTime: Date) {

@@ -175,6 +175,7 @@ describe("TripRequestHandlingPage", () => {
           1001: [mockAssignment],
           1002: [mockAssignment],
         }}
+        activePassengerCountsByVehicle={{}}
       />,
     );
 
@@ -230,6 +231,7 @@ describe("TripRequestHandlingPage", () => {
         assignmentsByPassenger={{
           1001: [mockAssignment],
         }}
+        activePassengerCountsByVehicle={{}}
       />,
     );
 

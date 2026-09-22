@@ -27,7 +27,8 @@ const vehicleIds: number[] = [];
 const assignmentIds: number[] = [];
 let originId: number | undefined;
 let destinationId: number | undefined;
-let requestId: number | undefined;
+let requestAId: number | undefined;
+let requestBId: number | undefined;
 
 const request = () => adapter.underlyingDriver().request();
 
@@ -159,36 +160,49 @@ test.describe("Trip request vehicle capacity", () => {
     if (requestTypeId === undefined) {
       throw new Error("Trip request type is missing.");
     }
-    requestId = await insertId(
-      `INSERT INTO trip.TripRequest
-         (RequestNo, TripRequestTypeId, RequestDateTime,
-          RequestedTravelDateTime, Status, CreatedAt)
-       OUTPUT INSERTED.TripRequestId AS id
-       VALUES (@requestNo, @typeId, @travelAt, @travelAt, N'New', @travelAt)`,
-      { requestNo: `E2E-CAP-${token}`, typeId: requestTypeId, travelAt },
-    );
-    for (const personId of passengerIds) {
-      await insertId(
-        `INSERT INTO trip.Trip
-           (TripRequestId, PassengerPersonId, OriginLocationId,
-            DestinationLocationId, RequestedPickupDateTime)
-         OUTPUT INSERTED.TripId AS id
-         VALUES (@requestId, @personId, @originId, @destinationId, @travelAt)`,
-        {
-          requestId,
-          personId,
-          originId: originId!,
-          destinationId: destinationId!,
-          travelAt,
-        },
+    async function createRequest(requestNo: string, people: number[]) {
+      const id = await insertId(
+        `INSERT INTO trip.TripRequest
+           (RequestNo, TripRequestTypeId, RequestDateTime,
+            RequestedTravelDateTime, Status, CreatedAt)
+         OUTPUT INSERTED.TripRequestId AS id
+         VALUES (@requestNo, @typeId, @travelAt, @travelAt, N'New', @travelAt)`,
+        { requestNo, typeId: requestTypeId, travelAt },
       );
+      for (const personId of people) {
+        await insertId(
+          `INSERT INTO trip.Trip
+             (TripRequestId, PassengerPersonId, OriginLocationId,
+              DestinationLocationId, RequestedPickupDateTime)
+           OUTPUT INSERTED.TripId AS id
+           VALUES (@requestId, @personId, @originId, @destinationId, @travelAt)`,
+          {
+            requestId: id,
+            personId,
+            originId: originId!,
+            destinationId: destinationId!,
+            travelAt,
+          },
+        );
+      }
+      return id;
     }
+
+    requestAId = await createRequest(
+      `E2E-CAP-A-${token}`,
+      passengerIds.slice(0, 3),
+    );
+    requestBId = await createRequest(
+      `E2E-CAP-B-${token}`,
+      passengerIds.slice(3),
+    );
   });
 
   test.afterAll(async () => {
     if (!adapter) return;
     try {
-      if (requestId !== undefined) {
+      for (const requestId of [requestAId, requestBId]) {
+        if (requestId === undefined) continue;
         await request().input("requestId", requestId).query(`
           DELETE FROM trip.RoutePoint
           WHERE RouteId IN (
@@ -257,12 +271,13 @@ test.describe("Trip request vehicle capacity", () => {
     }
   });
 
-  test("disables a vehicle after three passengers and releases it when one changes", async ({
+  test("disables a vehicle that already has three planned passengers on another request", async ({
     page,
   }) => {
     test.setTimeout(180_000);
-    page.setDefaultTimeout(30_000);
-    await page.goto(`/trips/${requestId}`);
+    page.setDefaultTimeout(60_000);
+    const eventually = expect.configure({ timeout: 60_000 });
+    await page.goto(`/trips/${requestAId}`);
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await page.getByRole("button", { name: "بعدی: راننده و خودرو", exact: true }).click();
     await expect(page.getByRole("heading", { name: "راننده و خودرو" })).toBeVisible();
@@ -278,13 +293,28 @@ test.describe("Trip request vehicle capacity", () => {
       await expect(page.getByText("آماده ثبت نهایی")).toBeVisible();
     }
 
-    await openAssignment(page, passengerNames[0]);
-    const ownOption = await searchAssignment(page, vehicleACode);
-    await expect(ownOption).toBeVisible();
-    await expect(ownOption).not.toHaveAttribute("aria-disabled", "true");
-    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "بعدی: مسیر سفر", exact: true }).click();
+    await page
+      .getByRole("button", { name: /بعدی: (تأیید و تخصیص|برنامه‌ریزی)/ })
+      .click();
+    await page.getByRole("button", { name: "تأیید و تخصیص سفر", exact: true }).click();
+    await eventually(
+      page.getByRole("navigation", { name: "بخش‌های پرونده سفر" }),
+    ).toBeVisible();
 
-    await openAssignment(page, passengerNames[3]);
+    const planned = await request()
+      .input("requestId", requestAId)
+      .query<{ count: number }>(`
+        SELECT COUNT(*) AS count
+        FROM trip.TripExecution AS execution
+        INNER JOIN trip.Trip AS trip ON trip.TripId = execution.TripId
+        WHERE trip.TripRequestId = @requestId
+          AND execution.Status = N'Planned'
+      `);
+    expect(planned.recordset[0].count).toBe(3);
+
+    await page.goto(`/trips/${requestBId}`);
+    await page.getByRole("button", { name: "بعدی: راننده و خودرو", exact: true }).click();
     const fullOption = await searchAssignment(page, vehicleACode);
     await expect(fullOption).toBeVisible();
     await expect(fullOption).toContainText("ظرفیت خودرو تکمیل شده");
@@ -297,16 +327,22 @@ test.describe("Trip request vehicle capacity", () => {
     expect(hasHorizontalOverflow).toBe(false);
     await page.keyboard.press("Escape");
 
-    await openAssignment(page, passengerNames[2]);
-    await selectSearchableOption(
-      page,
-      "تخصیص واجد شرایط",
-      vehicleBCode,
-      vehicleBCode,
-    );
+    await request().input("requestId", requestAId).query(`
+      UPDATE trip.TripExecution
+      SET Status = N'Cancelled'
+      WHERE TripExecutionId = (
+        SELECT TOP (1) execution.TripExecutionId
+        FROM trip.TripExecution AS execution
+        INNER JOIN trip.Trip AS trip ON trip.TripId = execution.TripId
+        WHERE trip.TripRequestId = @requestId
+          AND execution.Status = N'Planned'
+      )
+    `);
 
-    await openAssignment(page, passengerNames[3]);
+    await page.goto(`/trips/${requestBId}`);
+    await page.getByRole("button", { name: "بعدی: راننده و خودرو", exact: true }).click();
     const releasedOption = await searchAssignment(page, vehicleACode);
+    await expect(releasedOption).toBeVisible();
     await expect(releasedOption).not.toHaveAttribute("aria-disabled", "true");
     await releasedOption.click();
     await expect(page.getByText("آماده ثبت نهایی")).toBeVisible();

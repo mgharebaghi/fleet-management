@@ -38,12 +38,14 @@ export type TripRequestHandlingPageProps = {
   details: TripRequestDetails;
   locations: TripLocationReference[];
   assignmentsByPassenger: CreateWizardAssignments;
+  activePassengerCountsByVehicle: Readonly<Record<number, number>>;
 };
 
 export function TripRequestHandlingPage({
   details,
   locations,
   assignmentsByPassenger,
+  activePassengerCountsByVehicle,
 }: TripRequestHandlingPageProps) {
   const [step, setStep] = useState<HandlingWizardStep>(1);
   const [selectedAssignments, setSelectedAssignments] = useState<
@@ -280,6 +282,7 @@ export function TripRequestHandlingPage({
             passengers={wizardPassengers}
             assignmentsByPassenger={assignmentsByPassenger}
             selectedAssignments={selectedAssignments}
+            activePassengerCountsByVehicle={activePassengerCountsByVehicle}
             onSelectionChange={(passengerKey, assignmentId) => {
               setSelectedAssignments((prev) => ({
                 ...prev,

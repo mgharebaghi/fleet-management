@@ -13,7 +13,7 @@ import {
   assignmentIneligibilityReasons,
   isAssignmentEligible,
 } from "../../application/trip-assignment-eligibility";
-import { TRIP_REQUEST_VEHICLE_PASSENGER_LIMIT } from "../../application/trip-vehicle-capacity";
+import { VEHICLE_ACTIVE_PASSENGER_LIMIT } from "../../application/trip-vehicle-capacity";
 import { assignmentIneligibilityMessages } from "../trip-form-data";
 import {
   assignmentOptionLabel,
@@ -31,6 +31,7 @@ type AssignmentStepProps = {
   passengers: CreateWizardPassenger[];
   assignmentsByPassenger: CreateWizardAssignments;
   selectedAssignments: Record<number, number>;
+  activePassengerCountsByVehicle: Readonly<Record<number, number>>;
   onSelectionChange: (passengerKey: number, assignmentId: number) => void;
   onBack: () => void;
   onNext: () => void;
@@ -41,6 +42,7 @@ export function AssignmentStep({
   passengers,
   assignmentsByPassenger,
   selectedAssignments,
+  activePassengerCountsByVehicle,
   onSelectionChange,
   onBack,
   onNext,
@@ -88,7 +90,7 @@ export function AssignmentStep({
         <div>
           <h2>راننده و خودرو</h2>
           <p className={styles.stepDescription}>
-            برای هر مسافر یک تخصیص واجد شرایط انتخاب کنید. هر خودرو در این درخواست حداکثر به {TRIP_REQUEST_VEHICLE_PASSENGER_LIMIT.toLocaleString("fa-IR")} مسافر تخصیص داده می‌شود. انتخاب‌ها تا ثبت نهایی فقط در همین فرم نگه‌داری می‌شوند.
+            برای هر مسافر یک تخصیص واجد شرایط انتخاب کنید. هر خودرو در این درخواست حداکثر به {VEHICLE_ACTIVE_PASSENGER_LIMIT.toLocaleString("fa-IR")} مسافر تخصیص داده می‌شود. انتخاب‌ها تا ثبت نهایی فقط در همین فرم نگه‌داری می‌شوند.
           </p>
         </div>
         <StatusBadge
@@ -145,6 +147,7 @@ export function AssignmentStep({
               assignmentsByPassenger,
               selectedAssignments,
               activePassengerKey: passenger.key,
+              activePassengerCountsByVehicle,
             })}
             defaultValue={selectedId ? String(selectedId) : ""}
             placeholder="انتخاب راننده و خودرو…"

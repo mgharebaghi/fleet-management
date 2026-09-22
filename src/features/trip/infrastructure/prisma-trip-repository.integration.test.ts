@@ -854,4 +854,96 @@ describe.sequential("Trip SQL Server integration", () => {
     },
     600_000,
   );
+
+  it("counts active passengers by physical vehicle across assignment records", async () => {
+    const fixture = await createCoreFixture();
+    const assignmentA = await createAssignmentFixture(
+      fixture.token,
+      fixture.person.PersonId,
+      fixture.requestedTravelDateTime,
+    );
+    const assignmentA2 = await client.vehicleDriverAssignment.create({
+      data: {
+        DriverId: assignmentA.DriverId,
+        VehicleId: assignmentA.VehicleId,
+        FromDateTime: new Date("2026-01-01T00:00:00Z"),
+        ToDateTime: null,
+      },
+    });
+    assignmentIds.push(assignmentA2.AssignmentId);
+    const vehicleA = await client.vehicle.findUniqueOrThrow({
+      where: { VehicleId: assignmentA.VehicleId },
+    });
+    const vehicleB = await client.vehicle.create({
+      data: {
+        VehicleCode: `TB-${fixture.token.slice(0, 20)}`,
+        PlateNoLeftSide: "21",
+        PlateNoCenterChar: "ج",
+        PlateNoRightSide: "543",
+        PlateNoIranNo: "76",
+        ModelId: vehicleA.ModelId,
+        VehicleStatusId: vehicleA.VehicleStatusId,
+        IsActive: true,
+      },
+    });
+    vehicleIds.push(vehicleB.VehicleId);
+    const assignmentB = await client.vehicleDriverAssignment.create({
+      data: {
+        DriverId: assignmentA.DriverId,
+        VehicleId: vehicleB.VehicleId,
+        FromDateTime: new Date("2026-01-01T00:00:00Z"),
+        ToDateTime: null,
+      },
+    });
+    assignmentIds.push(assignmentB.AssignmentId);
+
+    async function addExecution(assignmentId: number, status: string) {
+      const trip = await client.trip.create({
+        data: {
+          TripRequestId: fixture.requestId,
+          PassengerPersonId: fixture.person.PersonId,
+          OriginLocationId: fixture.origin.LocationId,
+          DestinationLocationId: fixture.destination.LocationId,
+        },
+      });
+      await client.tripExecution.create({
+        data: {
+          TripId: trip.TripId,
+          VehicleDriverAssignmentId: assignmentId,
+          Status: status,
+        },
+      });
+    }
+
+    await addExecution(assignmentA.AssignmentId, "Planned");
+    await addExecution(assignmentA2.AssignmentId, "InProgress");
+    await addExecution(assignmentA.AssignmentId, "Completed");
+    await addExecution(assignmentA2.AssignmentId, "Cancelled");
+    await addExecution(assignmentB.AssignmentId, "Planned");
+
+    const expected = {
+      [assignmentA.VehicleId]: 2,
+      [vehicleB.VehicleId]: 1,
+    };
+    await expect(
+      repository.activePassengerCountsByVehicle([
+        assignmentA.VehicleId,
+        vehicleB.VehicleId,
+      ]),
+    ).resolves.toEqual(expected);
+    await repository.atomic(async (session) => {
+      await expect(
+        session.activePassengerCountsByVehicle([
+          assignmentA.VehicleId,
+          vehicleB.VehicleId,
+        ]),
+      ).resolves.toEqual(expected);
+    });
+    await expect(
+      repository.activePassengerCountsByVehicle([vehicleB.VehicleId]),
+    ).resolves.toEqual({ [vehicleB.VehicleId]: 1 });
+    await expect(repository.activePassengerCountsByVehicle([])).resolves.toEqual(
+      {},
+    );
+  });
 });

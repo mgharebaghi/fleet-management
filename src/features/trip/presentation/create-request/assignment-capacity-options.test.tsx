@@ -67,6 +67,7 @@ const assignmentsByPassenger: Record<number, TripAssignmentReference[]> = {
 function optionsFor(
   activePassengerKey: number,
   selectedAssignments: Record<number, number>,
+  activePassengerCountsByVehicle: Readonly<Record<number, number>> = {},
 ) {
   return buildEligibleAssignmentOptions({
     eligible: assignmentsByPassenger[activePassengerKey],
@@ -74,6 +75,7 @@ function optionsFor(
     assignmentsByPassenger,
     selectedAssignments,
     activePassengerKey,
+    activePassengerCountsByVehicle,
   });
 }
 
@@ -132,5 +134,37 @@ describe("assignment capacity options", () => {
     expect(optionFor(options, 204)?.disabled).toBe(true);
     expect(optionFor(options, 308)?.disabled).toBe(true);
     expect(optionFor(options, 900)?.disabled).toBe(false);
+  });
+
+  it("disables a vehicle that already has three persisted active passengers", () => {
+    const options = optionsFor(4, {}, { 5: 3 });
+    expect(optionFor(options, 101)?.disabled).toBe(true);
+    expect(optionFor(options, 412)?.disabled).toBe(true);
+    expect(optionFor(options, 900)?.disabled).toBe(false);
+    expect(optionFor(options, 101)?.label).toContain(VEHICLE_CAPACITY_FULL_MESSAGE);
+  });
+
+  it("counts one other wizard selection on top of two persisted passengers", () => {
+    const options = optionsFor(4, { 1: 101 }, { 5: 2 });
+    expect(optionFor(options, 204)?.disabled).toBe(true);
+    expect(optionFor(options, 412)?.disabled).toBe(true);
+  });
+
+  it("lets the active passenger keep a vehicle that has two persisted passengers", () => {
+    const options = optionsFor(2, { 2: 204 }, { 5: 2 });
+    expect(optionFor(options, 204)?.disabled).toBe(false);
+    expect(optionFor(options, 412)?.disabled).toBe(false);
+  });
+
+  it("frees a persisted vehicle when the other wizard passenger moves away", () => {
+    expect(optionFor(optionsFor(4, { 1: 101 }, { 5: 2 }), 412)?.disabled).toBe(
+      true,
+    );
+    expect(optionFor(optionsFor(4, { 1: 900 }, { 5: 2 }), 101)?.disabled).toBe(
+      false,
+    );
+    expect(optionFor(optionsFor(4, { 1: 900 }, { 5: 2 }), 412)?.disabled).toBe(
+      false,
+    );
   });
 });

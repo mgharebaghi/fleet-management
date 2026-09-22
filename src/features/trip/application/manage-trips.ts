@@ -44,7 +44,7 @@ import {
   tripRouteError,
   tripRouteDetailsError,
 } from "./trip-validation";
-import { tripRequestVehicleCapacityExceeded } from "./trip-vehicle-capacity";
+import { vehiclePassengerCapacityExceeded } from "./trip-vehicle-capacity";
 
 const failure = (error: TripFailure, field?: string): TripResult => ({
   success: false,
@@ -416,7 +416,18 @@ export class ManageTrips {
         }
       }
 
-      if (tripRequestVehicleCapacityExceeded(resolvedVehicleIds)) {
+      // A New request has no TripExecutions yet, so persisted occupancy is
+      // other requests only and these passengers are counted once, below.
+      const persistedActiveCounts =
+        await session.activePassengerCountsByVehicle([
+          ...new Set(resolvedVehicleIds),
+        ]);
+      if (
+        vehiclePassengerCapacityExceeded({
+          persistedActiveCounts,
+          submittedVehicleIds: resolvedVehicleIds,
+        })
+      ) {
         return failure("VEHICLE_PASSENGER_CAPACITY_EXCEEDED");
       }
 

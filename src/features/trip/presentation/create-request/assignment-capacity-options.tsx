@@ -43,15 +43,17 @@ export function buildEligibleAssignmentOptions(input: {
   >;
   selectedAssignments: Readonly<Record<number, number>>;
   activePassengerKey: number;
+  activePassengerCountsByVehicle: Readonly<Record<number, number>>;
 }): SearchableSelectOption[] {
-  const fullVehicleIds = vehicleIdsWithoutPassengerRoom(
-    selectedVehicleIdsExcludingPassenger(
+  const fullVehicleIds = vehicleIdsWithoutPassengerRoom({
+    persistedActiveCounts: input.activePassengerCountsByVehicle,
+    wizardVehicleIdsExcludingActivePassenger: selectedVehicleIdsExcludingPassenger(
       input.passengers,
       input.assignmentsByPassenger,
       input.selectedAssignments,
       input.activePassengerKey,
     ),
-  );
+  });
 
   return input.eligible.map((assignment) => {
     const label = assignmentOptionLabel(assignment);

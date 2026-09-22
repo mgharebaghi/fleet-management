@@ -300,6 +300,7 @@ describe("Wizard Step 3: AssignmentStep", () => {
         passengers={[mockPendingPassenger]}
         assignmentsByPassenger={{ 0: [mockAssignment] }}
         selectedAssignments={{ 0: 501 }}
+        activePassengerCountsByVehicle={{}}
         onSelectionChange={noop}
         onBack={noop}
         onNext={noop}

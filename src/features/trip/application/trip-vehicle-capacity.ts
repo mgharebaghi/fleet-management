@@ -1,8 +1,9 @@
 /**
- * Passengers one physical vehicle may carry inside a single Trip Request.
- * Capacity is `vehicleId`, shared by every assignment of that vehicle.
+ * Active passengers one physical vehicle may carry across all trip requests.
+ * Capacity is `vehicleId`. Planned and InProgress executions occupy a slot;
+ * Completed and Cancelled executions do not.
  */
-export const TRIP_REQUEST_VEHICLE_PASSENGER_LIMIT = 3;
+export const VEHICLE_ACTIVE_PASSENGER_LIMIT = 3;
 
 function passengersByVehicle(
   vehicleIds: readonly number[],
@@ -14,28 +15,41 @@ function passengersByVehicle(
   return counts;
 }
 
-/** True when the submitted passengers put any vehicle over the request limit. */
-export function tripRequestVehicleCapacityExceeded(
-  vehicleIds: readonly number[],
-): boolean {
-  for (const count of passengersByVehicle(vehicleIds).values()) {
-    if (count > TRIP_REQUEST_VEHICLE_PASSENGER_LIMIT) return true;
+export function vehiclePassengerCapacityExceeded(input: {
+  persistedActiveCounts: Readonly<Record<number, number>>;
+  submittedVehicleIds: readonly number[];
+}): boolean {
+  const submitted = passengersByVehicle(input.submittedVehicleIds);
+  for (const [vehicleId, submittedCount] of submitted) {
+    const total =
+      (input.persistedActiveCounts[vehicleId] ?? 0) + submittedCount;
+    if (total > VEHICLE_ACTIVE_PASSENGER_LIMIT) return true;
   }
   return false;
 }
 
 /**
- * Vehicles that already have no free passenger slot for someone else.
- * Callers must omit the passenger currently being edited.
+ * Vehicles with no free slot for someone else.
+ * Wizard ids must omit the passenger currently being edited.
+ * Missing persisted keys mean zero active occupancy.
  */
-export function vehicleIdsWithoutPassengerRoom(
-  vehicleIdsExcludingActivePassenger: readonly number[],
-): ReadonlySet<number> {
+export function vehicleIdsWithoutPassengerRoom(input: {
+  persistedActiveCounts: Readonly<Record<number, number>>;
+  wizardVehicleIdsExcludingActivePassenger: readonly number[];
+}): ReadonlySet<number> {
+  const wizard = passengersByVehicle(
+    input.wizardVehicleIdsExcludingActivePassenger,
+  );
+  const vehicleIds = new Set<number>([
+    ...Object.keys(input.persistedActiveCounts).map(Number),
+    ...wizard.keys(),
+  ]);
   const full = new Set<number>();
-  for (const [vehicleId, count] of passengersByVehicle(
-    vehicleIdsExcludingActivePassenger,
-  )) {
-    if (count >= TRIP_REQUEST_VEHICLE_PASSENGER_LIMIT) {
+  for (const vehicleId of vehicleIds) {
+    const total =
+      (input.persistedActiveCounts[vehicleId] ?? 0) +
+      (wizard.get(vehicleId) ?? 0);
+    if (total >= VEHICLE_ACTIVE_PASSENGER_LIMIT) {
       full.add(vehicleId);
     }
   }

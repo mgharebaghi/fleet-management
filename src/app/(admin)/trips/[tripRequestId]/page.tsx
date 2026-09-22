@@ -33,11 +33,21 @@ export default async function Page({
         await reader.assignmentsActiveAt(pickupTime);
     }
 
+    const activePassengerCountsByVehicle =
+      await reader.activePassengerCountsByVehicle([
+        ...new Set(
+          Object.values(assignmentsByPassenger).flatMap((assignments) =>
+            assignments.map((assignment) => assignment.vehicle.vehicleId),
+          ),
+        ),
+      ]);
+
     return (
       <TripRequestHandlingPage
         details={details}
         locations={locations}
         assignmentsByPassenger={assignmentsByPassenger}
+        activePassengerCountsByVehicle={activePassengerCountsByVehicle}
       />
     );
   }

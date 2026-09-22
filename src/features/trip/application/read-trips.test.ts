@@ -11,6 +11,7 @@ const repository = {
   availablePeople: vi.fn(),
   availableLocations: vi.fn(),
   assignmentsActiveAt: vi.fn(),
+  activePassengerCountsByVehicle: vi.fn(),
   countPendingRequests: vi.fn(),
 } as unknown as TripRepository;
 

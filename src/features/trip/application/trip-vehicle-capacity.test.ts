@@ -1,31 +1,79 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  TRIP_REQUEST_VEHICLE_PASSENGER_LIMIT,
-  tripRequestVehicleCapacityExceeded,
+  VEHICLE_ACTIVE_PASSENGER_LIMIT,
   vehicleIdsWithoutPassengerRoom,
+  vehiclePassengerCapacityExceeded,
 } from "./trip-vehicle-capacity";
 
 describe("trip vehicle passenger capacity", () => {
-  it("keeps the request limit at three passengers per vehicle", () => {
-    expect(TRIP_REQUEST_VEHICLE_PASSENGER_LIMIT).toBe(3);
+  it("keeps the active passenger limit at three per vehicle", () => {
+    expect(VEHICLE_ACTIVE_PASSENGER_LIMIT).toBe(3);
   });
 
-  it("allows exactly three passengers on one vehicle", () => {
-    expect(tripRequestVehicleCapacityExceeded([5, 5, 5])).toBe(false);
+  it("allows persisted occupancy plus the current submission up to three", () => {
+    expect(
+      vehiclePassengerCapacityExceeded({
+        persistedActiveCounts: {},
+        submittedVehicleIds: [5, 5, 5],
+      }),
+    ).toBe(false);
+    expect(
+      vehiclePassengerCapacityExceeded({
+        persistedActiveCounts: { 5: 1 },
+        submittedVehicleIds: [5, 5],
+      }),
+    ).toBe(false);
+    expect(
+      vehiclePassengerCapacityExceeded({
+        persistedActiveCounts: { 5: 2 },
+        submittedVehicleIds: [5],
+      }),
+    ).toBe(false);
   });
 
-  it("rejects a fourth passenger even when assignment identity is not the key", () => {
-    expect(tripRequestVehicleCapacityExceeded([5, 5, 5, 5])).toBe(true);
+  it("rejects when persisted occupancy plus the submission exceeds three", () => {
+    expect(
+      vehiclePassengerCapacityExceeded({
+        persistedActiveCounts: { 5: 3 },
+        submittedVehicleIds: [5],
+      }),
+    ).toBe(true);
+    expect(
+      vehiclePassengerCapacityExceeded({
+        persistedActiveCounts: { 5: 2 },
+        submittedVehicleIds: [5, 5],
+      }),
+    ).toBe(true);
   });
 
-  it("allows three passengers on one vehicle and another passenger on a different vehicle", () => {
-    expect(tripRequestVehicleCapacityExceeded([5, 5, 5, 8])).toBe(false);
+  it("does not add occupancy from a different vehicle", () => {
+    expect(
+      vehiclePassengerCapacityExceeded({
+        persistedActiveCounts: { 5: 3, 8: 1 },
+        submittedVehicleIds: [8],
+      }),
+    ).toBe(false);
   });
 
-  it("marks a vehicle full only after other passengers already use every slot", () => {
-    expect(vehicleIdsWithoutPassengerRoom([5, 5])).toEqual(new Set());
-    expect(vehicleIdsWithoutPassengerRoom([5, 5, 5])).toEqual(new Set([5]));
-    expect(vehicleIdsWithoutPassengerRoom([5, 5, 5, 8])).toEqual(new Set([5]));
+  it("treats a vehicle as full from persisted occupancy and other wizard selections", () => {
+    expect(
+      vehicleIdsWithoutPassengerRoom({
+        persistedActiveCounts: { 5: 3 },
+        wizardVehicleIdsExcludingActivePassenger: [],
+      }),
+    ).toEqual(new Set([5]));
+    expect(
+      vehicleIdsWithoutPassengerRoom({
+        persistedActiveCounts: { 5: 2 },
+        wizardVehicleIdsExcludingActivePassenger: [5],
+      }),
+    ).toEqual(new Set([5]));
+    expect(
+      vehicleIdsWithoutPassengerRoom({
+        persistedActiveCounts: { 5: 2 },
+        wizardVehicleIdsExcludingActivePassenger: [],
+      }),
+    ).toEqual(new Set());
   });
 });

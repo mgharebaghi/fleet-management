@@ -22,6 +22,7 @@ import {
   tripSelect,
   type TripPrismaClient,
 } from "./prisma-trip-mapping";
+import { readActivePassengerCountsByVehicle } from "./prisma-active-vehicle-occupancy";
 
 export class PrismaTripWriteSession implements TripWriteSession {
   constructor(private readonly client: TripPrismaClient) {}
@@ -222,6 +223,10 @@ export class PrismaTripWriteSession implements TripWriteSession {
       WHERE UPPER(LTRIM(RTRIM(RequestNo))) = ${requestNo}
     `;
     return rows.length > 0;
+  }
+
+  activePassengerCountsByVehicle(vehicleIds: readonly number[]) {
+    return readActivePassengerCountsByVehicle(this.client, vehicleIds);
   }
 
   async assignment(id: number, activeAt: Date) {
