@@ -14,6 +14,7 @@ export type TripPersonReference = {
   firstName: string;
   lastName: string;
   personnelNo: string | null;
+  nationalCode: string | null;
   mobile: string | null;
   isActive: boolean;
 };

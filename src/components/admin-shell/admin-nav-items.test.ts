@@ -2,9 +2,30 @@ import { describe, expect, it } from "vitest";
 
 import {
   ADMIN_NAV_SECTIONS,
+  findAdminNavTrail,
   isAdminNavPathActive,
   isAdminNavSectionActive,
 } from "./admin-nav-items";
+
+describe("ADMIN_NAV_SECTIONS labels", () => {
+  const fleetSection = ADMIN_NAV_SECTIONS.find(
+    (section) => section.label === "ناوگان",
+  )!;
+
+  it("uses the updated fleet child navigation labels", () => {
+    expect(
+      fleetSection.children?.map((child) => child.label),
+    ).toEqual(["خودروهای سازمان", "بیمه ها", "کاتالوگ خودروها"]);
+    expect(findAdminNavTrail("/fleet/vehicles")).toEqual([
+      "ناوگان",
+      "خودروهای سازمان",
+    ]);
+    expect(findAdminNavTrail("/fleet/catalogs")).toEqual([
+      "ناوگان",
+      "کاتالوگ خودروها",
+    ]);
+  });
+});
 
 describe("isAdminNavPathActive", () => {
   it("matches the href exactly", () => {

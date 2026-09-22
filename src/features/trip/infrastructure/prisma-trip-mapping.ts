@@ -13,6 +13,7 @@ export const personSelect = {
   FirstName: true,
   LastName: true,
   PersonnelNo: true,
+  NationalCode: true,
   Mobile: true,
   IsActive: true,
 } satisfies Prisma.PeopleSelect;
@@ -138,6 +139,7 @@ export function mapPerson(row: Prisma.PeopleGetPayload<{ select: typeof personSe
     firstName: row.FirstName,
     lastName: row.LastName,
     personnelNo: row.PersonnelNo,
+    nationalCode: row.NationalCode,
     mobile: row.Mobile,
     isActive: row.IsActive,
   };

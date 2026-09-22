@@ -1,0 +1,34 @@
+.control {
+  position: relative;
+  min-width: 0;
+}
+
+.input {
+  width: 100%;
+  cursor: text;
+  padding-inline-end: 36px;
+}
+
+.toggle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  inset-inline-end: 0;
+  display: flex;
+  width: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--app-text-muted);
+  cursor: pointer;
+}
+
+.toggle:disabled {
+  cursor: not-allowed;
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--app-focus);
+  outline-offset: -2px;
+}

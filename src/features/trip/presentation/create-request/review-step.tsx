@@ -154,7 +154,6 @@ export function ReviewStep({
                   <tr>
                     <th>مسافر</th>
                     <th>مبدأ و مقصد</th>
-                    <th>زمان سوارشدن</th>
                     <th>توضیحات</th>
                   </tr>
                 </thead>
@@ -163,7 +162,6 @@ export function ReviewStep({
                     <tr key={index}>
                       <td data-label="مسافر"><strong>{passenger.personName}</strong></td>
                       <td data-label="مبدأ و مقصد">{passenger.originName} ← {passenger.destinationName}</td>
-                      <td data-label="زمان سوارشدن">{passenger.pickup ?? review.travelAt}</td>
                       <td data-label="توضیحات">{passenger.description ?? "—"}</td>
                     </tr>
                   ))}

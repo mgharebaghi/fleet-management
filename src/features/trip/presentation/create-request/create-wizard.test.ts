@@ -4,9 +4,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   CREATE_WIZARD_STEPS,
+  DEFAULT_CREATE_REQUEST_PURPOSE,
   HANDLING_WIZARD_STEPS,
   createRequestReview,
   createRequestSummaryPreview,
+  defaultTripRequestTypeId,
   dropPassengerSnapshot,
   extractPassengerSnapshot,
   gapNotice,
@@ -55,6 +57,7 @@ const people = [
     firstName: "علی",
     lastName: "رضایی",
     personnelNo: "P-1",
+    nationalCode: "0012345678",
     mobile: null,
     isActive: true,
   },
@@ -157,14 +160,28 @@ describe("Trip create wizard presentation", () => {
         {
           "passenger.0.personId": "44",
           "passenger.0.destinationLocationId": "81",
-          "passenger.0.pickupOverride": "true",
         },
         "COMMON_ORIGIN",
       ),
-    ).toEqual([
-      "passenger.0.pickupDay",
-      "passenger.0.pickupTime",
-    ]);
+    ).toEqual([]);
+  });
+
+  it("defaults the create request type to COMMON_ORIGIN_DESTINATION when present", () => {
+    expect(defaultTripRequestTypeId(requestTypes)).toBe("3");
+    expect(
+      defaultTripRequestTypeId([
+        {
+          tripRequestTypeId: 9,
+          typeCode: "COMMON_ORIGIN",
+          typeName: "مبدأ مشترک",
+          description: null,
+        },
+      ]),
+    ).toBe("");
+  });
+
+  it("exposes the default create-request purpose preset", () => {
+    expect(DEFAULT_CREATE_REQUEST_PURPOSE).toBe("ماموریت اداری");
   });
 
   it("builds a human-readable review without raw identifiers", () => {

@@ -24,6 +24,7 @@ const person = {
   firstName: "Test",
   lastName: "Passenger",
   personnelNo: "P-1",
+  nationalCode: null,
   mobile: null,
   isActive: true,
 };
@@ -265,7 +266,7 @@ describe("create Trip request", () => {
     });
   });
 
-  it("preserves a passenger-specific requested pickup override", async () => {
+  it("persists the request travel datetime even when a passenger pickup override is supplied", async () => {
     const requestedPickupDateTime = new Date("2026-02-01T08:30:00Z");
 
     await manage.createRequest({
@@ -281,7 +282,9 @@ describe("create Trip request", () => {
     expect(session.createRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         passengers: [
-          expect.objectContaining({ requestedPickupDateTime }),
+          expect.objectContaining({
+            requestedPickupDateTime: createInput.requestedTravelDateTime,
+          }),
         ],
       }),
     );

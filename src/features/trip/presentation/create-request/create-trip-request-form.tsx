@@ -13,8 +13,10 @@ import { tripFormValues, tripMessages, type TripActionState } from "../trip-form
 import { LOCATION_CREATED_EVENT } from "../location/location-picker";
 import { CreateRequestSummary } from "./create-request-summary";
 import {
+  DEFAULT_CREATE_REQUEST_PURPOSE,
   createRequestReview,
   createRequestSummaryPreview,
+  defaultTripRequestTypeId,
   dropPassengerSnapshot,
   gapNotice,
   isLocationField,
@@ -48,16 +50,20 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
   const router = useRouter();
   const prefix = useId();
   const formRef = useRef<HTMLFormElement>(null);
+  const initialTypeId = defaultTripRequestTypeId(requestTypes);
   const [step, setStep] = useState<CreateWizardStep>(1);
   const [stepNotice, setStepNotice] = useState<string | null>(null);
   const [catalogLocations, setCatalogLocations] = useState(locations);
   const [passengerCount, setPassengerCount] = useState(1);
   const [activePassengerIndex, setActivePassengerIndex] = useState(0);
-  const [formValuesState, setFormValuesState] = useState<Record<string, string>>({});
+  const [formValuesState, setFormValuesState] = useState<Record<string, string>>(() => ({
+    purpose: DEFAULT_CREATE_REQUEST_PURPOSE,
+    ...(initialTypeId ? { tripRequestTypeId: initialTypeId } : {}),
+  }));
   const [passengerSnapshots, setPassengerSnapshots] = useState<Record<number, Record<string, string>>>({});
   const [summaryPreview, setSummaryPreview] = useState<TripRequestSummaryPreview | null>(null);
   const [review, setReview] = useState<TripRequestReview | null>(null);
-  const [selectedTypeId, setSelectedTypeId] = useState("");
+  const [selectedTypeId, setSelectedTypeId] = useState(initialTypeId);
   const [keptLocations, setKeptLocations] = useState<Record<string, string>>({});
   const [typeRestoreNonce, setTypeRestoreNonce] = useState(0);
   const selectedTypeIdRef = useRef(selectedTypeId);

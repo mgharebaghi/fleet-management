@@ -29,8 +29,7 @@ describe("trip workspace passenger display", () => {
 
   it("keeps personnel/mobile reachable via roster item fields", () => {
     const item = {
-      personnelNo: "10234",
-      mobile: "09121234567",
+      personnelNo: "10234",      nationalCode: null,      mobile: "09121234567",
       passengerStatus: null,
       executionStatus: null,
       hasPlan: true,

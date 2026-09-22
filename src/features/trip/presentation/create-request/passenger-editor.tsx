@@ -10,7 +10,6 @@ import {
 } from "../../../../components/ui/form-field/form-field";
 import { FormGrid } from "../../../../components/ui/form-grid/form-grid";
 import { SearchableSelect } from "../../../../components/ui/searchable-select/searchable-select";
-import { TechnicalValue } from "../../../../components/ui/technical-value/technical-value";
 import { TimeSelect } from "../../../../components/ui/time-select/time-select";
 import type {
   TripLocationReference,
@@ -18,6 +17,7 @@ import type {
 } from "../../application/trip-records";
 import { LocationPicker } from "../location/location-picker";
 import styles from "./create-trip.module.css";
+import { tripPersonSelectOptions } from "./trip-person-select-options";
 
 export function PassengerEditor({
   index,
@@ -28,6 +28,7 @@ export function PassengerEditor({
   passengerCount,
   shareOrigin,
   shareDestination,
+  allowPickupOverride = true,
   value,
   fieldInvalid,
 }: {
@@ -39,25 +40,11 @@ export function PassengerEditor({
   passengerCount: number;
   shareOrigin: boolean;
   shareDestination: boolean;
+  allowPickupOverride?: boolean;
   value: (name: string) => string;
   fieldInvalid: (name: string) => boolean;
 }) {
-  const personOptions = people.map((person) => ({
-    value: String(person.personId),
-    label: `${person.firstName} ${person.lastName} ${person.personnelNo ?? ""}`,
-    searchText: `${person.firstName} ${person.lastName} ${person.personnelNo ?? ""} ${person.mobile ?? ""}`,
-    content: (
-      <span>
-        {person.firstName} {person.lastName}
-        {person.personnelNo && (
-          <>
-            {" — "}
-            <TechnicalValue>{person.personnelNo}</TechnicalValue>
-          </>
-        )}
-      </span>
-    ),
-  }));
+  const personOptions = tripPersonSelectOptions(people);
   const inheritedRouteHelp =
     shareOrigin && shareDestination
       ? "مبدأ و مقصد از اطلاعات درخواست استفاده می‌شود."
@@ -83,7 +70,7 @@ export function PassengerEditor({
           options={personOptions}
           defaultValue={value(`passenger.${index}.personId`)}
           placeholder="انتخاب کنید"
-          searchPlaceholder="جستجوی نام، شماره پرسنلی یا موبایل…"
+          searchPlaceholder="جستجوی نام، کد ملی یا موبایل…"
           disabled={pending}
           required
           invalid={fieldInvalid(`passenger.${index}.personId`)}
@@ -129,43 +116,45 @@ export function PassengerEditor({
         </FormGrid>
       )}
 
-      <fieldset className={styles.passengerPickupGroup}>
-        <legend>زمان سوارشدن درخواستی</legend>
-        <input
-          type="hidden"
-          name={pickupOverrideName}
-          value={pickupOverride ? "true" : ""}
-          readOnly
-        />
-        <label className={styles.passengerPickupToggle}>
+      {allowPickupOverride && (
+        <fieldset className={styles.passengerPickupGroup}>
+          <legend>زمان سوارشدن درخواستی</legend>
           <input
-            type="checkbox"
-            checked={pickupOverride}
-            disabled={pending}
-            onChange={(event) => setPickupOverride(event.currentTarget.checked)}
+            type="hidden"
+            name={pickupOverrideName}
+            value={pickupOverride ? "true" : ""}
+            readOnly
           />
-          <span>زمان سوارشدن متفاوت از زمان درخواست</span>
-        </label>
-        <p className={styles.passengerHelp}>
-          در حالت عادی، زمان سوارشدن همین مسافر از زمان درخواست سفر استفاده
-          می‌کند.
-        </p>
-        <div className={styles.passengerPickupControls} hidden={!pickupOverride}>
-          <JalaliDatePicker
-            name={`passenger.${index}.pickupDay`}
-            label="تاریخ (شمسی)"
-            defaultValue={value(`passenger.${index}.pickupDay`)}
-            disabled={pending || !pickupOverride}
-          />
-          <TimeSelect
-            id={`${prefix}-pickup-time-${index}`}
-            name={`passenger.${index}.pickupTime`}
-            label="ساعت"
-            defaultValue={value(`passenger.${index}.pickupTime`)}
-            disabled={pending || !pickupOverride}
-          />
-        </div>
-      </fieldset>
+          <label className={styles.passengerPickupToggle}>
+            <input
+              type="checkbox"
+              checked={pickupOverride}
+              disabled={pending}
+              onChange={(event) => setPickupOverride(event.currentTarget.checked)}
+            />
+            <span>زمان سوارشدن متفاوت از زمان درخواست</span>
+          </label>
+          <p className={styles.passengerHelp}>
+            در حالت عادی، زمان سوارشدن همین مسافر از زمان درخواست سفر استفاده
+            می‌کند.
+          </p>
+          <div className={styles.passengerPickupControls} hidden={!pickupOverride}>
+            <JalaliDatePicker
+              name={`passenger.${index}.pickupDay`}
+              label="تاریخ (شمسی)"
+              defaultValue={value(`passenger.${index}.pickupDay`)}
+              disabled={pending || !pickupOverride}
+            />
+            <TimeSelect
+              id={`${prefix}-pickup-time-${index}`}
+              name={`passenger.${index}.pickupTime`}
+              label="ساعت"
+              defaultValue={value(`passenger.${index}.pickupTime`)}
+              disabled={pending || !pickupOverride}
+            />
+          </div>
+        </fieldset>
+      )}
 
       {passengerCount > 1 && (
         <FormGrid>

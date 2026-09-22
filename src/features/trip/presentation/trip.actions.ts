@@ -22,6 +22,22 @@ import {
   type CreateWizardPayload,
 } from "./create-request/create-wizard";
 
+function passengerRequestedPickupDateTime(
+  values: Record<string, string>,
+  passengerIndex: number,
+  inheritedDateTime: Date,
+): Date {
+  if (values[`passenger.${passengerIndex}.pickupOverride`] !== "true") {
+    return inheritedDateTime;
+  }
+  return (
+    parseTehranDateTime(
+      values[`passenger.${passengerIndex}.pickupDay`],
+      values[`passenger.${passengerIndex}.pickupTime`],
+    ) ?? new Date(Number.NaN)
+  );
+}
+
 async function run(
   values: Record<string, string>,
   work: () => Promise<TripResult>,
@@ -51,22 +67,6 @@ function requestedTravelDateTime(
     parseTehranDateTime(
       values.requestedTravelDay,
       values.requestedTravelTime,
-    ) ?? new Date(Number.NaN)
-  );
-}
-
-function passengerRequestedPickupDateTime(
-  values: Record<string, string>,
-  passengerIndex: number,
-  inheritedDateTime: Date,
-): Date {
-  if (values[`passenger.${passengerIndex}.pickupOverride`] !== "true") {
-    return inheritedDateTime;
-  }
-  return (
-    parseTehranDateTime(
-      values[`passenger.${passengerIndex}.pickupDay`],
-      values[`passenger.${passengerIndex}.pickupTime`],
     ) ?? new Date(Number.NaN)
   );
 }
@@ -399,11 +399,7 @@ export async function createTripRequestAction(
           commonDestination ||
             values[`passenger.${index}.destinationLocationId`],
         ),
-        requestedPickupDateTime: passengerRequestedPickupDateTime(
-          values,
-          index,
-          travelDateTime,
-        ),
+        requestedPickupDateTime: travelDateTime,
         pickupOrder: parseOptionalInteger(
           values[`passenger.${index}.pickupOrder`],
         ),

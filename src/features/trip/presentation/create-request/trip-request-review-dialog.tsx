@@ -77,7 +77,6 @@ export function TripRequestReviewDialog({
                     <th scope="col">#</th>
                     <th scope="col">نام مسافر</th>
                     <th scope="col">مسیر</th>
-                    <th scope="col">تاریخ و ساعت سوارشدن</th>
                     <th scope="col">ترتیب سوارشدن</th>
                     <th scope="col">ترتیب پیاده‌شدن</th>
                     <th scope="col">توضیحات</th>
@@ -89,7 +88,6 @@ export function TripRequestReviewDialog({
                       <td data-label="مسافر">{index + 1}</td>
                       <td data-label="نام مسافر">{passenger.personName || "مسافر انتخاب‌نشده"}</td>
                       <td data-label="مسیر">{passenger.originName || "—"} ← {passenger.destinationName || "—"}</td>
-                      <td data-label="تاریخ و ساعت سوارشدن">{passenger.pickup ?? (review.travelAt || "—")}</td>
                       <td data-label="ترتیب سوارشدن">{passenger.pickupOrder ?? "—"}</td>
                       <td data-label="ترتیب پیاده‌شدن">{passenger.dropoffOrder ?? "—"}</td>
                       <td data-label="توضیحات">{passenger.description ?? "—"}</td>

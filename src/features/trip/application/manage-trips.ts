@@ -93,8 +93,9 @@ export class ManageTrips {
       ...input,
       passengers: input.passengers.map((passenger) => ({
         ...passenger,
-        requestedPickupDateTime:
-          passenger.requestedPickupDateTime ?? input.requestedTravelDateTime,
+        // Requesters do not choose a passenger pickup time. Any supplied
+        // value is discarded so every Trip inherits the request travel time.
+        requestedPickupDateTime: input.requestedTravelDateTime,
       })),
     });
     const validationError = tripRequestError(value);

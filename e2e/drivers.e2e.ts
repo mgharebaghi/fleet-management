@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { connectToE2EDatabase, createPerson, type E2EDatabaseAdapter } from "./support/e2e-database";
 import { selectSearchableOption } from "./support/searchable-select";
 import { selectJalaliDate } from "./support/jalali-calendar";
+import { setTime } from "./support/time-select";
 
 let adapter: E2EDatabaseAdapter;
 let personId: number | undefined, brandId: number | undefined, modelId: number | undefined, statusId: number | undefined, vehicleId: number | undefined;
@@ -73,7 +74,7 @@ test.describe.serial("Drivers management", () => {
     await assign.getByLabel("کیلومتر شروع", { exact: true }).fill("1234567890123456.78");
     await assign.getByRole("button", { name: "تاریخ شروع (شمسی)", exact: true }).click();
     await selectJalaliDate(page.getByRole("dialog", { name: "انتخاب تاریخ شروع (شمسی)" }), 1404, "فروردین", "۱");
-    await assign.getByLabel("ساعت شروع (تهران)", { exact: true }).selectOption("08");
+    await setTime(assign, "ساعت شروع (تهران)", "08:00");
     await assign.getByRole("button", { name: "ثبت تخصیص", exact: true }).click();
     const current = page.getByRole("region", { name: "تخصیص جاری", exact: true });
     await expect(current).toContainText(vehicleCode);
@@ -89,7 +90,7 @@ test.describe.serial("Drivers management", () => {
     const close = current.getByRole("form", { name: "ثبت پایان تخصیص", exact: true });
     await close.getByRole("button", { name: "تاریخ پایان (شمسی)", exact: true }).click();
     await selectJalaliDate(page.getByRole("dialog", { name: "انتخاب تاریخ پایان (شمسی)" }), 1404, "فروردین", "۲");
-    await close.getByLabel("ساعت پایان (تهران)", { exact: true }).selectOption("08");
+    await setTime(close, "ساعت پایان (تهران)", "08:00");
     await close.getByLabel("کیلومتر پایان", { exact: true }).fill("1234567890123456.79");
     await close.getByRole("button", { name: "ثبت پایان تخصیص", exact: true }).click();
     await expect(current).toContainText("تخصیص جاری ندارد");
@@ -106,7 +107,7 @@ test.describe.serial("Drivers management", () => {
     await selectSearchableOption(futureAssign, "خودرو", token, token);
     await futureAssign.getByRole("button", { name: "تاریخ شروع (شمسی)", exact: true }).click();
     await selectJalaliDate(page.getByRole("dialog", { name: "انتخاب تاریخ شروع (شمسی)" }), 1406, "فروردین", "۱");
-    await futureAssign.getByLabel("ساعت شروع (تهران)", { exact: true }).selectOption("08");
+    await setTime(futureAssign, "ساعت شروع (تهران)", "08:00");
     await futureAssign.getByRole("button", { name: "ثبت تخصیص", exact: true }).click();
     const future = page.getByRole("region", { name: "تخصیص‌های آینده", exact: true });
     await expect(future).toContainText(vehicleCode);
@@ -158,7 +159,7 @@ test.describe.serial("Drivers management", () => {
     await selectSearchableOption(extraAssign, "خودرو", token, token);
     await extraAssign.getByRole("button", { name: "تاریخ شروع (شمسی)", exact: true }).click();
     await selectJalaliDate(page.getByRole("dialog", { name: "انتخاب تاریخ شروع (شمسی)" }), 1405, "فروردین", "۱");
-    await extraAssign.getByLabel("ساعت شروع (تهران)", { exact: true }).selectOption("08");
+    await setTime(extraAssign, "ساعت شروع (تهران)", "08:00");
     await extraAssign.getByRole("button", { name: "ثبت تخصیص", exact: true }).click();
     await expect(current).toContainText(vehicleCode);
     await current.getByRole("button", { name: /^حذف تخصیص/ }).click();
@@ -175,13 +176,13 @@ test.describe.serial("Drivers management", () => {
     await selectSearchableOption(assign, "خودرو", token, token);
     await assign.getByRole("button", { name: "تاریخ شروع (شمسی)", exact: true }).click();
     await selectJalaliDate(page.getByRole("dialog", { name: "انتخاب تاریخ شروع (شمسی)" }), 1404, "فروردین", "۱");
-    await assign.getByLabel("ساعت شروع (تهران)", { exact: true }).selectOption("09");
+    await setTime(assign, "ساعت شروع (تهران)", "09:00");
     // The hour reads in Persian numerals while the submitted value stays HH:mm.
-    await expect(assign.getByLabel("ساعت شروع (تهران)", { exact: true })).toContainText("۰۹");
+    await expect(assign.getByRole("button", { name: "ساعت شروع (تهران)", exact: true })).toContainText("۰۹:۰۰");
     await assign.getByRole("button", { name: "ثبت تخصیص", exact: true }).click();
     await expect(assign.getByRole("alert")).toContainText("راننده در این بازه تخصیص دیگری دارد");
     await expect(assign.getByLabel("خودرو", { exact: true })).toContainText(token);
-    await expect(assign.getByLabel("ساعت شروع (تهران)", { exact: true })).toHaveValue("09");
+    await expect(assign.getByRole("button", { name: "ساعت شروع (تهران)", exact: true })).toContainText("۰۹:۰۰");
     await expect(assign.locator('input[type="hidden"][name="fromTime"]')).toHaveValue("09:00");
     await page.goto("/drivers?page=2&source=e2e");
     const search = page.getByRole("searchbox", { name: "جستجوی رانندگان" });
