@@ -93,6 +93,8 @@ describe.sequential("Trip Location SQL Server integration", () => {
         locationCode: `LOC-${token}`.toUpperCase(),
         locationType: "اداری",
         address: "تهران مرکزی",
+        latitude: "35.123456",
+        longitude: "51.654321",
         isActive: true,
       });
 
@@ -134,6 +136,45 @@ describe.sequential("Trip Location SQL Server integration", () => {
         success: false,
         error: "LOCATION_NAME_ADDRESS_DUPLICATE",
       });
+
+      const withoutCoordinates = await manage.create({
+        locationName: `مکان بدون مختصات ${token}`,
+        locationCode: null,
+        locationType: null,
+        address: null,
+        latitude: null,
+        longitude: null,
+        description: null,
+      });
+      expect(withoutCoordinates.success).toBe(true);
+      if (!withoutCoordinates.success) throw new Error(withoutCoordinates.error);
+      locationIds.push(withoutCoordinates.location.locationId);
+      expect(withoutCoordinates.location.latitude).toBeNull();
+      expect(withoutCoordinates.location.longitude).toBeNull();
+
+      const trimmed = await manage.create({
+        locationName: `مکان مختصات کوتاه ${token}`,
+        locationCode: null,
+        locationType: null,
+        address: null,
+        latitude: "32.50",
+        longitude: "-53.250000",
+        description: null,
+      });
+      expect(trimmed.success).toBe(true);
+      if (!trimmed.success) throw new Error(trimmed.error);
+      locationIds.push(trimmed.location.locationId);
+      expect(trimmed.location.latitude).toBe("32.5");
+      expect(trimmed.location.longitude).toBe("-53.25");
+      const [trimmedRow] = await client.$queryRaw<
+        Array<{ latitudeOk: number; longitudeOk: number }>
+      >`SELECT
+          CASE WHEN Latitude = 32.5 THEN 1 ELSE 0 END latitudeOk,
+          CASE WHEN Longitude = -53.25 THEN 1 ELSE 0 END longitudeOk
+        FROM common.Location
+        WHERE LocationId=${trimmed.location.locationId}`;
+      expect(Number(trimmedRow?.latitudeOk)).toBe(1);
+      expect(Number(trimmedRow?.longitudeOk)).toBe(1);
     },
     300_000,
   );

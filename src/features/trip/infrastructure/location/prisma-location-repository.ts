@@ -11,6 +11,7 @@ import type {
   LocationWriteSession,
 } from "../../application/location/location-repository";
 import type { CreateLocationCommand } from "../../application/location/location-records";
+import { decimalToCoordinateString } from "./location-coordinate";
 
 type Client = Prisma.TransactionClient;
 
@@ -63,6 +64,8 @@ class PrismaLocationWriteSession implements LocationWriteSession {
         LocationName: true,
         LocationType: true,
         Address: true,
+        Latitude: true,
+        Longitude: true,
         IsActive: true,
       },
     });
@@ -72,6 +75,8 @@ class PrismaLocationWriteSession implements LocationWriteSession {
       locationName: row.LocationName,
       locationType: row.LocationType,
       address: row.Address,
+      latitude: decimalToCoordinateString(row.Latitude),
+      longitude: decimalToCoordinateString(row.Longitude),
       isActive: row.IsActive,
     };
   }

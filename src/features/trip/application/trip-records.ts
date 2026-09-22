@@ -25,6 +25,10 @@ export type TripLocationReference = {
   locationName: string;
   locationType: string | null;
   address: string | null;
+  /** Decimal(9,6) latitude as a string. Omitted only by callers that did not map the column. */
+  latitude?: string | null;
+  /** Decimal(9,6) longitude as a string. Omitted only by callers that did not map the column. */
+  longitude?: string | null;
   isActive: boolean | null;
 };
 

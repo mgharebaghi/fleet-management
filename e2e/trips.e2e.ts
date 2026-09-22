@@ -90,6 +90,11 @@ async function createInlineLocation(
     .click();
   const dialog = page.getByRole("dialog", { name: "ثبت مکان جدید" });
   await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByText(
+      "سرویس نقشه موقتاً در دسترس نیست؛ می‌توانید اطلاعات مکان را دستی ثبت کنید.",
+    ),
+  ).toBeVisible();
   await dialog.getByLabel("نام مکان", { exact: true }).fill(locationName);
   await dialog.getByRole("button", { name: "ثبت و انتخاب مکان" }).click();
   await expect(dialog).toBeHidden({ timeout: 60_000 });

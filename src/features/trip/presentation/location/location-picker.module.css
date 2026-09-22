@@ -3,6 +3,41 @@
   gap: var(--space-2);
 }
 
+.fieldRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: end;
+}
+
+.mapButton {
+  min-height: 46px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--app-control-border);
+  border-radius: var(--app-radius-control);
+  background: var(--app-surface);
+  color: var(--app-primary);
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mapButton:hover {
+  border-color: var(--app-primary);
+}
+
+.mapButton:focus-visible {
+  border-color: var(--app-focus);
+  outline: 3px solid var(--app-focus-outline);
+  outline-offset: 2px;
+}
+
+.mapButton:disabled {
+  cursor: not-allowed;
+  opacity: var(--app-disabled-opacity);
+}
+
 .createButton {
   width: fit-content;
   border: 0;
@@ -21,33 +56,12 @@
   opacity: var(--app-disabled-opacity);
 }
 
-.form {
-  display: grid;
-  gap: var(--space-4);
-}
+@media (max-width: 760px) {
+  .fieldRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
 
-.fieldError {
-  color: var(--app-danger-text);
-  font-size: var(--font-size-xs);
-}
-
-.similar {
-  padding: var(--space-3);
-  border: 1px solid var(--app-border);
-  border-radius: var(--radius-sm);
-  color: var(--app-text);
-  background: var(--app-surface-subtle);
-}
-
-.similar ul {
-  margin-top: var(--space-2);
-  padding-right: var(--space-5);
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--app-border);
+  .mapButton {
+    width: fit-content;
+  }
 }

@@ -76,13 +76,6 @@ export function RequestStep({
         </InlineNotice>
       )}
 
-      <div className={styles.createSurfaceHeading}>
-        <div>
-          <h2 id={`${prefix}-request`}>اطلاعات اصلی</h2>
-          <p>شمارهٔ درخواست خودکار و وضعیت اولیه «جدید» است.</p>
-        </div>
-      </div>
-
       <div className={styles.requestBasics}>
         <FormGrid>
           <FormField>
@@ -151,7 +144,6 @@ export function RequestStep({
       </div>
 
       <fieldset className={styles.requestDateTimeFieldset}>
-        <legend>تاریخ و زمان درخواست سفر</legend>
         <div className={styles.requestDateTimeGroup}>
           <JalaliDatePicker
             name="requestedTravelDay"

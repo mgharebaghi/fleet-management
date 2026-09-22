@@ -54,4 +54,11 @@ describe("SearchableCombobox", () => {
     expect(markup).toContain("disabled");
     expect(markup).not.toContain("<select");
   });
+
+  it("shows a controlled value that is not one of the suggestions", () => {
+    const markup = render({ value: "کارگاه موقت", onValueChange: () => {} });
+
+    expect(markup).toContain('value="کارگاه موقت"');
+    expect(markup).not.toContain("<select");
+  });
 });

@@ -7,6 +7,7 @@ import type {
   TripLocationReference,
   TripPassengerRecord,
 } from "../application/trip-records";
+import { decimalToCoordinateString } from "./location/location-coordinate";
 
 export const personSelect = {
   PersonId: true,
@@ -24,6 +25,8 @@ export const locationSelect = {
   LocationName: true,
   LocationType: true,
   Address: true,
+  Latitude: true,
+  Longitude: true,
   IsActive: true,
 } satisfies Prisma.LocationSelect;
 
@@ -154,6 +157,8 @@ export function mapLocation(
     locationName: row.LocationName,
     locationType: row.LocationType,
     address: row.Address,
+    latitude: decimalToCoordinateString(row.Latitude),
+    longitude: decimalToCoordinateString(row.Longitude),
     isActive: row.IsActive,
   };
 }

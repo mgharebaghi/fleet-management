@@ -18,7 +18,7 @@ export type DialogProps = {
   description?: string;
   children: ReactNode;
   /** "drawer" pins the panel to the inline-start edge, full height. */
-  size?: "form" | "list" | "wide" | "drawer";
+  size?: "form" | "list" | "wide" | "map" | "drawer";
 };
 
 export function Dialog({

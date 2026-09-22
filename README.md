@@ -77,6 +77,11 @@ docker run --rm -p 3000:3000 --env-file .env fleet-management
 At runtime, provide the existing `DATABASE_SERVER`, `DATABASE_PORT`,
 `DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_ENCRYPT` and
 `DATABASE_TRUST_SERVER_CERTIFICATE` variables through the deployment platform.
+Also provide `NEXT_PUBLIC_NESHAN_MAP_KEY` (public web map key) and
+`NESHAN_SERVICE_API_KEY` (server-only Search/Reverse key) on the running
+service. The map key is read on the server and handed to the browser per
+request, so it is not baked into the Next.js build and does not need to be a
+Docker build argument. The service key must never be exposed to the client.
 Do not put credentials in the Dockerfile or image. `DATABASE_URL` remains a
 Prisma CLI concern and is not used by the running application.
 
@@ -96,6 +101,20 @@ filled-in `.env`, `.env.test.local` or `.env.e2e.local` files.
   only by `npm run test:integration`.
 - `.env.e2e.local` — E2E test database (`E2E_DATABASE_*`), used only by
   `npm run test:e2e`.
+
+Neshan map assistance uses two additional variables, documented in
+`.env.example`:
+
+- `NEXT_PUBLIC_NESHAN_MAP_KEY` — web map key. It is client-visible because the
+  browser requests map tiles, but server code reads it at runtime and passes
+  it into the map. Set it on the running container. A missing key shows a
+  manual-entry fallback instead of the map.
+- `NESHAN_SERVICE_API_KEY` — server-only secret for Neshan Search and Reverse
+  Geocoding. FleetManagement calls Neshan; the browser does not. Search can
+  remain unavailable until Neshan activates it for this key. That does not
+  block saving a location by hand.
+
+Automated E2E clears both variables so the suite never calls Neshan.
 
 Each environment is a distinct SQL Server database. Test configuration fails
 fast (and integration/E2E runs refuse to start) if the required variables are
