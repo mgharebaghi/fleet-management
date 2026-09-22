@@ -67,8 +67,15 @@ export function isTerminalTripRequestStatus(status: string): boolean {
   return status === "Completed" || status === "Cancelled";
 }
 
+export const NON_TERMINAL_TRIP_EXECUTION_STATUSES = [
+  "Planned",
+  "InProgress",
+] as const satisfies readonly TripExecutionStatus[];
+
 export function isNonTerminalTripExecutionStatus(status: string): boolean {
-  return status === "Planned" || status === "InProgress";
+  return (NON_TERMINAL_TRIP_EXECUTION_STATUSES as readonly string[]).includes(
+    status,
+  );
 }
 
 export function executionHasStarted(execution: {

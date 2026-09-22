@@ -8,6 +8,7 @@ import {
   formControlClassName,
 } from "../../../../components/ui/form-field/form-field";
 import { FormGrid } from "../../../../components/ui/form-grid/form-grid";
+import { SearchableCombobox } from "../../../../components/ui/searchable-combobox/searchable-combobox";
 import { TimeSelect } from "../../../../components/ui/time-select/time-select";
 import type {
   TripLocationReference,
@@ -16,7 +17,10 @@ import type {
 import { tripMessages, type TripActionState } from "../trip-form-data";
 import { LocationPicker } from "../location/location-picker";
 import styles from "./create-trip.module.css";
-import { typeExplanation } from "./create-wizard";
+import {
+  CREATE_REQUEST_PURPOSE_SUGGESTIONS,
+  typeExplanation,
+} from "./create-wizard";
 
 export function RequestStep({
   hidden,
@@ -115,17 +119,15 @@ export function RequestStep({
             )}
           </FormField>
           <FormField>
-            <FieldLabel htmlFor={`${prefix}-purpose`}>
-              هدف سفر
-            </FieldLabel>
-            <input
+            <SearchableCombobox
               id={`${prefix}-purpose`}
               name="purpose"
-              className={formControlClassName}
+              label="هدف سفر"
+              suggestions={CREATE_REQUEST_PURPOSE_SUGGESTIONS}
               defaultValue={value("purpose")}
               disabled={isDisabled}
-              aria-invalid={fieldInvalid("purpose")}
-              aria-describedby={fieldErrorId("purpose")}
+              invalid={fieldInvalid("purpose")}
+              describedBy={fieldErrorId("purpose")}
             />
             {fieldInvalid("purpose") && state.error && (
               <FieldErrors

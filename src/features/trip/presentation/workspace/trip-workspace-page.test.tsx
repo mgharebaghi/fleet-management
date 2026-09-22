@@ -96,8 +96,7 @@ const person = {
   personId: 1,
   firstName: "علی",
   lastName: "رضایی",
-  personnelNo: "P-1",
-  mobile: "09120000000",
+  personnelNo: "P-1",  nationalCode: null,  mobile: "09120000000",
   isActive: true,
 };
 

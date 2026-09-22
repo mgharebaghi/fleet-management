@@ -132,8 +132,7 @@ const mockDetails: TripRequestDetails = {
         personId: 201,
         firstName: "علی",
         lastName: "رضایی",
-        personnelNo: "EMP-01",
-        mobile: "09120000001",
+        personnelNo: "EMP-01",        nationalCode: null,        mobile: "09120000001",
         isActive: true,
       },
       origin: mockLocation1,
@@ -155,8 +154,7 @@ const mockDetails: TripRequestDetails = {
         personId: 202,
         firstName: "سارا",
         lastName: "محمدی",
-        personnelNo: "EMP-02",
-        mobile: "09120000002",
+        personnelNo: "EMP-02",        nationalCode: null,        mobile: "09120000002",
         isActive: true,
       },
       origin: mockLocation1,
@@ -177,6 +175,7 @@ describe("TripRequestHandlingPage", () => {
           1001: [mockAssignment],
           1002: [mockAssignment],
         }}
+        activePassengerCountsByVehicle={{}}
       />,
     );
 
@@ -232,6 +231,7 @@ describe("TripRequestHandlingPage", () => {
         assignmentsByPassenger={{
           1001: [mockAssignment],
         }}
+        activePassengerCountsByVehicle={{}}
       />,
     );
 

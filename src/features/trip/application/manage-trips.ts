@@ -44,6 +44,7 @@ import {
   tripRouteError,
   tripRouteDetailsError,
 } from "./trip-validation";
+import { vehiclePassengerCapacityExceeded } from "./trip-vehicle-capacity";
 
 const failure = (error: TripFailure, field?: string): TripResult => ({
   success: false,
@@ -93,8 +94,9 @@ export class ManageTrips {
       ...input,
       passengers: input.passengers.map((passenger) => ({
         ...passenger,
-        requestedPickupDateTime:
-          passenger.requestedPickupDateTime ?? input.requestedTravelDateTime,
+        // Requesters do not choose a passenger pickup time. Any supplied
+        // value is discarded so every Trip inherits the request travel time.
+        requestedPickupDateTime: input.requestedTravelDateTime,
       })),
     });
     const validationError = tripRequestError(value);
@@ -379,6 +381,7 @@ export class ManageTrips {
         return failure("PASSENGER_REQUIRED");
       }
 
+      const resolvedVehicleIds: number[] = [];
       for (const [passengerIndex, passengerInput] of input.passengers.entries()) {
         const trip = await session.trip(passengerInput.tripId);
         if (!trip || trip.requestId !== input.tripRequestId) {
@@ -400,6 +403,7 @@ export class ManageTrips {
           assignment.toDateTime,
         );
         if (assignmentError) return failure(assignmentError);
+        resolvedVehicleIds.push(assignment.vehicle.vehicleId);
 
         for (const route of normalizedRoutesByPassenger[passengerIndex]) {
           for (const point of route.points) {
@@ -410,6 +414,21 @@ export class ManageTrips {
             }
           }
         }
+      }
+
+      // A New request has no TripExecutions yet, so persisted occupancy is
+      // other requests only and these passengers are counted once, below.
+      const persistedActiveCounts =
+        await session.activePassengerCountsByVehicle([
+          ...new Set(resolvedVehicleIds),
+        ]);
+      if (
+        vehiclePassengerCapacityExceeded({
+          persistedActiveCounts,
+          submittedVehicleIds: resolvedVehicleIds,
+        })
+      ) {
+        return failure("VEHICLE_PASSENGER_CAPACITY_EXCEEDED");
       }
 
       for (const [passengerIndex, passengerInput] of input.passengers.entries()) {

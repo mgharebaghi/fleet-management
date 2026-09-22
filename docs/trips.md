@@ -177,10 +177,15 @@ Opening a `New` request loads the **4-step handling wizard**:
 Submitting the handling wizard calls `assignInitialTripRequestAction`, which atomically:
 - Verifies the request is still `New`.
 - Validates active driver and vehicle assignment eligibility.
+- Rejects the assignment when any physical vehicle would have more than 3 active passengers, including passengers already planned or in progress on other requests.
 - Creates `TripExecution` records with status `Planned`.
 - Persists any defined routes linked to passenger trips.
 - Updates the `TripRequest.Status` to `Assigned`.
 - Redirects to `/trips/{id}`.
+
+One physical vehicle may carry at most 3 active passengers across all trip requests. An active passenger is a `TripExecution` in `Planned` or `InProgress`. `Completed` and `Cancelled` executions free that capacity. Capacity is the physical vehicle (`vehicleId`): different driver/vehicle assignment records for the same vehicle share that limit. This is not a seat-count or vehicle-type capacity, and it does not use planned end time, route duration, or `VehicleTrip`. On the assignment step, persisted active occupancy is combined with the other passengers selected in the current wizard. A full vehicle stays visible and searchable, but its assignment options are disabled with «ظرفیت خودرو تکمیل شده». The passenger currently being edited is excluded from the unsaved wizard count, so their own selection stays available. `assignInitialRequest` reads that occupancy inside its transaction and enforces the same limit before creating executions, routes, or changing request status. It returns `VEHICLE_PASSENGER_CAPACITY_EXCEEDED` when the limit would be exceeded. A `New` request has no executions yet, so its own passengers are counted only from the assignment being submitted.
+
+`createCompleteRequest` is not part of this dispatcher flow. Requesters submit a `New` request without assignments; only handling calls `assignInitialRequest`.
 
 ### 4. Staff detail workspace (`/trips/{id}`)
 Subsequent visits to an assigned or active request directly load the **5-tab administrative workspace** (`TripWorkspacePage`):

@@ -41,6 +41,13 @@ export class ReadTrips {
       : Promise.resolve([]);
   }
 
+  activePassengerCountsByVehicle(vehicleIds: readonly number[]) {
+    const ids = vehicleIds.filter((id) => isValidTripId(id));
+    return ids.length === 0
+      ? Promise.resolve({})
+      : this.repository.activePassengerCountsByVehicle(ids);
+  }
+
   countPendingRequests() {
     return this.repository.countPendingRequests();
   }

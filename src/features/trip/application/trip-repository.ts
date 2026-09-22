@@ -73,6 +73,9 @@ export interface TripWriteSession {
     id: number,
     activeAt: Date,
   ): Promise<TripAssignmentReference | null>;
+  activePassengerCountsByVehicle(
+    vehicleIds: readonly number[],
+  ): Promise<Readonly<Record<number, number>>>;
   createRequest(input: CreateTripRequestInput): Promise<{
     tripRequestId: number;
     tripIds: number[];
@@ -115,5 +118,8 @@ export interface TripRepository {
   availablePeople(): Promise<TripPersonReference[]>;
   availableLocations(): Promise<TripLocationReference[]>;
   assignmentsActiveAt(dateTime: Date): Promise<TripAssignmentReference[]>;
+  activePassengerCountsByVehicle(
+    vehicleIds: readonly number[],
+  ): Promise<Readonly<Record<number, number>>>;
   countPendingRequests(): Promise<number>;
 }

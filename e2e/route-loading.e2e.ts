@@ -39,9 +39,9 @@ function gateNextNavigation() {
  * the two specifically reported as missing.
  */
 const adminRoutes = [
-  { path: "/fleet/catalogs", linkName: "کاتالوگ‌ها" },
+  { path: "/fleet/catalogs", linkName: "کاتالوگ خودروها" },
   { path: "/fleet/vehicle-insurances", linkName: "بیمه ها" },
-  { path: "/fleet/vehicles", linkName: "خودروها" },
+  { path: "/fleet/vehicles", linkName: "خودروهای سازمان" },
   { path: "/drivers", linkName: "رانندگان" },
 ] as const;
 

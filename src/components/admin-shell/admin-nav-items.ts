@@ -32,13 +32,13 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     href: "/fleet/vehicles",
     icon: "fleet",
     children: [
-      { label: "خودروها", href: "/fleet/vehicles", icon: "vehicle" },
+      { label: "خودروهای سازمان", href: "/fleet/vehicles", icon: "vehicle" },
       {
         label: "بیمه ها",
         href: "/fleet/vehicle-insurances",
         icon: "insurance",
       },
-      { label: "کاتالوگ‌ها", href: "/fleet/catalogs", icon: "catalog" },
+      { label: "کاتالوگ خودروها", href: "/fleet/catalogs", icon: "catalog" },
     ],
   },
   { label: "رانندگان", href: "/drivers", icon: "drivers" },

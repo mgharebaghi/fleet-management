@@ -34,6 +34,7 @@ const passenger: TripPersonReference = {
   firstName: "مریم",
   lastName: "سعیدی",
   personnelNo: "EMP-42",
+  nationalCode: null,
   mobile: "09121234567",
   isActive: true,
 };

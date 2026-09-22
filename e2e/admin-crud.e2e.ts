@@ -57,10 +57,10 @@ test.describe("Admin shell navigation", () => {
       "page",
     );
 
-    await sidebar.getByRole("link", { name: "خودروها" }).click();
+    await sidebar.getByRole("link", { name: "خودروهای سازمان" }).click();
     await expect(page).toHaveURL(/\/fleet\/vehicles$/);
     await expect(
-      sidebar.getByRole("link", { name: "خودروها" }),
+      sidebar.getByRole("link", { name: "خودروهای سازمان" }),
     ).toHaveAttribute("aria-current", "page");
 
     await sidebar.getByRole("link", { name: "رانندگان" }).click();

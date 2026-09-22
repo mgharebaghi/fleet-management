@@ -126,7 +126,6 @@ const mockReview = {
     personName: "رضا کریمی",
     originName: "دفتر مرکزی",
     destinationName: "کارخانه",
-    pickup: null,
     pickupOrder: "1",
     dropoffOrder: "1",
     description: null,
@@ -164,7 +163,6 @@ describe("Trip create review dialog", () => {
               personName: "علی رضایی",
               originName: "تهران",
               destinationName: "قم",
-              pickup: null,
               pickupOrder: null,
               dropoffOrder: null,
               description: null,
@@ -184,7 +182,7 @@ describe("Trip create review dialog", () => {
     expect(markup).toContain("زمان درخواست سفر");
     expect(markup).not.toContain("زمان ثبت");
     expect(markup).toContain('data-label="مسیر">تهران ← قم');
-    expect(markup).toContain('data-label="تاریخ و ساعت سوارشدن"');
+    expect(markup).not.toContain('data-label="تاریخ و ساعت سوارشدن"');
     expect(markup).not.toContain("personId");
     expect(markup).not.toContain("locationId");
     expect(markup).toContain('type="submit"');
@@ -302,6 +300,7 @@ describe("Wizard Step 3: AssignmentStep", () => {
         passengers={[mockPendingPassenger]}
         assignmentsByPassenger={{ 0: [mockAssignment] }}
         selectedAssignments={{ 0: 501 }}
+        activePassengerCountsByVehicle={{}}
         onSelectionChange={noop}
         onBack={noop}
         onNext={noop}
@@ -421,6 +420,46 @@ describe("Wizard Step 6: ReviewStep", () => {
 });
 
 describe("Wizard Step 1: RequestStep", () => {
+  it("offers purpose suggestions and keeps purpose as free text", () => {
+    const markup = renderToStaticMarkup(
+      <RequestStep
+        hidden={false}
+        prefix="trip-create-wizard"
+        pending={false}
+        requestTypes={[
+          {
+            tripRequestTypeId: 3,
+            typeCode: "COMMON_ORIGIN_DESTINATION",
+            typeName: "مبدأ و مقصد مشترک",
+            description: null,
+          },
+        ]}
+        locations={[mockLocation1]}
+        selectedTypeId="3"
+        typeRestoreNonce={0}
+        selectedType={{
+          tripRequestTypeId: 3,
+          typeCode: "COMMON_ORIGIN_DESTINATION",
+          typeName: "مبدأ و مقصد مشترک",
+          description: null,
+        }}
+        shareOrigin
+        shareDestination
+        state={{}}
+        value={(name) => (name === "purpose" ? "ماموریت اداری" : "")}
+        fieldInvalid={() => false}
+        fieldErrorId={() => undefined}
+        onTypeChange={noop}
+        onNext={noop}
+      />,
+    );
+
+    expect(markup).toContain('role="combobox"');
+    expect(markup).toContain('name="purpose"');
+    expect(markup).toContain('value="ماموریت اداری"');
+    expect(markup).not.toContain("<datalist");
+  });
+
   it("renders purpose error and aria-invalid when PURPOSE_TOO_LONG", () => {
     const markup = renderToStaticMarkup(
       <RequestStep

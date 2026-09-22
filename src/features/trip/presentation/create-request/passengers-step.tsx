@@ -141,6 +141,7 @@ export function PassengersStep({
         passengerCount={passengerCount}
         shareOrigin={shareOrigin}
         shareDestination={shareDestination}
+        allowPickupOverride={false}
         value={snapshotValue}
         fieldInvalid={fieldInvalid}
       />

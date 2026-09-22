@@ -9,6 +9,28 @@ import type {
 } from "../../application/trip-records";
 import { consecutiveFormIndexes } from "../trip-form-data";
 
+export const DEFAULT_CREATE_REQUEST_PURPOSE = "ماموریت اداری";
+
+export const CREATE_REQUEST_PURPOSE_SUGGESTIONS = [
+  "ماموریت اداری",
+  "سفر شخصی",
+  "سفر سیاحتی",
+  "امور مدیریتی",
+  "جلسه یا بازدید سازمانی",
+  "ماموریت آموزشی",
+] as const;
+
+const COMMON_ORIGIN_DESTINATION_TYPE_CODE = "COMMON_ORIGIN_DESTINATION";
+
+export function defaultTripRequestTypeId(
+  requestTypes: TripRequestTypeReference[],
+): string {
+  const match = requestTypes.find(
+    (type) => type.typeCode === COMMON_ORIGIN_DESTINATION_TYPE_CODE,
+  );
+  return match ? String(match.tripRequestTypeId) : "";
+}
+
 export type CreateWizardStep = 1 | 2 | 3;
 
 export type HandlingWizardStep = 1 | 2 | 3 | 4;
@@ -234,14 +256,6 @@ export function passengerStepGaps(
     ) {
       gaps.push(`passenger.${index}.destinationLocationId`);
     }
-    if (values[`passenger.${index}.pickupOverride`] === "true") {
-      if (!values[`passenger.${index}.pickupDay`]) {
-        gaps.push(`passenger.${index}.pickupDay`);
-      }
-      if (!values[`passenger.${index}.pickupTime`]) {
-        gaps.push(`passenger.${index}.pickupTime`);
-      }
-    }
   }
   return gaps;
 }
@@ -256,9 +270,7 @@ export function gapNotice(gaps: string[]) {
           ? "مبدأ"
           : gap.includes("destinationLocationId")
             ? "مقصد"
-            : gap.includes("pickup")
-              ? "زمان سوارشدن متفاوت"
-              : "فیلد الزامی"),
+            : "فیلد الزامی"),
   );
   const unique = [...new Set(labels)];
   return `برای ادامه، ${unique.join("، ")} را کامل کنید.`;
@@ -268,7 +280,6 @@ export type TripRequestReviewPassenger = {
   personName: string;
   originName: string;
   destinationName: string;
-  pickup: string | null;
   pickupOrder: string | null;
   dropoffOrder: string | null;
   description: string | null;
@@ -351,12 +362,6 @@ export function createRequestReview(
           locations,
           values[`passenger.${index}.destinationLocationId`],
         ),
-      pickup: optional(
-        jalaliWhen(
-          values[`passenger.${index}.pickupDay`],
-          values[`passenger.${index}.pickupTime`],
-        ),
-      ),
       pickupOrder: optional(values[`passenger.${index}.pickupOrder`]),
       dropoffOrder: optional(values[`passenger.${index}.dropoffOrder`]),
       description: optional(values[`passenger.${index}.description`]),

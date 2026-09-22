@@ -9,6 +9,7 @@ import {
 } from "./support/e2e-database";
 import { selectJalaliDate } from "./support/jalali-calendar";
 import { selectSearchableOption } from "./support/searchable-select";
+import { setTime } from "./support/time-select";
 import { gregorianToJalali } from "../src/components/ui/date-picker/jalali-date";
 
 let adapter: E2EDatabaseAdapter;
@@ -424,9 +425,7 @@ test.describe.serial("Trip management", () => {
         "فروردین",
         "۱",
       );
-      await requestStep
-        .getByLabel("ساعت", { exact: true })
-        .selectOption("08");
+      await setTime(requestStep, "ساعت", "08:00");
 
       const tooLongPurpose = "الف".repeat(501);
       await requestStep
@@ -722,9 +721,7 @@ test.describe.serial("Trip management", () => {
         "فروردین",
         "۲",
       );
-      await executionForm
-        .getByLabel("ساعت واقعی سوارشدن", { exact: true })
-        .selectOption("08");
+      await setTime(executionForm, "ساعت واقعی سوارشدن", "08:00");
 
       await executionForm
         .getByRole("button", {
@@ -739,9 +736,7 @@ test.describe.serial("Trip management", () => {
         "فروردین",
         "۲",
       );
-      await executionForm
-        .getByLabel("ساعت واقعی پیاده‌شدن", { exact: true })
-        .selectOption("10");
+      await setTime(executionForm, "ساعت واقعی پیاده‌شدن", "10:00");
 
       await executionForm
         .getByLabel("کیلومتر خودرو در شروع اجرا", { exact: true })

@@ -24,6 +24,7 @@ const person = {
   firstName: "Test",
   lastName: "Passenger",
   personnelNo: "P-1",
+  nationalCode: null,
   mobile: null,
   isActive: true,
 };
@@ -95,6 +96,7 @@ const session = {
   trip: vi.fn(),
   execution: vi.fn(),
   assignment: vi.fn(),
+  activePassengerCountsByVehicle: vi.fn(),
   createRequest: vi.fn(),
   updateRequestStatus: vi.fn(),
   cancelPlannedExecutions: vi.fn(),
@@ -122,6 +124,7 @@ const repository = {
   availablePeople: vi.fn(),
   availableLocations: vi.fn(),
   assignmentsActiveAt: vi.fn(),
+  activePassengerCountsByVehicle: vi.fn(),
   countPendingRequests: vi.fn(),
 } satisfies TripRepository;
 
@@ -213,6 +216,7 @@ beforeEach(() => {
   }));
   session.trip.mockResolvedValue(trip);
   session.assignment.mockResolvedValue(assignment);
+  session.activePassengerCountsByVehicle.mockResolvedValue({});
   session.execution.mockResolvedValue({
     tripExecutionId: 2,
     tripId: 1,
@@ -265,7 +269,7 @@ describe("create Trip request", () => {
     });
   });
 
-  it("preserves a passenger-specific requested pickup override", async () => {
+  it("persists the request travel datetime even when a passenger pickup override is supplied", async () => {
     const requestedPickupDateTime = new Date("2026-02-01T08:30:00Z");
 
     await manage.createRequest({
@@ -281,7 +285,9 @@ describe("create Trip request", () => {
     expect(session.createRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         passengers: [
-          expect.objectContaining({ requestedPickupDateTime }),
+          expect.objectContaining({
+            requestedPickupDateTime: createInput.requestedTravelDateTime,
+          }),
         ],
       }),
     );
@@ -1660,6 +1666,166 @@ describe("Trip execution and survey", () => {
         status: "Planned",
         description: null,
       });
+      expect(session.updateRequestStatus).toHaveBeenCalledWith(1, "Assigned");
+    });
+
+    function requestFor(tripIds: number[]) {
+      session.request.mockResolvedValue({
+        tripRequestId: 1,
+        status: "New",
+        tripRequestTypeId: 1,
+        passengers: tripIds.map((tripId) => ({ tripId })),
+      });
+    }
+
+    function assignmentOnVehicle(assignmentId: number, vehicleId: number) {
+      return {
+        ...assignment,
+        assignmentId,
+        vehicle: { ...vehicle, vehicleId },
+      };
+    }
+
+    function assignPassengers(
+      selections: Array<{ tripId: number; assignmentId: number }>,
+    ) {
+      return manage.assignInitialRequest({
+        tripRequestId: 1,
+        passengers: selections.map(({ tripId, assignmentId }) => ({
+          tripId,
+          vehicleDriverAssignmentId: assignmentId,
+          routes: [
+            {
+              routeName: "مسیر اصلی",
+              alternativeNo: 1,
+              distanceKm: null,
+              estimatedDurationMinute: null,
+              isSelected: false,
+              description: null,
+              points: [
+                {
+                  locationId: 1,
+                  trafficZone: null,
+                  sequenceNo: 1,
+                  distanceFromStartKm: null,
+                  description: null,
+                },
+              ],
+            },
+          ],
+        })),
+      });
+    }
+
+    it("allows three passengers when the vehicle has no persisted occupancy", async () => {
+      requestFor([1, 2, 3]);
+      session.assignment.mockResolvedValue(assignmentOnVehicle(11, 5));
+      session.activePassengerCountsByVehicle.mockResolvedValue({});
+
+      const result = await assignPassengers([
+        { tripId: 1, assignmentId: 11 },
+        { tripId: 2, assignmentId: 11 },
+        { tripId: 3, assignmentId: 11 },
+      ]);
+
+      expect(result).toEqual({ success: true, id: 1 });
+      expect(session.createExecution).toHaveBeenCalledTimes(3);
+      expect(session.createExecution).toHaveBeenCalledWith(
+        expect.objectContaining({ tripId: 1, status: "Planned" }),
+      );
+      expect(session.updateRequestStatus).toHaveBeenCalledWith(1, "Assigned");
+      expect(session.activePassengerCountsByVehicle).toHaveBeenCalledWith([5]);
+    });
+
+    it("rejects one more passenger when the vehicle already has three active passengers", async () => {
+      requestFor([1]);
+      session.assignment.mockResolvedValue(assignmentOnVehicle(11, 12));
+      session.activePassengerCountsByVehicle.mockResolvedValue({ 12: 3 });
+
+      const result = await assignPassengers([
+        { tripId: 1, assignmentId: 11 },
+      ]);
+
+      expect(result).toEqual({
+        success: false,
+        error: "VEHICLE_PASSENGER_CAPACITY_EXCEEDED",
+      });
+      expect(session.createExecution).not.toHaveBeenCalled();
+      expect(session.createRoute).not.toHaveBeenCalled();
+      expect(session.updateRequestStatus).not.toHaveBeenCalled();
+    });
+
+    it("allows one passenger when the vehicle already has two active passengers", async () => {
+      requestFor([1]);
+      session.assignment.mockResolvedValue(assignmentOnVehicle(11, 12));
+      session.activePassengerCountsByVehicle.mockResolvedValue({ 12: 2 });
+
+      const result = await assignPassengers([
+        { tripId: 1, assignmentId: 11 },
+      ]);
+
+      expect(result).toEqual({ success: true, id: 1 });
+      expect(session.createExecution).toHaveBeenCalledTimes(1);
+      expect(session.updateRequestStatus).toHaveBeenCalledWith(1, "Assigned");
+    });
+
+    it("rejects two passengers when the vehicle already has two active passengers", async () => {
+      requestFor([1, 2]);
+      session.assignment.mockResolvedValue(assignmentOnVehicle(11, 12));
+      session.activePassengerCountsByVehicle.mockResolvedValue({ 12: 2 });
+
+      const result = await assignPassengers([
+        { tripId: 1, assignmentId: 11 },
+        { tripId: 2, assignmentId: 11 },
+      ]);
+
+      expect(result).toEqual({
+        success: false,
+        error: "VEHICLE_PASSENGER_CAPACITY_EXCEEDED",
+      });
+      expect(session.createExecution).not.toHaveBeenCalled();
+      expect(session.createRoute).not.toHaveBeenCalled();
+      expect(session.updateRequestStatus).not.toHaveBeenCalled();
+    });
+
+    it("combines different assignment ids on the same vehicle with persisted occupancy", async () => {
+      requestFor([1, 2]);
+      const catalog = [
+        assignmentOnVehicle(204, 12),
+        assignmentOnVehicle(450, 12),
+      ];
+      session.assignment.mockImplementation(async (id: number) =>
+        catalog.find((item) => item.assignmentId === id) ?? null,
+      );
+      session.activePassengerCountsByVehicle.mockResolvedValue({ 12: 2 });
+
+      const result = await assignPassengers([
+        { tripId: 1, assignmentId: 204 },
+        { tripId: 2, assignmentId: 450 },
+      ]);
+
+      expect(result).toEqual({
+        success: false,
+        error: "VEHICLE_PASSENGER_CAPACITY_EXCEEDED",
+      });
+      expect(session.activePassengerCountsByVehicle).toHaveBeenCalledWith([12]);
+      expect(session.createExecution).not.toHaveBeenCalled();
+      expect(session.createRoute).not.toHaveBeenCalled();
+      expect(session.updateRequestStatus).not.toHaveBeenCalled();
+    });
+
+    it("does not let a full vehicle block a different vehicle that still has capacity", async () => {
+      requestFor([1]);
+      session.assignment.mockResolvedValue(assignmentOnVehicle(202, 8));
+      session.activePassengerCountsByVehicle.mockResolvedValue({ 12: 3, 8: 1 });
+
+      const result = await assignPassengers([
+        { tripId: 1, assignmentId: 202 },
+      ]);
+
+      expect(result).toEqual({ success: true, id: 1 });
+      expect(session.activePassengerCountsByVehicle).toHaveBeenCalledWith([8]);
+      expect(session.createExecution).toHaveBeenCalledTimes(1);
       expect(session.updateRequestStatus).toHaveBeenCalledWith(1, "Assigned");
     });
   });
