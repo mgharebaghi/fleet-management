@@ -42,8 +42,9 @@ passenger remains one Trip.
 Origin and destination remain required Location foreign keys. When the catalog
 is empty, staff create a Location inline without leaving the request form.
 Optional code, type, address, coordinates and description follow the current
-column lengths and `decimal(9,6)` coordinates. Duplicate checks are
-application-level only:
+column lengths and `decimal(9,6)` coordinates. Latitude and longitude are
+carried as decimal strings, including when a location row is read back.
+Duplicate checks are application-level only:
 
 - normalized nonempty code is a strong duplicate
 - normalized name + address prevents an obvious duplicate
@@ -51,6 +52,26 @@ application-level only:
 
 There is no database UNIQUE on Location; concurrent or external writers can
 still race.
+
+A saved Location is chosen from the searchable field or from «انتخاب روی نقشه».
+The map shows markers only for Locations that already have coordinates. A
+Location without coordinates stays in the searchable field and in the map
+dialog list, and can still be confirmed. That list searches the loaded
+Locations locally and does not call Neshan Search.
+
+Creating a location can be assisted by a Neshan map. The map is a data-entry
+aid: the saved row is still written only by FleetManagement into
+`common.Location`. Search and reverse geocoding go through the FleetManagement
+server, which holds `NESHAN_SERVICE_API_KEY`. The browser only receives the
+public map key (`NEXT_PUBLIC_NESHAN_MAP_KEY`) at runtime so it can draw tiles.
+That public key is not read inside the client bundle, so changing it does not
+require a new image build. Both variables must be set on the running
+service (Coolify runtime environment), not only as Docker build arguments.
+
+Neshan Search stays unavailable until Neshan activates it for the service key.
+That state, a missing key, or a provider failure does not block manual
+location entry. The same map canvas and server client are the foundation for
+later route display; routing and distance matrix are not called yet.
 
 ## Request numbers and lifecycle
 

@@ -18,6 +18,9 @@ type SearchableComboboxProps = {
   label: string;
   suggestions: readonly string[];
   defaultValue?: string;
+  /** When set, the field shows this text instead of its internal value. */
+  value?: string;
+  onValueChange?: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
   invalid?: boolean;
@@ -34,6 +37,8 @@ export function SearchableCombobox({
   label,
   suggestions,
   defaultValue = "",
+  value,
+  onValueChange,
   placeholder = "",
   disabled = false,
   invalid = false,
@@ -42,7 +47,13 @@ export function SearchableCombobox({
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   const listboxId = `${fieldId}-listbox`;
-  const [text, setText] = useState(defaultValue);
+  const [uncontrolledText, setUncontrolledText] = useState(defaultValue);
+  const text = value !== undefined ? value : uncontrolledText;
+
+  function publishText(next: string) {
+    if (value === undefined) setUncontrolledText(next);
+    onValueChange?.(next);
+  }
   const [isOpen, setIsOpen] = useState(false);
   const [filterQuery, setFilterQuery] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -63,8 +74,12 @@ export function SearchableCombobox({
   );
 
   const defaultValueRef = useRef(defaultValue);
+  const valueRef = useRef(value);
+  const onValueChangeRef = useRef(onValueChange);
   useInsertionEffect(() => {
     defaultValueRef.current = defaultValue;
+    valueRef.current = value;
+    onValueChangeRef.current = onValueChange;
   });
 
   useEffect(() => {
@@ -74,7 +89,10 @@ export function SearchableCombobox({
     }
 
     function handleReset() {
-      setText(defaultValueRef.current);
+      if (valueRef.current === undefined) {
+        setUncontrolledText(defaultValueRef.current);
+      }
+      onValueChangeRef.current?.(defaultValueRef.current);
       setFilterQuery(null);
       setIsOpen(false);
     }
@@ -121,8 +139,8 @@ export function SearchableCombobox({
     setIsOpen(true);
   }
 
-  function selectSuggestion(value: string) {
-    setText(value);
+  function selectSuggestion(next: string) {
+    publishText(next);
     setFilterQuery(null);
     setIsOpen(false);
     inputRef.current?.focus();
@@ -182,7 +200,7 @@ export function SearchableCombobox({
           onFocus={openPanel}
           onClick={openPanel}
           onChange={(event) => {
-            setText(event.target.value);
+            publishText(event.target.value);
             setFilterQuery(event.target.value);
             setActiveIndex(0);
             setIsOpen(true);

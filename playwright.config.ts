@@ -100,6 +100,10 @@ export default defineConfig({
       DATABASE_TRUST_SERVER_CERTIFICATE: String(
         e2eMssqlConfig.options.trustServerCertificate,
       ),
+      // Location creation must stay manual when Neshan is not configured.
+      // Empty values override any developer keys loaded from .env.
+      NEXT_PUBLIC_NESHAN_MAP_KEY: "",
+      NESHAN_SERVICE_API_KEY: "",
     },
   },
 });

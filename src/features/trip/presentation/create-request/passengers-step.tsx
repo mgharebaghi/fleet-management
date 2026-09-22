@@ -90,15 +90,6 @@ export function PassengersStep({
       )}
 
       <div className={styles.passengerStepHeader}>
-        <div className={styles.createSurfaceHeading}>
-          <div>
-            <h2 id={`${prefix}-passengers`}>مسافران</h2>
-            <p>
-              اطلاعات هر مسافر را جداگانه ثبت کنید. فقط یک فرم در هر زمان
-              باز است.
-            </p>
-          </div>
-        </div>
         <div className={styles.passengerControls}>
           <TripPassengerSwitcher
             passengerCount={passengerCount}
