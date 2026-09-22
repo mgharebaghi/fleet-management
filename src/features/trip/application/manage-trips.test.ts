@@ -1665,5 +1665,141 @@ describe("Trip execution and survey", () => {
       });
       expect(session.updateRequestStatus).toHaveBeenCalledWith(1, "Assigned");
     });
+
+    function requestFor(tripIds: number[]) {
+      session.request.mockResolvedValue({
+        tripRequestId: 1,
+        status: "New",
+        tripRequestTypeId: 1,
+        passengers: tripIds.map((tripId) => ({ tripId })),
+      });
+    }
+
+    function assignmentOnVehicle(assignmentId: number, vehicleId: number) {
+      return {
+        ...assignment,
+        assignmentId,
+        vehicle: { ...vehicle, vehicleId },
+      };
+    }
+
+    function assignPassengers(
+      selections: Array<{ tripId: number; assignmentId: number }>,
+    ) {
+      return manage.assignInitialRequest({
+        tripRequestId: 1,
+        passengers: selections.map(({ tripId, assignmentId }) => ({
+          tripId,
+          vehicleDriverAssignmentId: assignmentId,
+          routes: [
+            {
+              routeName: "مسیر اصلی",
+              alternativeNo: 1,
+              distanceKm: null,
+              estimatedDurationMinute: null,
+              isSelected: false,
+              description: null,
+              points: [
+                {
+                  locationId: 1,
+                  trafficZone: null,
+                  sequenceNo: 1,
+                  distanceFromStartKm: null,
+                  description: null,
+                },
+              ],
+            },
+          ],
+        })),
+      });
+    }
+
+    it("allows exactly three passengers on the same vehicle and assigns the request", async () => {
+      requestFor([1, 2, 3]);
+      session.assignment.mockResolvedValue(assignmentOnVehicle(11, 5));
+
+      const result = await assignPassengers([
+        { tripId: 1, assignmentId: 11 },
+        { tripId: 2, assignmentId: 11 },
+        { tripId: 3, assignmentId: 11 },
+      ]);
+
+      expect(result).toEqual({ success: true, id: 1 });
+      expect(session.createExecution).toHaveBeenCalledTimes(3);
+      expect(session.createExecution).toHaveBeenCalledWith(
+        expect.objectContaining({ tripId: 1, status: "Planned" }),
+      );
+      expect(session.updateRequestStatus).toHaveBeenCalledWith(1, "Assigned");
+    });
+
+    it("rejects a fourth passenger on the same vehicle before any persistence", async () => {
+      requestFor([1, 2, 3, 4]);
+      session.assignment.mockResolvedValue(assignmentOnVehicle(11, 5));
+
+      const result = await assignPassengers([
+        { tripId: 1, assignmentId: 11 },
+        { tripId: 2, assignmentId: 11 },
+        { tripId: 3, assignmentId: 11 },
+        { tripId: 4, assignmentId: 11 },
+      ]);
+
+      expect(result).toEqual({
+        success: false,
+        error: "VEHICLE_PASSENGER_CAPACITY_EXCEEDED",
+      });
+      expect(session.createExecution).not.toHaveBeenCalled();
+      expect(session.createRoute).not.toHaveBeenCalled();
+      expect(session.updateRequestStatus).not.toHaveBeenCalled();
+    });
+
+    it("counts capacity by vehicleId when assignment ids differ", async () => {
+      requestFor([1, 2, 3, 4]);
+      const catalog = [
+        assignmentOnVehicle(101, 5),
+        assignmentOnVehicle(204, 5),
+        assignmentOnVehicle(308, 5),
+        assignmentOnVehicle(412, 5),
+      ];
+      session.assignment.mockImplementation(async (id: number) =>
+        catalog.find((item) => item.assignmentId === id) ?? null,
+      );
+
+      const result = await assignPassengers([
+        { tripId: 1, assignmentId: 101 },
+        { tripId: 2, assignmentId: 204 },
+        { tripId: 3, assignmentId: 308 },
+        { tripId: 4, assignmentId: 412 },
+      ]);
+
+      expect(result).toEqual({
+        success: false,
+        error: "VEHICLE_PASSENGER_CAPACITY_EXCEEDED",
+      });
+      expect(session.createExecution).not.toHaveBeenCalled();
+      expect(session.createRoute).not.toHaveBeenCalled();
+      expect(session.updateRequestStatus).not.toHaveBeenCalled();
+    });
+
+    it("allows three passengers on one vehicle and a fourth on another", async () => {
+      requestFor([1, 2, 3, 4]);
+      const catalog = [
+        assignmentOnVehicle(101, 5),
+        assignmentOnVehicle(202, 8),
+      ];
+      session.assignment.mockImplementation(async (id: number) =>
+        catalog.find((item) => item.assignmentId === id) ?? null,
+      );
+
+      const result = await assignPassengers([
+        { tripId: 1, assignmentId: 101 },
+        { tripId: 2, assignmentId: 101 },
+        { tripId: 3, assignmentId: 101 },
+        { tripId: 4, assignmentId: 202 },
+      ]);
+
+      expect(result).toEqual({ success: true, id: 1 });
+      expect(session.createExecution).toHaveBeenCalledTimes(4);
+      expect(session.updateRequestStatus).toHaveBeenCalledWith(1, "Assigned");
+    });
   });
 });

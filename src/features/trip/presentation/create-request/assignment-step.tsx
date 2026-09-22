@@ -13,18 +13,18 @@ import {
   assignmentIneligibilityReasons,
   isAssignmentEligible,
 } from "../../application/trip-assignment-eligibility";
-import type { TripAssignmentReference } from "../../application/trip-records";
+import { TRIP_REQUEST_VEHICLE_PASSENGER_LIMIT } from "../../application/trip-vehicle-capacity";
 import { assignmentIneligibilityMessages } from "../trip-form-data";
+import {
+  assignmentOptionLabel,
+  buildEligibleAssignmentOptions,
+} from "./assignment-capacity-options";
 import { TripPassengerSwitcher } from "../passenger/trip-passenger-switcher";
 import type {
   CreateWizardAssignments,
   CreateWizardPassenger,
 } from "./create-wizard";
 import styles from "./create-trip.module.css";
-
-function assignmentLabel(assignment: TripAssignmentReference) {
-  return `${assignment.driverFirstName} ${assignment.driverLastName} — ${assignment.vehicle.brandName} ${assignment.vehicle.modelName} — ${assignment.vehicle.vehicleCode}`;
-}
 
 type AssignmentStepProps = {
   hidden: boolean;
@@ -88,7 +88,7 @@ export function AssignmentStep({
         <div>
           <h2>راننده و خودرو</h2>
           <p className={styles.stepDescription}>
-            برای هر مسافر یک تخصیص واجد شرایط انتخاب کنید. انتخاب‌ها تا ثبت نهایی فقط در همین فرم نگه‌داری می‌شوند.
+            برای هر مسافر یک تخصیص واجد شرایط انتخاب کنید. هر خودرو در این درخواست حداکثر به {TRIP_REQUEST_VEHICLE_PASSENGER_LIMIT.toLocaleString("fa-IR")} مسافر تخصیص داده می‌شود. انتخاب‌ها تا ثبت نهایی فقط در همین فرم نگه‌داری می‌شوند.
           </p>
         </div>
         <StatusBadge
@@ -139,12 +139,13 @@ export function AssignmentStep({
             key={`${passenger.key}-${selectedId ?? "none"}`}
             name={`assignment.${passenger.key}`}
             label="تخصیص واجد شرایط"
-            options={eligible.map((assignment) => ({
-              value: String(assignment.assignmentId),
-              label: assignmentLabel(assignment),
-              searchText: `${assignmentLabel(assignment)} ${assignment.driverPersonnelNo ?? ""}`,
-              content: <span>{assignmentLabel(assignment)}</span>,
-            }))}
+            options={buildEligibleAssignmentOptions({
+              eligible,
+              passengers,
+              assignmentsByPassenger,
+              selectedAssignments,
+              activePassengerKey: passenger.key,
+            })}
             defaultValue={selectedId ? String(selectedId) : ""}
             placeholder="انتخاب راننده و خودرو…"
             searchPlaceholder="جستجوی راننده، خودرو، پلاک یا کد…"
@@ -194,7 +195,7 @@ export function AssignmentStep({
               <ul className={styles.ineligibleList}>
                 {ineligible.map((item) => (
                   <li key={item.assignmentId}>
-                    <strong>{assignmentLabel(item)}</strong>
+                    <strong>{assignmentOptionLabel(item)}</strong>
                     <span>{assignmentIneligibilityReasons(item, scheduledDateTime).map((reason) => assignmentIneligibilityMessages[reason]).join(" · ")}</span>
                   </li>
                 ))}

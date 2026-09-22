@@ -44,6 +44,7 @@ import {
   tripRouteError,
   tripRouteDetailsError,
 } from "./trip-validation";
+import { tripRequestVehicleCapacityExceeded } from "./trip-vehicle-capacity";
 
 const failure = (error: TripFailure, field?: string): TripResult => ({
   success: false,
@@ -380,6 +381,7 @@ export class ManageTrips {
         return failure("PASSENGER_REQUIRED");
       }
 
+      const resolvedVehicleIds: number[] = [];
       for (const [passengerIndex, passengerInput] of input.passengers.entries()) {
         const trip = await session.trip(passengerInput.tripId);
         if (!trip || trip.requestId !== input.tripRequestId) {
@@ -401,6 +403,7 @@ export class ManageTrips {
           assignment.toDateTime,
         );
         if (assignmentError) return failure(assignmentError);
+        resolvedVehicleIds.push(assignment.vehicle.vehicleId);
 
         for (const route of normalizedRoutesByPassenger[passengerIndex]) {
           for (const point of route.points) {
@@ -411,6 +414,10 @@ export class ManageTrips {
             }
           }
         }
+      }
+
+      if (tripRequestVehicleCapacityExceeded(resolvedVehicleIds)) {
+        return failure("VEHICLE_PASSENGER_CAPACITY_EXCEEDED");
       }
 
       for (const [passengerIndex, passengerInput] of input.passengers.entries()) {

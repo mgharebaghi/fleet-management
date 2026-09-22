@@ -289,7 +289,8 @@ export type TripFailure =
   | "INVALID_EXECUTION_PERIOD"
   | "INVALID_ODOMETER"
   | "ODOMETER_DECREASE"
-  | "INVALID_RATING";
+  | "INVALID_RATING"
+  | "VEHICLE_PASSENGER_CAPACITY_EXCEEDED";
 
 export type TripLocationInputRole = "origin" | "destination";
 

@@ -177,10 +177,15 @@ Opening a `New` request loads the **4-step handling wizard**:
 Submitting the handling wizard calls `assignInitialTripRequestAction`, which atomically:
 - Verifies the request is still `New`.
 - Validates active driver and vehicle assignment eligibility.
+- Rejects the assignment when any physical vehicle would carry more than 3 passengers in this request.
 - Creates `TripExecution` records with status `Planned`.
 - Persists any defined routes linked to passenger trips.
 - Updates the `TripRequest.Status` to `Assigned`.
 - Redirects to `/trips/{id}`.
+
+Within one Trip Request, one vehicle may be assigned to at most 3 passengers. Capacity is the physical vehicle (`vehicleId`): different driver/vehicle assignment records for the same vehicle share that limit. The rule does not apply across requests and is not a seat-count or vehicle-type capacity. On the assignment step, a vehicle that already has 3 other passengers stays visible and searchable, but its assignment options are disabled with «ظرفیت خودرو تکمیل شده». The passenger currently being edited is excluded from that count, so their own selection stays available. `assignInitialRequest` enforces the same limit before creating executions, routes, or changing request status, and returns `VEHICLE_PASSENGER_CAPACITY_EXCEEDED` when it is exceeded.
+
+`createCompleteRequest` is not part of this dispatcher flow. Requesters submit a `New` request without assignments; only handling calls `assignInitialRequest`.
 
 ### 4. Staff detail workspace (`/trips/{id}`)
 Subsequent visits to an assigned or active request directly load the **5-tab administrative workspace** (`TripWorkspacePage`):
