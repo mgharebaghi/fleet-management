@@ -283,7 +283,8 @@ describe("Wizard request and passenger inputs", () => {
       />,
     );
 
-    expect(markup).toContain("تاریخ و زمان درخواست سفر");
+    expect(markup).toContain("تاریخ (شمسی)");
+    expect(markup).toContain("ساعت");
     expect(markup).toContain('name="requestedTravelDay"');
     expect(markup).toContain('name="requestedTravelTime"');
     expect(markup).not.toContain('name="requestDay"');
@@ -499,7 +500,12 @@ describe("Wizard Step 1: RequestStep", () => {
     expect(markup).toContain('aria-invalid="true"');
     expect(markup).toContain('id="trip-create-wizard-purpose-error"');
     expect(markup).toContain("هدف سفر حداکثر ۵۰۰ نویسه است.");
-    expect(markup).toContain("اطلاعات اصلی");
+    expect(markup).toContain("نوع درخواست سفر");
+    expect(markup).toContain('name="purpose"');
+    expect(markup).toContain('name="requestedTravelDay"');
+    expect(markup).toContain('name="requestedTravelTime"');
+    expect(markup).toContain('name="commonOriginLocationId"');
+    expect(markup).not.toContain("اطلاعات اصلی");
   });
 
   it("renders PassengersStep with next button labeled 'بعدی: مرور و تأیید'", () => {

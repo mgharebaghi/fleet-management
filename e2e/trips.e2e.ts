@@ -380,21 +380,27 @@ test.describe.serial("Trip management", () => {
       await page.getByRole("link", { name: /ثبت (درخواست )?سفر/ }).click();
       await expect(page).toHaveURL(/\/trips\/create$/, { timeout: 60_000 });
       const form = page.locator('form[aria-label="ثبت درخواست سفر"]');
-      const requestStep = form.getByRole("region", { name: "اطلاعات اصلی" });
-      const passengersStep = form.getByRole("region", { name: "مسافران" });
+      const requestStep = form.locator("section").filter({
+        has: page.getByLabel("نوع درخواست سفر", { exact: true }),
+      });
+      const passengersStep = form.locator("section").filter({
+        has: page.getByRole("button", { name: "+ افزودن مسافر", exact: true }),
+      });
       const requestStepNext = () =>
         requestStep.getByRole("button", { name: "بعدی", exact: true });
       await expect(form).toBeVisible({ timeout: 60_000 });
       await expect(
         page.getByRole("navigation", { name: "مراحل ثبت درخواست سفر" }),
       ).toBeVisible();
-      await expect(
-        requestStep.getByRole("heading", { name: "اطلاعات اصلی" }),
-      ).toBeVisible();
       await eventually(requestStepNext()).toBeVisible();
       await eventually(
         requestStep.getByLabel("نوع درخواست سفر", { exact: true }),
       ).toBeVisible();
+      await expect(requestStep.getByLabel("هدف سفر", { exact: true })).toBeVisible();
+      await expect(
+        requestStep.getByRole("button", { name: "تاریخ (شمسی)", exact: true }),
+      ).toBeVisible();
+      await expect(requestStep.getByLabel("ساعت", { exact: true })).toBeVisible();
 
       await requestStep
         .getByLabel("نوع درخواست سفر", { exact: true })
@@ -466,14 +472,14 @@ test.describe.serial("Trip management", () => {
         }),
       ).toBeVisible();
       await expect(
-        requestStep.getByRole("heading", { name: "اطلاعات اصلی" }),
+        requestStep.getByLabel("نوع درخواست سفر", { exact: true }),
       ).toBeVisible();
 
       await createInlineLocation(page, requestStep, "مبدأ", inlineOriginName);
       await createInlineLocation(page, requestStep, "مقصد", inlineDestinationName);
       await requestStepNext().click();
       await expect(
-        passengersStep.getByRole("heading", { name: "مسافران" }),
+        passengersStep.getByRole("button", { name: "+ افزودن مسافر", exact: true }),
       ).toBeVisible();
       await expect(passengersStep.getByLabel("مسافر", { exact: true })).toBeVisible();
 
@@ -481,7 +487,7 @@ test.describe.serial("Trip management", () => {
         .getByRole("button", { name: "قبلی", exact: true })
         .click();
       await expect(
-        requestStep.getByRole("heading", { name: "اطلاعات اصلی" }),
+        requestStep.getByLabel("هدف سفر", { exact: true }),
       ).toBeVisible();
       await expect(
         requestStep.getByLabel("هدف سفر", { exact: true }),
