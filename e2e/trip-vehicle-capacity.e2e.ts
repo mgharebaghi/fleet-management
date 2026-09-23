@@ -280,7 +280,7 @@ test.describe("Trip request vehicle capacity", () => {
     await page.goto(`/trips/${requestAId}`);
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await page.getByRole("button", { name: "بعدی: راننده و خودرو", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "راننده و خودرو" })).toBeVisible();
+    await expect(page.getByLabel("تخصیص واجد شرایط", { exact: true })).toBeVisible();
 
     for (const passengerName of passengerNames.slice(0, 3)) {
       await openAssignment(page, passengerName);
