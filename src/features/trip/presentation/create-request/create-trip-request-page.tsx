@@ -13,24 +13,32 @@ export async function CreateTripRequestPage() {
     reader.availableLocations(),
   ]);
 
+  const blocked =
+    requestTypes.length === 0
+      ? {
+          title: "نوع درخواست موجود نیست",
+          description:
+            "نوع‌های درخواست هنوز پیکربندی نشده‌اند؛ با مدیر سامانه تماس بگیرید.",
+        }
+      : people.length === 0
+        ? {
+            title: "مسافر فعالی موجود نیست",
+            description: "برای ثبت درخواست، حداقل یک شخص فعال لازم است.",
+          }
+        : null;
+
   return (
     <PageShell>
-      <PageHeader
-        eyebrow="مدیریت سفر"
-        title="ثبت درخواست سفر"
-        action={<BackLink href="/trips/requests" label="بازگشت به سفرها" />}
-        compactAction
-      />
-      {requestTypes.length === 0 ? (
-        <ResultState
-          title="نوع درخواست موجود نیست"
-          description="نوع‌های درخواست هنوز پیکربندی نشده‌اند؛ با مدیر سامانه تماس بگیرید."
-        />
-      ) : people.length === 0 ? (
-        <ResultState
-          title="مسافر فعالی موجود نیست"
-          description="برای ثبت درخواست، حداقل یک شخص فعال لازم است."
-        />
+      {blocked ? (
+        <>
+          <PageHeader
+            eyebrow="مدیریت سفر"
+            title="ثبت درخواست سفر"
+            action={<BackLink href="/trips/requests" label="بازگشت به سفرها" />}
+            compactAction
+          />
+          <ResultState title={blocked.title} description={blocked.description} />
+        </>
       ) : (
         <CreateTripRequestForm
           requestTypes={requestTypes}

@@ -53,6 +53,9 @@ vi.mock("@/components/ui/wizard-progress/wizard-progress", () =>
 vi.mock("@/components/ui/dialog/dialog", () =>
   import("../../../../components/ui/dialog/dialog"),
 );
+vi.mock("@/components/ui/confirm-dialog/confirm-dialog", () =>
+  import("../../../../components/ui/confirm-dialog/confirm-dialog"),
+);
 vi.mock("@/components/ui/form-grid/form-grid", () =>
   import("../../../../components/ui/form-grid/form-grid"),
 );
@@ -61,6 +64,7 @@ vi.mock("../location/location.actions", () => ({
 }));
 vi.mock("../trip.actions", () => ({
   assignInitialTripRequestAction: vi.fn(),
+  cancelTripRequestAction: vi.fn(),
 }));
 
 const mockLocation1: TripLocationReference = {
@@ -196,8 +200,8 @@ describe("TripRequestHandlingPage", () => {
     expect(markup).toContain("مسیر");
     expect(markup).toContain("تأیید و تخصیص");
 
-    // Status badge
-    expect(markup).toContain("نیازمند رسیدگی");
+    // Handling context
+    expect(markup).toContain("در انتظار رسیدگی واحد ترابری");
 
     // Request details
     expect(markup).toContain("TR-1405-0042");
@@ -215,7 +219,13 @@ describe("TripRequestHandlingPage", () => {
 
     // Action button
     expect(markup).toContain("بعدی: راننده و خودرو");
-    expect(markup).toContain("انصراف و بازگشت");
+    expect(markup).toContain("بازگشت به فهرست درخواست‌ها");
+    expect(markup).toContain("لغو درخواست");
+    expect(markup.indexOf(">لغو درخواست<")).toBeGreaterThan(markup.indexOf("بعدی: راننده و خودرو"));
+    expect(markup).not.toContain("requestCancelRow");
+    expect(markup).not.toContain("اگر این سفر انجام نمی‌شود");
+    expect(markup).toContain("ادامه درخواست");
+    expect(markup).not.toContain("انصراف");
 
     // Strictly progressive: inactive steps (like Step 4 confirmation) are not rendered on Step 1
     expect(markup).not.toContain("تأیید و تخصیص نهایی سفر");

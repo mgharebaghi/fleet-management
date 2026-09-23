@@ -213,6 +213,51 @@
   margin-top: var(--space-2);
 }
 
+.wizardFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--app-border);
+}
+
+.wizardNav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.wizardAbandon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--app-radius-control);
+  background: transparent;
+  color: var(--app-danger-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wizardAbandon:hover:not(:disabled) {
+  border-color: var(--app-danger-border);
+  background: var(--app-danger-background);
+}
+
+.wizardAbandon:focus-visible {
+  outline: 3px solid var(--app-focus-outline);
+  outline-offset: 2px;
+}
+
+.wizardAbandon:disabled {
+  cursor: not-allowed;
+  opacity: var(--app-disabled-opacity);
+}
+
 .createActions {
   display: flex;
   flex-wrap: wrap;
@@ -413,6 +458,16 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+
+  .wizardFooter {
+    justify-content: stretch;
+  }
+
+  .wizardNav {
+    width: 100%;
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
 
   .createActions {
     flex-direction: column-reverse;
@@ -639,8 +694,10 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--app-border);
+}
+
+.handlingCancelAction {
+  margin-inline-start: auto;
 }
 
 /* Route step cards */
@@ -732,6 +789,209 @@
   display: grid;
   min-width: 0;
   gap: var(--space-4);
+}
+
+.routeBasics,
+.routeStops,
+.routeMap,
+.routeEstimateSection {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-group);
+  background: var(--app-surface);
+}
+
+.routeBasics {
+  background: var(--app-surface-subtle);
+}
+
+.routeSectionHeading {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.routeSectionHeading h3 {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: var(--font-size-md);
+}
+
+.routeSectionHeading p {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+}
+
+.routeLabelHint {
+  margin-inline-start: var(--space-1);
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 400;
+}
+
+.routeBasicsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.75fr);
+  align-items: start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.routeLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  align-items: start;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.routeStops {
+  gap: var(--space-3);
+}
+
+.routeEndpoint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3);
+  border-radius: var(--app-radius-control);
+  background: var(--app-surface-subtle);
+}
+
+.routeEndpointLabel {
+  flex: none;
+  color: var(--app-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.routeEndpoint strong {
+  min-width: 0;
+  color: var(--app-heading);
+  font-size: var(--font-size-sm);
+}
+
+.routeMiddle {
+  display: grid;
+  gap: var(--space-2);
+  padding-inline: var(--space-3);
+  border-inline-start: 2px solid var(--app-border);
+}
+
+.routeMiddleHeading {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--app-heading);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.routeMiddleHeading span:last-child {
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 400;
+}
+
+.routeMiddle > p {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.routePointCard {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-control);
+  background: var(--app-surface);
+}
+
+.routePointHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.routePointHeading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--app-heading);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.routePointIndex {
+  display: inline-grid;
+  width: 1.6rem;
+  height: 1.6rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--app-info-background);
+  color: var(--app-primary);
+}
+
+.routePointName {
+  min-width: 0;
+  color: var(--app-primary);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.routePointSummaryActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.routeMap {
+  background: var(--app-surface-subtle);
+}
+
+.routeMapCanvas {
+  min-width: 0;
+  width: 100%;
+}
+
+.routeEstimateSection {
+  gap: var(--space-3);
+}
+
+.routeDialogActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 760px) {
+  .routeBasicsGrid,
+  .routeLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .routeBasics,
+  .routeStops,
+  .routeMap,
+  .routeEstimateSection {
+    padding: var(--space-3);
+  }
+
+  .routeDialogActions > div {
+    width: 100%;
+  }
 }
 
 .modalSection {

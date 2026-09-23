@@ -185,6 +185,87 @@ async function createAssignmentFixture(
   return assignment;
 }
 
+async function removeLeftoverTripIntegrationFixtures() {
+  const people = await client.people.findMany({
+    where: { FirstName: "TripIntegration" },
+    select: { PersonId: true },
+  });
+  const leftoverPersonIds = people.map((person) => person.PersonId);
+  if (leftoverPersonIds.length === 0) return;
+
+  const trips = await client.trip.findMany({
+    where: { PassengerPersonId: { in: leftoverPersonIds } },
+    select: { TripId: true, TripRequestId: true },
+  });
+  const tripIds = trips.map((trip) => trip.TripId);
+  const leftoverRequestIds = [
+    ...new Set(trips.map((trip) => trip.TripRequestId)),
+  ];
+  const executions =
+    tripIds.length === 0
+      ? []
+      : await client.tripExecution.findMany({
+          where: { TripId: { in: tripIds } },
+          select: { TripExecutionId: true },
+        });
+  const executionIds = executions.map((execution) => execution.TripExecutionId);
+  if (leftoverRequestIds.length > 0) {
+    await client.accident.deleteMany({
+      where: { TripRequestId: { in: leftoverRequestIds } },
+    });
+    await client.vehicleViolation.deleteMany({
+      where: { TripRequestId: { in: leftoverRequestIds } },
+    });
+  }
+  const routeOwners = [
+    ...(tripIds.length > 0 ? [{ TripId: { in: tripIds } }] : []),
+    ...(executionIds.length > 0
+      ? [{ TripExecutionId: { in: executionIds } }]
+      : []),
+  ];
+  if (routeOwners.length > 0) {
+    await client.routePoint.deleteMany({
+      where: { Route: { OR: routeOwners } },
+    });
+    await client.route.deleteMany({
+      where: { OR: routeOwners },
+    });
+  }
+  if (executionIds.length > 0) {
+    await client.tripExecution.deleteMany({
+      where: { TripExecutionId: { in: executionIds } },
+    });
+  }
+  if (tripIds.length > 0) {
+    await client.trip.deleteMany({ where: { TripId: { in: tripIds } } });
+  }
+  if (leftoverRequestIds.length > 0) {
+    await client.tripRequest.deleteMany({
+      where: { TripRequestId: { in: leftoverRequestIds } },
+    });
+  }
+
+  const drivers = await client.driver.findMany({
+    where: { PersonId: { in: leftoverPersonIds } },
+    select: { DriverId: true },
+  });
+  const leftoverDriverIds = drivers.map((driver) => driver.DriverId);
+  if (leftoverDriverIds.length > 0) {
+    await client.vehicleDriverAssignment.deleteMany({
+      where: { DriverId: { in: leftoverDriverIds } },
+    });
+    await client.driverLicense.deleteMany({
+      where: { DriverId: { in: leftoverDriverIds } },
+    });
+    await client.driver.deleteMany({
+      where: { DriverId: { in: leftoverDriverIds } },
+    });
+  }
+  await client.people.deleteMany({
+    where: { PersonId: { in: leftoverPersonIds } },
+  });
+}
+
 describe.sequential("Trip SQL Server integration", () => {
   beforeAll(async () => {
     const [identity] = await client.$queryRaw<
@@ -220,6 +301,7 @@ describe.sequential("Trip SQL Server integration", () => {
       throw new Error("Trip IntegrationTest baseline is invalid.");
     }
     verified = true;
+    await removeLeftoverTripIntegrationFixtures();
   }, 180_000);
 
   afterEach(async () => {
@@ -311,6 +393,132 @@ describe.sequential("Trip SQL Server integration", () => {
   afterAll(async () => {
     await client.$disconnect();
   });
+
+  it("cancels a registered request without deleting the request or its passengers", async () => {
+    const fresh = await createCoreFixture();
+    const tripsBefore = await client.trip.findMany({
+      where: { TripRequestId: fresh.requestId },
+    });
+    expect(tripsBefore).toHaveLength(1);
+    expect(tripsBefore[0]?.Description).toBe("Passenger Trip");
+
+    expect(await manage.cancelRequest(fresh.requestId)).toEqual({
+      success: true,
+      id: fresh.requestId,
+    });
+
+    const cancelled = await client.tripRequest.findUniqueOrThrow({
+      where: { TripRequestId: fresh.requestId },
+    });
+    expect(cancelled.Status).toBe("Cancelled");
+    const tripsAfter = await client.trip.findMany({
+      where: { TripRequestId: fresh.requestId },
+    });
+    expect(tripsAfter.map((trip) => trip.TripId)).toEqual([
+      tripsBefore[0]?.TripId,
+    ]);
+    expect(tripsAfter[0]?.Description).toBe("Passenger Trip");
+    expect(tripsAfter[0]?.PassengerPersonId).toBe(fresh.person.PersonId);
+    expect(await manage.cancelRequest(fresh.requestId)).toEqual({
+      success: false,
+      error: "INVALID_REQUEST_TRANSITION",
+    });
+
+    const assigned = await createCoreFixture();
+    const assignment = await createAssignmentFixture(
+      assigned.token,
+      assigned.person.PersonId,
+      assigned.requestedTravelDateTime,
+    );
+    const executionId = successfulId(
+      await manage.saveExecution({
+        tripId: assigned.tripId,
+        tripExecutionId: null,
+        vehicleDriverAssignmentId: assignment.AssignmentId,
+        actualPickupDateTime: null,
+        actualDropoffDateTime: null,
+        startOdometer: null,
+        endOdometer: null,
+        status: "Planned",
+        description: "Planned child",
+      }),
+    );
+    expect(await manage.changeRequestStatus(assigned.requestId, "Assigned")).toEqual({
+      success: true,
+      id: assigned.requestId,
+    });
+    expect(await manage.cancelRequest(assigned.requestId)).toEqual({
+      success: true,
+      id: assigned.requestId,
+    });
+    const assignedRequest = await client.tripRequest.findUniqueOrThrow({
+      where: { TripRequestId: assigned.requestId },
+    });
+    const assignedTrips = await client.trip.findMany({
+      where: { TripRequestId: assigned.requestId },
+    });
+    const plannedChild = await client.tripExecution.findUniqueOrThrow({
+      where: { TripExecutionId: executionId },
+    });
+    expect(assignedRequest.Status).toBe("Cancelled");
+    expect(assignedTrips).toHaveLength(1);
+    expect(assignedTrips[0]?.TripId).toBe(assigned.tripId);
+    expect(plannedChild.Status).toBe("Cancelled");
+    expect(plannedChild.Description).toBe("Planned child");
+
+    const started = await createCoreFixture();
+    const startedAssignment = await createAssignmentFixture(
+      started.token,
+      started.person.PersonId,
+      started.requestedTravelDateTime,
+    );
+    const startedExecutionId = successfulId(
+      await manage.saveExecution({
+        tripId: started.tripId,
+        tripExecutionId: null,
+        vehicleDriverAssignmentId: startedAssignment.AssignmentId,
+        actualPickupDateTime: null,
+        actualDropoffDateTime: null,
+        startOdometer: null,
+        endOdometer: null,
+        status: "Planned",
+        description: null,
+      }),
+    );
+    expect(await manage.changeRequestStatus(started.requestId, "Assigned")).toEqual({
+      success: true,
+      id: started.requestId,
+    });
+    expect(
+      await manage.saveExecution({
+        tripId: started.tripId,
+        tripExecutionId: startedExecutionId,
+        vehicleDriverAssignmentId: startedAssignment.AssignmentId,
+        actualPickupDateTime: started.requestedTravelDateTime,
+        actualDropoffDateTime: null,
+        startOdometer: "10.00",
+        endOdometer: null,
+        status: "InProgress",
+        description: null,
+      }),
+    ).toEqual({ success: true, id: startedExecutionId });
+    expect(await manage.changeRequestStatus(started.requestId, "InProgress")).toEqual({
+      success: true,
+      id: started.requestId,
+    });
+    expect(await manage.cancelRequest(started.requestId)).toEqual({
+      success: false,
+      error: "INVALID_REQUEST_TRANSITION",
+    });
+    const stillRunning = await client.tripRequest.findUniqueOrThrow({
+      where: { TripRequestId: started.requestId },
+    });
+    const runningTrips = await client.trip.count({
+      where: { TripRequestId: started.requestId },
+    });
+    expect(stillRunning.Status).toBe("InProgress");
+    expect(runningTrips).toBe(1);
+  }, 120_000);
 
   it(
     "rolls back TripRequest and passenger Trips when work fails after creation",

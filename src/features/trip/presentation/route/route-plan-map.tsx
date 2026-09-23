@@ -147,7 +147,9 @@ export function RoutePlanMap({
   }
 
   const notice = routeNotice(readiness.status, routingPhase);
-  const canDrawMap = readiness.status === "ready";
+  const originCoordinate = stops.find((stop) => stop.role === "origin")?.coordinate;
+  const destinationCoordinate = stops.find((stop) => stop.role === "destination")?.coordinate;
+  const canDrawMap = Boolean(originCoordinate && destinationCoordinate);
   const mapMode =
     mapPhase === "ready" && mapKey
       ? "ready"
@@ -158,7 +160,7 @@ export function RoutePlanMap({
     route && route.path.length >= 2
       ? [{ id: "road", coordinates: route.path }]
       : [];
-  const initialCenter: MapCoordinate | null = coordinates[0] ?? null;
+  const initialCenter: MapCoordinate | null = originCoordinate ?? null;
 
   return (
     <div className={styles.layout}>

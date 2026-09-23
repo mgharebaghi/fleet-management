@@ -724,6 +724,10 @@
   align-items: center;
 }
 
+.statusCancelAction {
+  margin-inline-start: auto;
+}
+
 .completionSummary {
   display: flex;
   flex-wrap: wrap;

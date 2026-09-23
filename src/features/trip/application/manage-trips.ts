@@ -14,6 +14,7 @@ import type {
   TripResult,
 } from "./trip-records";
 import {
+  canCancelTripRequest,
   canTransitionTripExecution,
   canTransitionTripRequest,
   everyPassengerExecutionCompleted,
@@ -691,6 +692,29 @@ export class ManageTrips {
         tripRequestId,
         targetStatus as TripRequestStatus,
       );
+      return { success: true, id: tripRequestId };
+    });
+  }
+
+  async cancelRequest(tripRequestId: number): Promise<TripResult> {
+    if (!isValidTripId(tripRequestId)) return failure("INVALID_ID");
+
+    return this.repository.atomic(async (session) => {
+      const current = await session.requestLifecycle(tripRequestId);
+      if (!current) return failure("REQUEST_NOT_FOUND");
+      if (!isTripRequestStatus(current.status)) {
+        return failure("INVALID_REQUEST_STATUS");
+      }
+      if (
+        !canCancelTripRequest(
+          current.status,
+          requestHasStartedExecution(current),
+        )
+      ) {
+        return failure("INVALID_REQUEST_TRANSITION");
+      }
+      await session.cancelPlannedExecutions(tripRequestId);
+      await session.updateRequestStatus(tripRequestId, "Cancelled");
       return { success: true, id: tripRequestId };
     });
   }

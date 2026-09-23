@@ -80,6 +80,7 @@ vi.mock("../../composition/trip.factory", () => ({
 vi.mock("../trip.actions", () => ({
   saveTripExecutionAction: vi.fn(),
   changeTripRequestStatusAction: vi.fn(),
+  cancelTripRequestAction: vi.fn(),
   addTripRouteAction: vi.fn(),
   savePassengerSurveyAction: vi.fn(),
   addTripPassengerAction: vi.fn(),
@@ -579,6 +580,29 @@ describe("Trip workspace presentation", () => {
     expect(markup).toContain("بازگشت واقعی");
   });
 
+  it("offers request cancellation in the lifecycle action area only while eligible", async () => {
+    const detailsTab = await renderWorkspace("details");
+    expect(detailsTab).not.toContain(">لغو درخواست<");
+    const cancellable = await renderWorkspace("completion");
+    const cancelAt = cancellable.indexOf(">لغو درخواست<");
+    const lifecycleAt = cancellable.indexOf("اقدام درخواست");
+    expect(cancelAt).toBeGreaterThan(lifecycleAt);
+    expect(cancellable).not.toContain("requestCancelRow");
+    expect(cancellable).not.toContain("اگر این سفر انجام نمی‌شود");
+    expect(cancellable).toContain("ادامه درخواست");
+    expect(cancellable).toContain("در سوابق می‌ماند");
+    expect(cancellable).not.toContain("تأیید لغو");
+
+    reader.details.mockResolvedValue(details({
+      status: "InProgress",
+      passengers: [passenger({ executions: [execution({ status: "InProgress", actualPickupDateTime: new Date("2026-03-22T04:30:00Z") })] })],
+    }));
+    const running = await renderWorkspace("completion");
+    expect(running).not.toContain(">لغو درخواست<");
+    expect(running).not.toContain("ادامه درخواست");
+    expect(running).toContain("در حال اجرا");
+  });
+
   it("renders Assigned request with operational summary and start trip action", async () => {
     reader.details.mockResolvedValue(details({
       status: "Assigned",
@@ -586,6 +610,7 @@ describe("Trip workspace presentation", () => {
     }));
     const markup = await renderWorkspace("completion");
     expect(markup).toContain("شروع سفر");
+    expect(markup.indexOf(">لغو درخواست<")).toBeGreaterThan(markup.indexOf(">شروع سفر<"));
     expect(markup).toContain("خلاصهٔ عملیاتی سفر آمادهٔ شروع");
     expect(markup).toContain("آمادهٔ شروع");
     expect(markup).toContain("رضا راننده");
@@ -613,8 +638,10 @@ describe("Trip workspace presentation", () => {
     }));
     const cancelledMarkup = await renderWorkspace("completion");
     expect(cancelledMarkup).toContain("این درخواست سفر لغو شده است");
+    expect(cancelledMarkup).toContain("فقط برای مشاهدهٔ سوابق");
     expect(cancelledMarkup).not.toContain("شروع سفر");
-    expect(cancelledMarkup).not.toContain("لغو درخواست");
+    expect(cancelledMarkup).not.toContain(">لغو درخواست<");
+    expect(cancelledMarkup).not.toContain("ادامه درخواست");
   });
 
   it("separates operational summary into passenger and driver/vehicle sections", async () => {

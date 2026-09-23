@@ -57,11 +57,21 @@
 }
 
 .stopActions {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.stopItemActions,
+.stopLocationActions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.15rem var(--space-2);
-  min-width: 0;
+  gap: var(--space-2);
+}
+
+.stopItemActions {
+  justify-content: flex-end;
 }
 
 .stopAction {

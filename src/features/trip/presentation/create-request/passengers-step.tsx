@@ -1,4 +1,5 @@
 import { ActionButton } from "../../../../components/ui/action-button/action-button";
+import { CreateWizardNavigation } from "./create-wizard-navigation";
 import { InlineNotice } from "../../../../components/ui/inline-notice/inline-notice";
 import type {
   TripLocationReference,
@@ -137,26 +138,12 @@ export function PassengersStep({
         fieldInvalid={fieldInvalid}
       />
 
-      <div className={styles.createActions}>
-        <ActionButton
-          type="button"
-          variant="secondary"
-          disabled={pending}
-          onClick={onBack}
-        >
-          قبلی
-        </ActionButton>
-        <div className={styles.createActionsEnd}>
-          <ActionButton
-            type="button"
-            disabled={pending}
-            pending={pending}
-            onClick={onReview}
-          >
-            بعدی: مرور و تأیید
-          </ActionButton>
-        </div>
-      </div>
+      <CreateWizardNavigation
+        onBack={onBack}
+        onPrimary={onReview}
+        primaryLabel="بعدی: مرور و تأیید"
+        pending={pending}
+      />
     </section>
   );
 }

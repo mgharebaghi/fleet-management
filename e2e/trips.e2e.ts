@@ -484,7 +484,7 @@ test.describe.serial("Trip management", () => {
       await expect(passengersStep.getByLabel("مسافر", { exact: true })).toBeVisible();
 
       await passengersStep
-        .getByRole("button", { name: "قبلی", exact: true })
+        .getByRole("button", { name: "بازگشت", exact: true })
         .click();
       await expect(
         requestStep.getByLabel("هدف سفر", { exact: true }),
@@ -495,6 +495,24 @@ test.describe.serial("Trip management", () => {
       await expect(
         requestStep.getByLabel("نوع درخواست سفر", { exact: true }),
       ).toHaveValue(/.+/);
+      await page
+        .locator("header")
+        .first()
+        .getByRole("button", { name: "انصراف", exact: true })
+        .click();
+      const abandonDialog = page.getByRole("dialog", {
+        name: "انصراف از ثبت درخواست",
+      });
+      await expect(abandonDialog).toBeVisible();
+      await expect(abandonDialog.getByText("هیچ درخواست سفری")).toBeVisible();
+      await abandonDialog
+        .getByRole("button", { name: "ادامه ثبت", exact: true })
+        .click();
+      await expect(abandonDialog).toBeHidden();
+      await expect(
+        requestStep.getByLabel("هدف سفر", { exact: true }),
+      ).toHaveValue(`هدف ${token}`);
+      expect(await tripRequestCountForFixturePerson()).toBe(0);
       await requestStepNext().click();
 
       await passengersStep
@@ -529,7 +547,13 @@ test.describe.serial("Trip management", () => {
         page.getByRole("button", { name: "ثبت درخواست سفر", exact: true }),
       ).toBeVisible();
       await expect(
-        page.getByRole("button", { name: "قبلی: مسافران", exact: true }),
+        reviewStep.getByRole("button", { name: "بازگشت", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page
+          .locator("header")
+          .first()
+          .getByRole("button", { name: "انصراف", exact: true }),
       ).toBeVisible();
       const reviewHasHorizontalOverflow = await page.evaluate(
         () =>

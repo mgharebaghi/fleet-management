@@ -285,7 +285,6 @@ describe("Wizard request and passenger inputs", () => {
         fieldErrorId={() => undefined}
         onTypeChange={noop}
         onNext={noop}
-        onCancel={noop}
       />,
     );
 
@@ -423,7 +422,9 @@ describe("Wizard Step 6: ReviewStep", () => {
     expect(markup).toContain("رضا کریمی");
     expect(markup).toContain("دفتر مرکزی ← کارخانه");
     expect(markup).toContain("ثبت درخواست سفر");
-    expect(markup).toContain("قبلی: مسافران");
+    expect(markup).toContain("بازگشت");
+    expect(markup).not.toContain("قبلی: مسافران");
+    expect(markup).not.toContain("انصراف");
   });
 });
 
