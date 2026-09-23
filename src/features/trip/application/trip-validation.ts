@@ -10,6 +10,7 @@ import type {
 
 const SQL_INT_MIN = -2_147_483_648;
 const SQL_INT_MAX = 2_147_483_647;
+const ROUTE_DESCRIPTION_MAX_LENGTH = 1000;
 
 export function isValidTripId(value: number): boolean {
   return Number.isInteger(value) && value > 0 && value <= SQL_INT_MAX;
@@ -193,6 +194,9 @@ export function tripRouteDetailsError(
 ): TripFailure | null {
   if (!input.routeName) return "ROUTE_NAME_REQUIRED";
   if (input.routeName.length > 200) return "ROUTE_NAME_TOO_LONG";
+  if ((input.description?.length ?? 0) > ROUTE_DESCRIPTION_MAX_LENGTH) {
+    return "ROUTE_DESCRIPTION_TOO_LONG";
+  }
   if (
     input.alternativeNo !== null &&
     (!isSqlInt(input.alternativeNo) || input.alternativeNo <= 0)
@@ -221,6 +225,9 @@ export function tripRouteDetailsError(
     }
     if ((point.trafficZone?.length ?? 0) > 50) {
       return "TRAFFIC_ZONE_TOO_LONG";
+    }
+    if ((point.description?.length ?? 0) > ROUTE_DESCRIPTION_MAX_LENGTH) {
+      return "ROUTE_POINT_DESCRIPTION_TOO_LONG";
     }
   }
 

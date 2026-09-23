@@ -1,0 +1,146 @@
+.editor {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.identity {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(10rem, 0.8fr);
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.endpoint {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.endpointLabel,
+.order {
+  flex: none;
+  color: var(--app-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.endpointName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sectionLabel {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.points {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.point {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-block: var(--space-3);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.point:last-child {
+  border-bottom: 0;
+  padding-bottom: var(--space-2);
+}
+
+.stopHeading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.fieldHint {
+  margin: 0.3rem 0 0;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.textButton {
+  border: 0;
+  background: transparent;
+  color: var(--app-primary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+}
+
+.textButton:disabled {
+  color: var(--app-text-muted);
+  cursor: default;
+}
+
+.details {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding-inline-start: 1.6rem;
+}
+
+.details[hidden] {
+  display: none;
+}
+
+.estimates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.suggestion {
+  margin: 0.25rem 0 0;
+}
+
+.mapColumn {
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .editor {
+    grid-template-columns: minmax(22rem, 1.45fr) minmax(16rem, 0.8fr);
+    align-items: start;
+  }
+
+  .mapColumn {
+    grid-column: 2;
+    grid-row: 1 / span 6;
+  }
+}
+
+@media (max-width: 760px) {
+  .split,
+  .estimates {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

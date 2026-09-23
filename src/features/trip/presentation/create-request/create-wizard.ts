@@ -42,6 +42,10 @@ export type CreateWizardPassenger = {
   personnelNo: string | null;
   originName: string;
   destinationName: string;
+  /** Trip origin. Map context only; it is not submitted as a RoutePoint. */
+  originLocation?: TripLocationReference | null;
+  /** Trip destination. Map context only; it is not submitted as a RoutePoint. */
+  destinationLocation?: TripLocationReference | null;
   requestedPickupAt: string;
   requestedPickupLabel: string;
 };

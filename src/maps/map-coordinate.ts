@@ -8,6 +8,12 @@ export type MapCoordinate = {
   longitude: string;
 };
 
+/** A generic line on the map. The canvas does not interpret what it represents. */
+export type MapPath = {
+  id: string;
+  coordinates: readonly MapCoordinate[];
+};
+
 export type MapMarker = {
   id: string;
   coordinate: MapCoordinate;

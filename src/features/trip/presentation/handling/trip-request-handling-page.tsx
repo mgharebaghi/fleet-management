@@ -67,6 +67,8 @@ export function TripRequestHandlingPage({
         personnelNo: passenger.passenger.personnelNo,
         originName: passenger.origin.locationName,
         destinationName: passenger.destination.locationName,
+        originLocation: passenger.origin,
+        destinationLocation: passenger.destination,
         requestedPickupAt: pickupDate.toISOString(),
         requestedPickupLabel: formatTripDateTime(pickupDate),
       };

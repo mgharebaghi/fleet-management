@@ -654,18 +654,18 @@ test.describe.serial("Trip management", () => {
         token,
       );
       await routeForm
-        .getByLabel("نام مسیر", { exact: true })
+        .getByLabel("عنوان مسیر", { exact: true })
         .fill(`مسیر ${token}`);
       await routeForm
         .getByLabel("مسافت (کیلومتر)", { exact: true })
         .fill("24.50");
-      await routeForm.getByRole("button", { name: "بعدی", exact: true }).click();
-      await routeForm.getByRole("button", { name: "+ افزودن نقطه", exact: true }).click();
+      await routeForm
+        .getByRole("button", { name: "+ افزودن نقطه میانی", exact: true })
+        .click();
       await selectSearchableOption(routeForm, "مکان", token, `مبدأ ${token}`);
-      await routeForm.getByRole("button", { name: "بعدی", exact: true }).click();
       await routeForm.getByRole("button", { name: "ذخیره مسیر", exact: true }).click();
       await eventually(
-        page.getByText(`مسیر ${token}`, { exact: true }),
+        page.getByRole("heading", { name: `مسیر ${token}`, exact: true }),
       ).toBeVisible();
 
       await page.goto(`/trips/${requestId}?tab=assignment`);

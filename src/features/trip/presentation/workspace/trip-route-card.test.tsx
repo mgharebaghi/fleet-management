@@ -186,7 +186,7 @@ describe("RouteCard component presentation", () => {
       <RouteCard route={sampleRoute} />,
     );
     expect(selectedMarkup).toContain("routeCardSelected");
-    expect(selectedMarkup).toContain("مسیر انتخاب‌شده");
+    expect(selectedMarkup).toContain("مسیر اصلی");
     expect(selectedMarkup).not.toContain("شماره جایگزین");
 
     const alternativeRoute: TripRoute = {

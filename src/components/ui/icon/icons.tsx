@@ -84,6 +84,24 @@ export function CheckIcon(props: IconProps) {
   );
 }
 
+export function MoveUpIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 19V5" />
+      <path d="M6 11l6-6 6 6" />
+    </Icon>
+  );
+}
+
+export function MoveDownIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 5v14" />
+      <path d="M6 13l6 6 6-6" />
+    </Icon>
+  );
+}
+
 export function WarningIcon(props: IconProps) {
   return (
     <Icon {...props}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
 import { SearchableSelect } from "@/components/ui/searchable-select/searchable-select";
@@ -35,6 +35,9 @@ export function LocationPicker({
   required = false,
   invalid = false,
   describedBy,
+  onValueChange,
+  layout = "field",
+  actions,
 }: {
   name: string;
   label: string;
@@ -44,6 +47,10 @@ export function LocationPicker({
   required?: boolean;
   invalid?: boolean;
   describedBy?: string;
+  onValueChange?: (locationId: string) => void;
+  /** Route stops keep the location full width and place actions on the next row. */
+  layout?: "field" | "stop";
+  actions?: ReactNode;
 }) {
   const pickerId = useId();
   const [availableLocations, setAvailableLocations] = useState(locations);
@@ -85,61 +92,87 @@ export function LocationPicker({
             ),
       );
       if (detail.sourcePickerId === pickerId) {
+        const locationId = String(detail.location.locationId);
         setSelection((current) => ({
           source: defaultValue,
-          value: String(detail.location.locationId),
+          value: locationId,
           version: current.version + 1,
         }));
+        onValueChange?.(locationId);
       }
     }
     window.addEventListener(LOCATION_CREATED_EVENT, addLocation);
     return () => window.removeEventListener(LOCATION_CREATED_EVENT, addLocation);
-  }, [defaultValue, pickerId]);
+  }, [defaultValue, onValueChange, pickerId]);
+
+  const locationSelect = (
+    <SearchableSelect
+      key={`${synchronizedSelection.value}-${synchronizedSelection.version}`}
+      name={name}
+      label={label}
+      options={locationOptions(availableLocations)}
+      defaultValue={synchronizedSelection.value}
+      placeholder={`انتخاب ${label}`}
+      searchPlaceholder="جستجوی نام، کد، نوع یا نشانی…"
+      emptyMessage="مکانی پیدا نشد"
+      disabled={disabled}
+      required={required}
+      invalid={invalid}
+      describedBy={describedBy}
+      onValueChange={(value) => {
+        setSelection((current) =>
+          current.value === value
+            ? current
+            : { source: defaultValue, value, version: current.version },
+        );
+        onValueChange?.(value);
+      }}
+    />
+  );
+  const mapButton = (
+    <button
+      type="button"
+      className={layout === "stop" ? styles.stopAction : styles.mapButton}
+      disabled={disabled}
+      onClick={() => setMapOpen(true)}
+    >
+      انتخاب روی نقشه
+    </button>
+  );
+  const createButton = (
+    <button
+      type="button"
+      className={layout === "stop" ? styles.stopAction : styles.createButton}
+      disabled={disabled}
+      onClick={() => {
+        setCreatedNotice(null);
+        setOpen(true);
+      }}
+    >
+      + ثبت مکان جدید
+    </button>
+  );
 
   return (
     <div className={styles.picker}>
-      <div className={styles.fieldRow}>
-        <SearchableSelect
-          key={`${synchronizedSelection.value}-${synchronizedSelection.version}`}
-          name={name}
-          label={label}
-          options={locationOptions(availableLocations)}
-          defaultValue={synchronizedSelection.value}
-          placeholder={`انتخاب ${label}`}
-          searchPlaceholder="جستجوی نام، کد، نوع یا نشانی…"
-          emptyMessage="مکانی پیدا نشد"
-          disabled={disabled}
-          required={required}
-          invalid={invalid}
-          describedBy={describedBy}
-          onValueChange={(value) => {
-            setSelection((current) =>
-              current.value === value
-                ? current
-                : { source: defaultValue, value, version: current.version },
-            );
-          }}
-        />
-        <button
-          type="button"
-          className={styles.mapButton}
-          disabled={disabled}
-          onClick={() => setMapOpen(true)}
-        >
-          انتخاب روی نقشه
-        </button>
-      </div>
-      <button
-        type="button"
-        className={styles.createButton}
-        disabled={disabled}
-        onClick={() => {
-          setCreatedNotice(null);
-          setOpen(true);
-        }}
-      >
-        + ثبت مکان جدید
-      </button>
+      {layout === "stop" ? (
+        <>
+          {locationSelect}
+          <div className={styles.stopActions}>
+            {mapButton}
+            {actions}
+            {createButton}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className={styles.fieldRow}>
+            {locationSelect}
+            {mapButton}
+          </div>
+          {createButton}
+        </>
+      )}
       {createdNotice && (
         <InlineNotice tone="info" role="status">
           «{createdNotice.locationName}» ثبت و برای {label} انتخاب شد.
@@ -157,6 +190,7 @@ export function LocationPicker({
               value: locationId,
               version: current.version + 1,
             }));
+            onValueChange?.(locationId);
             setMapOpen(false);
           }}
         />

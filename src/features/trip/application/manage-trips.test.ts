@@ -666,8 +666,34 @@ describe("planned routes", () => {
     });
   });
 
+  it("accepts route and point descriptions of 1000 characters after trim", async () => {
+    const description = "ن".repeat(1000);
+    expect(
+      await manage.addRoute({
+        ...routeInput,
+        description: `  ${description}  `,
+        points: [{ ...routeInput.points[0], description }],
+      }),
+    ).toEqual({ success: true, id: 20 });
+    expect(session.createRoute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description,
+        points: [expect.objectContaining({ description })],
+      }),
+    );
+  });
+
   it.each([
     [{ routeName: " " }, "ROUTE_NAME_REQUIRED"],
+    [{ description: "ن".repeat(1001) }, "ROUTE_DESCRIPTION_TOO_LONG"],
+    [
+      {
+        points: [
+          { ...routeInput.points[0], description: "ن".repeat(1001) },
+        ],
+      },
+      "ROUTE_POINT_DESCRIPTION_TOO_LONG",
+    ],
     [{ alternativeNo: 0 }, "INVALID_ROUTE_NUMBER"],
     [{ distanceKm: "-1" }, "INVALID_DISTANCE"],
     [{ distanceKm: "100000000" }, "INVALID_DISTANCE"],

@@ -8,6 +8,7 @@ import {
   mapCoordinateFromDegrees,
   type MapCoordinate,
   type MapMarker,
+  type MapPath,
 } from "../map-coordinate";
 import type { MapFocus } from "./map-canvas";
 import styles from "./map-canvas.module.css";
@@ -16,6 +17,8 @@ const NESHAN_STYLE_URL = "https://static.neshan.org/sdk/maplibre/styles/light.js
 const MAP_LOAD_TIMEOUT_MS = 12_000;
 const SELECTED_MARKER_COLOR = "#113a6d";
 const UNSELECTED_MARKER_COLOR = "#8aa0b8";
+const PATH_SOURCE_ID = "map-path";
+const PATH_LAYER_ID = "map-path-line";
 
 type RuntimeMarker = {
   setLngLat: (lngLat: [number, number]) => RuntimeMarker;
@@ -38,6 +41,31 @@ type RuntimeMap = {
   ) => void;
   resize: () => void;
   remove: () => void;
+  getSource: (id: string) => { setData: (data: MapPathCollection) => void } | undefined;
+  addSource: (
+    id: string,
+    source: { type: "geojson"; data: MapPathCollection },
+  ) => void;
+  addLayer: (layer: {
+    id: string;
+    type: "line";
+    source: string;
+    layout: { "line-cap": "round"; "line-join": "round" };
+    paint: { "line-color": string; "line-width": number };
+  }) => void;
+  fitBounds: (
+    bounds: [[number, number], [number, number]],
+    options: { padding: number; maxZoom: number; essential: boolean },
+  ) => void;
+};
+
+type MapPathCollection = {
+  type: "FeatureCollection";
+  features: Array<{
+    type: "Feature";
+    properties: { id: string };
+    geometry: { type: "LineString"; coordinates: [number, number][] };
+  }>;
 };
 
 type NeshanSdk = {
@@ -63,6 +91,7 @@ export function NeshanMapView({
   initialCenter,
   initialZoom,
   markers,
+  paths = [],
   focus,
   onSelectPoint,
   onMarkerSelect,
@@ -74,6 +103,7 @@ export function NeshanMapView({
   initialCenter: MapCoordinate;
   initialZoom: number;
   markers: readonly MapMarker[];
+  paths?: readonly MapPath[];
   focus: MapFocus | null;
   onSelectPoint?: (coordinate: MapCoordinate) => void;
   onMarkerSelect?: (markerId: string) => void;
@@ -240,6 +270,29 @@ export function NeshanMapView({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || status !== "ready") return;
+    const collection = pathCollection(paths);
+    const source = map.getSource(PATH_SOURCE_ID);
+    if (source) {
+      source.setData(collection);
+    } else {
+      map.addSource(PATH_SOURCE_ID, { type: "geojson", data: collection });
+      map.addLayer({
+        id: PATH_LAYER_ID,
+        type: "line",
+        source: PATH_SOURCE_ID,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": SELECTED_MARKER_COLOR, "line-width": 4 },
+      });
+    }
+    const bounds = pathBounds(paths);
+    if (bounds) {
+      map.fitBounds(bounds, { padding: 48, maxZoom: 14, essential: true });
+    }
+  }, [paths, status]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map || !focus || status !== "ready") return;
     map.flyTo({
       center: [Number(focus.coordinate.longitude), Number(focus.coordinate.latitude)],
@@ -258,4 +311,48 @@ export function NeshanMapView({
       )}
     </>
   );
+}
+
+function pathCollection(paths: readonly MapPath[]): MapPathCollection {
+  return {
+    type: "FeatureCollection",
+    features: paths
+      .filter((path) => path.coordinates.length >= 2)
+      .map((path) => ({
+        type: "Feature",
+        properties: { id: path.id },
+        geometry: {
+          type: "LineString",
+          coordinates: path.coordinates.map((coordinate) => [
+            Number(coordinate.longitude),
+            Number(coordinate.latitude),
+          ]),
+        },
+      })),
+  };
+}
+
+function pathBounds(
+  paths: readonly MapPath[],
+): [[number, number], [number, number]] | null {
+  const coordinates = paths.flatMap((path) =>
+    path.coordinates.length >= 2 ? path.coordinates : [],
+  );
+  if (coordinates.length < 2) return null;
+  let west = Number(coordinates[0].longitude);
+  let east = west;
+  let south = Number(coordinates[0].latitude);
+  let north = south;
+  for (const coordinate of coordinates) {
+    const longitude = Number(coordinate.longitude);
+    const latitude = Number(coordinate.latitude);
+    west = Math.min(west, longitude);
+    east = Math.max(east, longitude);
+    south = Math.min(south, latitude);
+    north = Math.max(north, latitude);
+  }
+  return [
+    [west, south],
+    [east, north],
+  ];
 }

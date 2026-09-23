@@ -23,7 +23,11 @@ FleetManagement.
   not into a second Route graph. If an execution-owned Route row already
   exists it is shown read-only. The application never writes both parent FKs
   on one Route row. Selecting a planned route deselects other selected
-  Trip-owned routes for that passenger.
+  Trip-owned routes for that passenger. A route remains optional: zero routes
+  are valid. `Route.Description` and `RoutePoint.Description` are
+  `nvarchar(1000)` in SQL Server. Application rejects a longer value before
+  insert. Origin and destination stay on `Trip`; RoutePoints are intermediate
+  Locations and are not copies of those endpoints.
 - Passenger rating, comment and survey time are stored on the related
   TripExecution. The schema represents one current survey payload per
   execution, not survey history. No 1–5 scale is confirmed in the database
@@ -70,8 +74,15 @@ service (Coolify runtime environment), not only as Docker build arguments.
 
 Neshan Search stays unavailable until Neshan activates it for the service key.
 That state, a missing key, or a provider failure does not block manual
-location entry. The same map canvas and server client are the foundation for
-later route display; routing and distance matrix are not called yet.
+location entry. Route planning reuses the same map canvas to show saved
+Location coordinates for the Trip origin, intermediate RoutePoints, and the
+Trip destination. When every selected point has coordinates, the server calls
+Neshan Routing (`GET /v4/direction`, vehicle type `car`) with the service key
+and draws the returned road geometry. Suggested distance and duration stay
+editable; a manual edit is kept, and a later result is offered with
+«استفاده از مقدار پیشنهادی». A missing coordinate, a missing service key, or a
+provider failure does not block route entry or assignment. Automated tests do
+not call Neshan. Search API activation is not required for routing.
 
 ## Request numbers and lifecycle
 
@@ -229,7 +240,13 @@ Subsequent visits to an assigned or active request directly load the **5-tab adm
   vehicle/model/code/plate, and mission sheet voucher generation links
   (`/trips/{id}/voucher/{tripId}`).
 - **مسیر** — optional planned and execution-owned routes with ordered
-  RoutePoints and route registration dialog while the request is open.
+  RoutePoints. The open route editor, and one expanded route card at a time,
+  show origin, intermediate points, and destination. The open editor asks
+  Neshan Routing for a road line and suggested distance and duration when
+  coordinates exist. Those suggestions stay editable. A Location without
+  coordinates stays selectable; routing is skipped and the map stays compact.
+  Route registration stays available while the request is open. The map is a
+  visual aid; it is not required to save a route.
 - **وضعیت سفر (پویا)** — dynamically presents the 5th tab's label, icon, and tone
   according to `TripRequest.status` (`جدید`, `تخصیص‌یافته`, `در حال اجرا`, `تکمیل‌شده`, `لغوشده`).
   In `InProgress`, contains operational return time and odometer entry alongside

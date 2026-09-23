@@ -392,6 +392,8 @@
 }
 
 .pointListContainer {
+  position: relative;
+  z-index: 2;
   display: grid;
   gap: var(--space-3);
   min-width: 0;

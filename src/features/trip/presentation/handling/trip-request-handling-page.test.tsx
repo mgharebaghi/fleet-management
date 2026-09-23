@@ -26,6 +26,12 @@ vi.mock("@/components/ui/technical-value/technical-value", () =>
 vi.mock("@/components/ui/action-button/action-button", () =>
   import("../../../../components/ui/action-button/action-button"),
 );
+vi.mock("@/components/ui/icon-action-button/icon-action-button", () =>
+  import("../../../../components/ui/icon-action-button/icon-action-button"),
+);
+vi.mock("@/components/ui/icon/icons", () =>
+  import("../../../../components/ui/icon/icons"),
+);
 vi.mock("@/components/ui/action-link/action-link", () =>
   import("../../../../components/ui/action-link/action-link"),
 );
