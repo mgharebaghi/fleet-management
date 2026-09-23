@@ -3,7 +3,11 @@
 import { useEffect, useId, useInsertionEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { ActionButton } from "@/components/ui/action-button/action-button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog/confirm-dialog";
+import { FormActions } from "@/components/ui/form-field/form-field";
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
+import { PageHeader } from "@/components/ui/page-header/page-header";
 import type {
   TripLocationReference,
   TripPersonReference,
@@ -15,6 +19,7 @@ import { CreateRequestSummary } from "./create-request-summary";
 import {
   DEFAULT_CREATE_REQUEST_PURPOSE,
   createRequestReview,
+  createWizardHasDiscardableInput,
   createRequestSummaryPreview,
   defaultTripRequestTypeId,
   dropPassengerSnapshot,
@@ -68,6 +73,7 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
   const [typeRestoreNonce, setTypeRestoreNonce] = useState(0);
   const selectedTypeIdRef = useRef(selectedTypeId);
   const [formErrorState, setFormErrorState] = useState<TripActionState>({});
+  const [abandonOpen, setAbandonOpen] = useState(false);
 
   useInsertionEffect(() => {
     selectedTypeIdRef.current = selectedTypeId || "";
@@ -130,6 +136,27 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
     setPassengerSnapshots((current) => mergePassengerSnapshots(current, values, passengerCount));
     setFormValuesState(values);
     return values;
+  }
+
+  function leaveWizard() {
+    router.push("/trips");
+  }
+
+  function requestAbandon() {
+    const values = readValues();
+    if (
+      createWizardHasDiscardableInput({
+        step,
+        values,
+        passengerCount,
+        defaultTypeId: initialTypeId,
+        defaultPurpose: DEFAULT_CREATE_REQUEST_PURPOSE,
+      })
+    ) {
+      setAbandonOpen(true);
+      return;
+    }
+    leaveWizard();
   }
 
   function navigateStep(nextStep: CreateWizardStep) {
@@ -202,6 +229,21 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
   const completeReview = review ?? createRequestReview(formValuesState, { requestTypes, people, locations: catalogLocations });
 
   return (
+    <>
+    <PageHeader
+      eyebrow="مدیریت سفر"
+      title="ثبت درخواست سفر"
+      compactAction
+      action={
+        <button
+          type="button"
+          className={styles.wizardAbandon}
+          onClick={requestAbandon}
+        >
+          انصراف
+        </button>
+      }
+    />
     <div className={styles.createShell}>
       <TripCreateProgress currentIndex={step - 1} />
       <form
@@ -235,7 +277,6 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
             setSelectedTypeId(typeId);
           }}
           onNext={goToPassengers}
-          onCancel={() => router.push("/trips")}
         />
         <PassengersStep
           hidden={step !== 2}
@@ -265,5 +306,28 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
         onBack={() => navigateStep(2)}
       />
     </div>
+    <ConfirmDialog
+      open={abandonOpen}
+      onClose={() => setAbandonOpen(false)}
+      titleId={`${prefix}-abandon-title`}
+      title="انصراف از ثبت درخواست"
+      tone="danger"
+      recordName="این درخواست هنوز ثبت نشده است"
+      message="اطلاعاتی که وارد کرده‌اید ذخیره نمی‌شود و هیچ درخواست سفری در سامانه ثبت نخواهد شد."
+    >
+      <FormActions>
+        <ActionButton type="button" variant="danger" onClick={leaveWizard}>
+          خروج بدون ثبت
+        </ActionButton>
+        <ActionButton
+          type="button"
+          variant="secondary"
+          onClick={() => setAbandonOpen(false)}
+        >
+          ادامه ثبت
+        </ActionButton>
+      </FormActions>
+    </ConfirmDialog>
+    </>
   );
 }

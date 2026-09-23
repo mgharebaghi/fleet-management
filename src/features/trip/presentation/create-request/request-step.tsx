@@ -1,4 +1,3 @@
-import { ActionButton } from "../../../../components/ui/action-button/action-button";
 import { InlineNotice } from "../../../../components/ui/inline-notice/inline-notice";
 import { JalaliDatePicker } from "../../../../components/ui/date-picker/jalali-date-picker";
 import {
@@ -16,6 +15,7 @@ import type {
 } from "../../application/trip-records";
 import { tripMessages, type TripActionState } from "../trip-form-data";
 import { LocationPicker } from "../location/location-picker";
+import { CreateWizardNavigation } from "./create-wizard-navigation";
 import styles from "./create-trip.module.css";
 import {
   CREATE_REQUEST_PURPOSE_SUGGESTIONS,
@@ -39,7 +39,6 @@ export function RequestStep({
   fieldErrorId,
   onTypeChange,
   onNext,
-  onCancel,
   locked = false,
 }: {
   hidden: boolean;
@@ -58,7 +57,6 @@ export function RequestStep({
   fieldErrorId: (name: string) => string | undefined;
   onTypeChange: (typeId: string) => void;
   onNext: () => void;
-  onCancel?: () => void;
   locked?: boolean;
 }) {
   const isDisabled = pending || locked;
@@ -208,25 +206,11 @@ export function RequestStep({
         />
       </FormField>
 
-      <div className={styles.createActions}>
-        {onCancel ? (
-          <ActionButton
-            type="button"
-            variant="secondary"
-            disabled={pending}
-            onClick={onCancel}
-          >
-            {locked ? "لغو پیش‌نویس سفر" : "انصراف"}
-          </ActionButton>
-        ) : (
-          <span />
-        )}
-        <div className={styles.createActionsEnd}>
-          <ActionButton type="button" disabled={pending} onClick={onNext}>
-            بعدی
-          </ActionButton>
-        </div>
-      </div>
+      <CreateWizardNavigation
+        onPrimary={onNext}
+        primaryLabel="بعدی"
+        pending={pending}
+      />
     </section>
   );
 }

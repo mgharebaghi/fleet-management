@@ -8,6 +8,7 @@ import {
   HANDLING_WIZARD_STEPS,
   createRequestReview,
   createRequestSummaryPreview,
+  createWizardHasDiscardableInput,
   defaultTripRequestTypeId,
   dropPassengerSnapshot,
   extractPassengerSnapshot,
@@ -426,6 +427,81 @@ describe("Trip create wizard presentation", () => {
       2,
     );
     expect(changedAfterBack[0]["passenger.0.personId"]).toBe("99");
+  });
+
+  it("asks before discarding entered wizard data and skips that when only defaults remain", () => {
+    expect(
+      createWizardHasDiscardableInput({
+        step: 1,
+        values: {
+          purpose: DEFAULT_CREATE_REQUEST_PURPOSE,
+          tripRequestTypeId: "3",
+        },
+        passengerCount: 1,
+        defaultTypeId: "3",
+        defaultPurpose: DEFAULT_CREATE_REQUEST_PURPOSE,
+      }),
+    ).toBe(false);
+    expect(
+      createWizardHasDiscardableInput({
+        step: 1,
+        values: {
+          purpose: "جلسه",
+          tripRequestTypeId: "3",
+        },
+        passengerCount: 1,
+        defaultTypeId: "3",
+        defaultPurpose: DEFAULT_CREATE_REQUEST_PURPOSE,
+      }),
+    ).toBe(true);
+    expect(
+      createWizardHasDiscardableInput({
+        step: 2,
+        values: {
+          purpose: DEFAULT_CREATE_REQUEST_PURPOSE,
+          tripRequestTypeId: "3",
+        },
+        passengerCount: 1,
+        defaultTypeId: "3",
+        defaultPurpose: DEFAULT_CREATE_REQUEST_PURPOSE,
+      }),
+    ).toBe(true);
+  });
+
+  it("keeps wizard exit separate from previous-step navigation and from final persistence", () => {
+    const formSource = readFileSync(
+      new URL("create-trip-request-form.tsx", import.meta.url),
+      "utf8",
+    );
+    const requestSource = readFileSync(
+      new URL("request-step.tsx", import.meta.url),
+      "utf8",
+    );
+    const passengerSource = readFileSync(
+      new URL("passengers-step.tsx", import.meta.url),
+      "utf8",
+    );
+    const reviewSource = readFileSync(
+      new URL("review-step.tsx", import.meta.url),
+      "utf8",
+    );
+    const navigationSource = readFileSync(
+      new URL("create-wizard-navigation.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(formSource).toMatch(/>\s*انصراف\s*</);
+    expect(formSource).toContain('router.push("/trips")');
+    expect(formSource).not.toContain("createTripRequestAction");
+    expect(formSource).toContain("snapshotActivePassenger()");
+    expect(requestSource).not.toContain("انصراف");
+    expect(requestSource).not.toContain("بازگشت");
+    expect(navigationSource).toContain("بازگشت");
+    expect(navigationSource).not.toContain("انصراف");
+    expect(passengerSource).toContain("onBack={onBack}");
+    expect(passengerSource).not.toContain("انصراف");
+    expect(reviewSource).toContain("onBack={onBack}");
+    expect(reviewSource).toContain("createTripRequestAction");
+    expect(reviewSource).not.toContain("انصراف");
   });
 
   it("keeps every pre-confirmation wizard step free of database mutation actions", () => {

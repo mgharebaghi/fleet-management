@@ -40,6 +40,7 @@ export type CreateWizardPassenger = {
   personId: number;
   personName: string;
   personnelNo: string | null;
+  nationalCode?: string | null;
   originName: string;
   destinationName: string;
   /** Trip origin. Map context only; it is not submitted as a RoutePoint. */
@@ -214,6 +215,37 @@ export function wizardErrorNavigation(
 
 export function shouldSubmitCreateForm(reviewOpen: boolean) {
   return reviewOpen;
+}
+
+export function createWizardHasDiscardableInput(input: {
+  step: CreateWizardStep;
+  values: Record<string, string>;
+  passengerCount: number;
+  defaultTypeId: string;
+  defaultPurpose: string;
+}): boolean {
+  if (input.step > 1 || input.passengerCount > 1) return true;
+  const values = input.values;
+  const enteredFields = [
+    "requestedTravelDay",
+    "requestedTravelTime",
+    "requestDescription",
+    "commonOriginLocationId",
+    "commonDestinationLocationId",
+  ];
+  if (enteredFields.some((key) => (values[key] ?? "").trim() !== "")) {
+    return true;
+  }
+  if ((values.purpose ?? "").trim() !== input.defaultPurpose.trim()) {
+    return true;
+  }
+  if ((values.tripRequestTypeId ?? "") !== input.defaultTypeId) {
+    return true;
+  }
+  return Object.entries(values).some(
+    ([key, fieldValue]) =>
+      key.startsWith("passenger.") && fieldValue.trim() !== "",
+  );
 }
 
 export function requestStepGaps(

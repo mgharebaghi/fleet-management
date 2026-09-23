@@ -3,7 +3,6 @@
 import { useMemo, useState, useTransition } from "react";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
-import { ActionLink } from "@/components/ui/action-link/action-link";
 import { BackLink } from "@/components/ui/back-link/back-link";
 import { FormActions } from "@/components/ui/form-field/form-field";
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
@@ -28,6 +27,8 @@ import {
 } from "../create-request/create-wizard";
 import { AssignmentStep } from "../create-request/assignment-step";
 import { RouteStep } from "../create-request/route-step";
+import { CancelTripRequestAction } from "../workspace/cancel-trip-request-action";
+import { projectTripWorkspace } from "../workspace/trip-workspace-view";
 import {
   assignInitialTripRequestAction,
   type AssignInitialTripRequestPayload,
@@ -65,6 +66,7 @@ export function TripRequestHandlingPage({
         personName:
           `${passenger.passenger.firstName} ${passenger.passenger.lastName}`.trim(),
         personnelNo: passenger.passenger.personnelNo,
+        nationalCode: passenger.passenger.nationalCode,
         originName: passenger.origin.locationName,
         destinationName: passenger.destination.locationName,
         originLocation: passenger.origin,
@@ -127,6 +129,18 @@ export function TripRequestHandlingPage({
     });
   }
 
+  const view = projectTripWorkspace(details);
+  const cancelAction = view.canCancel ? (
+    <div className={styles.handlingCancelAction}>
+      <CancelTripRequestAction
+        tripRequestId={details.tripRequestId}
+        requestNo={details.requestNo}
+        purpose={details.purpose}
+        plannedAt={details.requestedTravelDateTime}
+      />
+    </div>
+  ) : null;
+
   return (
     <PageShell>
       <PageHeader
@@ -140,7 +154,6 @@ export function TripRequestHandlingPage({
         }
         compactAction
       />
-
       <div className={styles.createShell}>
         <div className={styles.createProgress}>
           <WizardProgress
@@ -153,17 +166,6 @@ export function TripRequestHandlingPage({
         {/* Step 1: بررسی درخواست */}
         {step === 1 && (
           <div className={styles.stepContainer}>
-            <div className={styles.stepHeader}>
-              <div>
-                <h2>بررسی درخواست سفر</h2>
-                <p className={styles.stepDescription}>
-                  اطلاعات اولیه و مسافران این درخواست را بررسی کرده و برای تخصیص
-                  خودرو و راننده به مرحله بعد بروید.
-                </p>
-              </div>
-              <StatusBadge label="نیازمند رسیدگی" tone="warning" />
-            </div>
-
             <InlineNotice tone="info">
               این درخواست سفر در انتظار رسیدگی واحد ترابری است. برای فعال‌سازی سفر
               و مشخص کردن مجری، راننده و خودروی مناسب را برای مسافران تعیین کنید.
@@ -266,13 +268,11 @@ export function TripRequestHandlingPage({
 
             <div className={styles.stepActions}>
               <FormActions>
-                <ActionLink href="/trips/requests" variant="secondary">
-                  انصراف و بازگشت
-                </ActionLink>
                 <ActionButton type="button" onClick={() => setStep(2)}>
                   بعدی: راننده و خودرو
                 </ActionButton>
               </FormActions>
+              {cancelAction}
             </div>
           </div>
         )}
@@ -293,6 +293,7 @@ export function TripRequestHandlingPage({
             }}
             onBack={() => setStep(1)}
             onNext={() => setStep(3)}
+            footerAction={cancelAction}
           />
         )}
 
@@ -307,6 +308,7 @@ export function TripRequestHandlingPage({
             onBack={() => setStep(2)}
             onNext={() => setStep(4)}
             nextLabel="بعدی: تأیید و تخصیص"
+            footerAction={cancelAction}
           />
         )}
 
@@ -436,6 +438,7 @@ export function TripRequestHandlingPage({
                   {pending ? "در حال ثبت و تخصیص..." : "تأیید و تخصیص سفر"}
                 </ActionButton>
               </FormActions>
+              {cancelAction}
             </div>
           </div>
         )}

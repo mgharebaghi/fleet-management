@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
 import { FormActions } from "@/components/ui/form-field/form-field";
@@ -13,7 +13,6 @@ import {
   assignmentIneligibilityReasons,
   isAssignmentEligible,
 } from "../../application/trip-assignment-eligibility";
-import { VEHICLE_ACTIVE_PASSENGER_LIMIT } from "../../application/trip-vehicle-capacity";
 import { assignmentIneligibilityMessages } from "../trip-form-data";
 import {
   assignmentOptionLabel,
@@ -35,6 +34,7 @@ type AssignmentStepProps = {
   onSelectionChange: (passengerKey: number, assignmentId: number) => void;
   onBack: () => void;
   onNext: () => void;
+  footerAction?: ReactNode;
 };
 
 export function AssignmentStep({
@@ -46,6 +46,7 @@ export function AssignmentStep({
   onSelectionChange,
   onBack,
   onNext,
+  footerAction,
 }: AssignmentStepProps) {
   const [activePassengerIndex, setActivePassengerIndex] = useState(0);
   const [stepNotice, setStepNotice] = useState<string | null>(null);
@@ -87,12 +88,6 @@ export function AssignmentStep({
   return (
     <div className={styles.stepContainer}>
       <div className={styles.stepHeader}>
-        <div>
-          <h2>راننده و خودرو</h2>
-          <p className={styles.stepDescription}>
-            برای هر مسافر یک تخصیص واجد شرایط انتخاب کنید. هر خودرو در این درخواست حداکثر به {VEHICLE_ACTIVE_PASSENGER_LIMIT.toLocaleString("fa-IR")} مسافر تخصیص داده می‌شود. انتخاب‌ها تا ثبت نهایی فقط در همین فرم نگه‌داری می‌شوند.
-          </p>
-        </div>
         <StatusBadge
           label={`${Object.keys(selectedAssignments).length} از ${passengers.length} انتخاب‌شده`}
           tone={passengers.every((item) => selectedAssignments[item.key]) ? "positive" : "info"}
@@ -213,6 +208,7 @@ export function AssignmentStep({
           <ActionButton type="button" variant="secondary" onClick={onBack}>قبلی</ActionButton>
           <ActionButton type="button" onClick={handleNext}>بعدی: مسیر سفر</ActionButton>
         </FormActions>
+        {footerAction}
       </div>
     </div>
   );

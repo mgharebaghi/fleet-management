@@ -2,8 +2,6 @@
 
 import { useState, useTransition } from "react";
 
-import { ActionButton } from "@/components/ui/action-button/action-button";
-import { FormActions } from "@/components/ui/form-field/form-field";
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
 import { StatusBadge } from "@/components/ui/status-badge/status-badge";
 import { VehiclePlate } from "@/components/ui/vehicle-plate/vehicle-plate";
@@ -15,6 +13,7 @@ import type {
   CreateWizardPayload,
   TripRequestReview,
 } from "./create-wizard";
+import { CreateWizardNavigation } from "./create-wizard-navigation";
 import styles from "./create-trip.module.css";
 
 type ReviewStepProps = {
@@ -172,16 +171,13 @@ export function ReviewStep({
         </section>
       </div>
 
-      <div className={styles.stepActions}>
-        <FormActions>
-          <ActionButton type="button" variant="secondary" disabled={pending} onClick={onBack}>
-            {isCompleteMode ? "قبلی: برنامه‌ریزی" : "قبلی: مسافران"}
-          </ActionButton>
-          <ActionButton type="button" disabled={pending || !allAssigned} pending={pending} onClick={submit}>
-            {isCompleteMode ? "ثبت نهایی درخواست" : "ثبت درخواست سفر"}
-          </ActionButton>
-        </FormActions>
-      </div>
+      <CreateWizardNavigation
+        onBack={onBack}
+        onPrimary={submit}
+        primaryLabel={isCompleteMode ? "ثبت نهایی درخواست" : "ثبت درخواست سفر"}
+        pending={pending}
+        primaryDisabled={!allAssigned}
+      />
     </div>
   );
 }

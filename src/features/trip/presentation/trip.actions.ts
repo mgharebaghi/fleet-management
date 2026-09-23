@@ -71,6 +71,20 @@ function requestedTravelDateTime(
   );
 }
 
+export async function cancelTripRequestAction(
+  tripRequestId: number,
+  state: TripActionState,
+): Promise<TripActionState> {
+  const result = await run(state.values ?? {}, () =>
+    makeManageTrips().cancelRequest(tripRequestId),
+  );
+  if (!("id" in result)) return result;
+  revalidatePath(`/trips/${tripRequestId}`);
+  revalidatePath("/trips");
+  revalidatePath("/trips/requests");
+  redirect(`/trips/${tripRequestId}`);
+}
+
 export async function changeTripRequestStatusAction(
   tripRequestId: number,
   _state: TripActionState,

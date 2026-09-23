@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canCancelTripRequest,
   canTransitionTripExecution,
   canTransitionTripRequest,
   everyPassengerExecutionCompleted,
@@ -25,6 +26,16 @@ describe("Trip request lifecycle", () => {
     expect(canTransitionTripRequest("InProgress", "Cancelled", false)).toBe(
       false,
     );
+  });
+
+  it("offers cancellation only from New or Assigned before execution starts", () => {
+    expect(canCancelTripRequest("New", false)).toBe(true);
+    expect(canCancelTripRequest("Assigned", false)).toBe(true);
+    expect(canCancelTripRequest("New", true)).toBe(false);
+    expect(canCancelTripRequest("Assigned", true)).toBe(false);
+    expect(canCancelTripRequest("InProgress", false)).toBe(false);
+    expect(canCancelTripRequest("Completed", false)).toBe(false);
+    expect(canCancelTripRequest("Cancelled", false)).toBe(false);
   });
 
   it("rejects reverse and terminal transitions", () => {

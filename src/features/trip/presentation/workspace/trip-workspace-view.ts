@@ -1,6 +1,8 @@
 import {
+  canCancelTripRequest,
   everyPassengerExecutionCompleted,
   everyPassengerHasPersistedPlan,
+  isTripRequestStatus,
   requestHasStartedExecution,
 } from "../../application/trip-lifecycle";
 import type {
@@ -450,7 +452,8 @@ export function projectTripWorkspace(
     currentStageId: current,
     nextAction: nextActionFor(details),
     canCancel:
-      (details.status === "New" || details.status === "Assigned") && !started,
+      isTripRequestStatus(details.status) &&
+      canCancelTripRequest(details.status, started),
     routeReadiness: hasAnyRoute ? "recorded" : "missing-optional",
     assignmentReadiness: hasPlan ? "recorded" : "needed",
     voucherReadiness: hasPlan ? "ready" : "after-assignment",

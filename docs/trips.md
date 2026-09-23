@@ -253,8 +253,25 @@ Subsequent visits to an assigned or active request directly load the **5-tab adm
   the primary «تکمیل درخواست» completion action. In terminal states (`Completed`,
   `Cancelled`), provides a full read-only summary and survey display without edit controls.
 
-Request-level status actions (تخصیص‌یافته، شروع درخواست، تکمیل درخواست،
-لغو) live in `TripRequestStatusControl` on the dynamic status tab.
+Request progression (ثبت درخواست، شروع سفر، تکمیل سفر) stays on the
+dynamic status tab in `TripRequestStatusControl`. Cancelling a registered
+request is a separate request-level action, «لغو درخواست». A `New` request
+shows it opposite the wizard navigation in the handling footer. Later
+cancellable requests show it opposite the lifecycle action in the workspace status tab. It is offered only when
+`canCancelTripRequest` allows it: status `New` or `Assigned`, and no
+execution has started. Confirmation names the request and explains that the
+row remains as «لغوشده». There is no cancellation-reason column;
+`TripRequest.Description` is the request note, not a reason for cancellation.
+Leaving the handling wizard with «بازگشت به فهرست درخواست‌ها» does not cancel
+the request.
+
+The create wizard keeps three different controls:
+
+- «بعدی» / «ثبت درخواست سفر» continues or persists.
+- «بازگشت» moves to the previous step and keeps entered values.
+- «انصراف», in the page header, leaves the wizard. Before the final confirm
+  nothing is written. If the user has entered more than the default purpose
+  and request type, a confirmation explains that no request will be saved.
 
 Legacy `?tab=` values (`general`, `details`, `driver`, `vehicle`, `planning`,
 `execution`, `status`, `survey`, `return`) map cleanly onto the five active tabs.

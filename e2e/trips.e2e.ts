@@ -484,7 +484,7 @@ test.describe.serial("Trip management", () => {
       await expect(passengersStep.getByLabel("مسافر", { exact: true })).toBeVisible();
 
       await passengersStep
-        .getByRole("button", { name: "قبلی", exact: true })
+        .getByRole("button", { name: "بازگشت", exact: true })
         .click();
       await expect(
         requestStep.getByLabel("هدف سفر", { exact: true }),
@@ -495,6 +495,20 @@ test.describe.serial("Trip management", () => {
       await expect(
         requestStep.getByLabel("نوع درخواست سفر", { exact: true }),
       ).toHaveValue(/.+/);
+      await page.getByRole("button", { name: "انصراف", exact: true }).click();
+      const abandonDialog = page.getByRole("dialog", {
+        name: "انصراف از ثبت درخواست",
+      });
+      await expect(abandonDialog).toBeVisible();
+      await expect(abandonDialog.getByText("هیچ درخواست سفری")).toBeVisible();
+      await abandonDialog
+        .getByRole("button", { name: "ادامه ثبت", exact: true })
+        .click();
+      await expect(abandonDialog).toBeHidden();
+      await expect(
+        requestStep.getByLabel("هدف سفر", { exact: true }),
+      ).toHaveValue(`هدف ${token}`);
+      expect(await tripRequestCountForFixturePerson()).toBe(0);
       await requestStepNext().click();
 
       await passengersStep
@@ -529,7 +543,10 @@ test.describe.serial("Trip management", () => {
         page.getByRole("button", { name: "ثبت درخواست سفر", exact: true }),
       ).toBeVisible();
       await expect(
-        page.getByRole("button", { name: "قبلی: مسافران", exact: true }),
+        reviewStep.getByRole("button", { name: "بازگشت", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "انصراف", exact: true }),
       ).toBeVisible();
       const reviewHasHorizontalOverflow = await page.evaluate(
         () =>
@@ -564,13 +581,15 @@ test.describe.serial("Trip management", () => {
       requestId = Number(page.url().split("/").pop());
 
       // Handling Step 1: بررسی درخواست
-      await eventually(page.getByRole("heading", { name: "بررسی درخواست سفر" })).toBeVisible();
-      await eventually(page.getByText("نیازمند رسیدگی").first()).toBeVisible();
+      await eventually(
+        page.getByRole("heading", { name: /رسیدگی به درخواست/ }),
+      ).toBeVisible();
+      await eventually(page.getByText("در انتظار رسیدگی واحد ترابری")).toBeVisible();
       await page.getByRole("button", { name: "بعدی: راننده و خودرو", exact: true }).click();
 
       // Handling Step 2: راننده و خودرو
       await eventually(
-        page.getByRole("heading", { name: "راننده و خودرو" }),
+        page.getByLabel("تخصیص واجد شرایط", { exact: true }),
       ).toBeVisible();
       await selectSearchableOption(
         page,

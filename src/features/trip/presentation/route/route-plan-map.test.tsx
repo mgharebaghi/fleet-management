@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { TripLocationReference } from "../../application/trip-records";
 import { RoutePlanMap } from "./route-plan-map";
 import {
+  ROUTE_PLAN_INCOMPLETE_POINT_MESSAGE,
   ROUTE_PLAN_MISSING_ENDPOINT_MESSAGE,
   ROUTE_PLAN_MISSING_INTERMEDIATE_MESSAGE,
 } from "./route-plan-assist";
@@ -45,6 +46,20 @@ describe("RoutePlanMap", () => {
     expect(markup).toContain(ROUTE_PLAN_MISSING_ENDPOINT_MESSAGE);
     expect(markup).not.toContain("در حال بارگذاری نقشه");
     expect(markup).not.toContain("<polyline");
+  });
+
+  it("keeps the map frame visible while an intermediate location is being selected", () => {
+    const markup = renderToStaticMarkup(
+      <RoutePlanMap
+        mapKey={null}
+        origin={location({ locationId: 1, locationName: "مبدأ", latitude: "35.72", longitude: "51.33" })}
+        destination={location({ locationId: 2, locationName: "مقصد", latitude: "35.69", longitude: "51.39" })}
+        intermediates={[{ location: null }]}
+      />,
+    );
+
+    expect(markup).toContain(ROUTE_PLAN_INCOMPLETE_POINT_MESSAGE);
+    expect(markup).toContain("نقشه در دسترس نیست");
   });
 
   it("explains a coordinate-less intermediate without calling the map canvas", () => {

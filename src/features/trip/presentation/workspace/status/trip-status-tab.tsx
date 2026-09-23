@@ -55,7 +55,7 @@ export function StatusCompletionTab({
       {details.status === "Cancelled" && (
         <div className={styles.emptyStateBlock}>
           <InlineNotice tone="danger" role="status">
-            این درخواست سفر لغو شده است و پرونده در وضعیت پایانی قرار دارد.
+            این درخواست سفر لغو شده است و فقط برای مشاهدهٔ سوابق در دسترس است.
           </InlineNotice>
         </div>
       )}

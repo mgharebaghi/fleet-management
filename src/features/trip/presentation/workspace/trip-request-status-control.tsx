@@ -1,14 +1,13 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useActionState, useId } from "react";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog/confirm-dialog";
-import { FormActions } from "@/components/ui/form-field/form-field";
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
 import type { TripRequestDetails } from "../../application/trip-records";
 import { changeTripRequestStatusAction } from "../trip.actions";
 import { tripMessages } from "../trip-form-data";
+import { CancelTripRequestAction } from "./cancel-trip-request-action";
 import styles from "./trip-workspace.module.css";
 import type { TripWorkspaceView } from "./trip-workspace-view";
 
@@ -26,7 +25,6 @@ export function TripRequestStatusControl({
     {},
   );
   const prefix = useId();
-  const [cancelOpen, setCancelOpen] = useState(false);
   const action = view.nextAction;
   const statusValue =
     action.id === "mark-assigned"
@@ -44,7 +42,7 @@ export function TripRequestStatusControl({
     action.id === "record-return" ||
     action.id === "view-details";
 
-  if (!showPrimary && !view.canCancel) return null;
+  if (!showPrimary) return null;
 
   return (
     <div
@@ -82,46 +80,14 @@ export function TripRequestStatusControl({
           )
         )}
         {view.canCancel && (
-          <>
-            <ActionButton
-              type="button"
-              variant="secondary"
-              disabled={pending}
-              onClick={() => setCancelOpen(true)}
-            >
-              لغو درخواست
-            </ActionButton>
-            <ConfirmDialog
-              open={cancelOpen}
-              onClose={() => setCancelOpen(false)}
-              titleId={`${prefix}-cancel-title`}
-              title="لغو درخواست سفر"
-              tone="danger"
-              recordName={details.requestNo}
-              message="برنامه‌های ثبت‌شدهٔ شروع‌نشده هم لغو می‌شوند. این کار برگشت‌پذیر نیست."
-            >
-              <form action={formAction}>
-                <input type="hidden" name="requestStatus" value="Cancelled" />
-                <FormActions separated>
-                  <ActionButton
-                    type="submit"
-                    disabled={pending}
-                    pending={pending}
-                  >
-                    {pending ? "در حال ثبت…" : "تأیید لغو"}
-                  </ActionButton>
-                  <ActionButton
-                    type="button"
-                    variant="secondary"
-                    disabled={pending}
-                    onClick={() => setCancelOpen(false)}
-                  >
-                    انصراف
-                  </ActionButton>
-                </FormActions>
-              </form>
-            </ConfirmDialog>
-          </>
+          <div className={styles.statusCancelAction}>
+            <CancelTripRequestAction
+              tripRequestId={view.tripRequestId}
+              requestNo={view.requestNo}
+              purpose={view.purpose}
+              plannedAt={view.plannedAt}
+            />
+          </div>
         )}
       </div>
     </div>

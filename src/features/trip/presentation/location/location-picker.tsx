@@ -159,9 +159,11 @@ export function LocationPicker({
         <>
           {locationSelect}
           <div className={styles.stopActions}>
-            {mapButton}
-            {actions}
-            {createButton}
+            {actions && <div className={styles.stopItemActions}>{actions}</div>}
+            <div className={styles.stopLocationActions}>
+              {mapButton}
+              {createButton}
+            </div>
           </div>
         </>
       ) : (

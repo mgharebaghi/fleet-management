@@ -650,6 +650,75 @@ describe("Trip request status", () => {
   });
 });
 
+describe("cancel Trip request", () => {
+  it("cancels a New request without deleting the request or its passengers", async () => {
+    expect(await manage.cancelRequest(1)).toEqual({ success: true, id: 1 });
+    expect(session.cancelPlannedExecutions).toHaveBeenCalledWith(1);
+    expect(session.updateRequestStatus).toHaveBeenCalledWith(1, "Cancelled");
+    expect(session.deletePassenger).not.toHaveBeenCalled();
+    expect(session.deleteRoute).not.toHaveBeenCalled();
+  });
+
+  it("cancels an Assigned request before execution starts", async () => {
+    session.requestLifecycle.mockResolvedValue({
+      status: "Assigned",
+      passengers: [
+        {
+          tripId: 1,
+          executions: [
+            {
+              tripExecutionId: 2,
+              status: "Planned",
+              actualPickupDateTime: null,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(await manage.cancelRequest(1)).toEqual({ success: true, id: 1 });
+    expect(session.cancelPlannedExecutions).toHaveBeenCalledWith(1);
+    expect(session.updateRequestStatus).toHaveBeenCalledWith(1, "Cancelled");
+    expect(session.deletePassenger).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["InProgress", false],
+    ["Completed", false],
+    ["Cancelled", false],
+    ["Assigned", true],
+  ] as const)(
+    "rejects cancellation from %s when execution started is %s",
+    async (status, started) => {
+      session.requestLifecycle.mockResolvedValue({
+        status,
+        passengers: [
+          {
+            tripId: 1,
+            executions: started
+              ? [
+                  {
+                    tripExecutionId: 2,
+                    status: "InProgress",
+                    actualPickupDateTime: new Date("2026-02-01T08:00:00Z"),
+                  },
+                ]
+              : [],
+          },
+        ],
+      });
+
+      expect(await manage.cancelRequest(1)).toEqual({
+        success: false,
+        error: "INVALID_REQUEST_TRANSITION",
+      });
+      expect(session.updateRequestStatus).not.toHaveBeenCalled();
+      expect(session.cancelPlannedExecutions).not.toHaveBeenCalled();
+      expect(session.deletePassenger).not.toHaveBeenCalled();
+    },
+  );
+});
+
 describe("planned routes", () => {
   it("creates a Trip-owned route with ordered location points", async () => {
     expect(await manage.addRoute(routeInput)).toEqual({

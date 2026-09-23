@@ -46,6 +46,17 @@ export function canTransitionTripRequest(
   );
 }
 
+/** A user cancellation, not an idempotent rewrite of an already cancelled request. */
+export function canCancelTripRequest(
+  current: TripRequestStatus,
+  hasStartedExecution: boolean,
+): boolean {
+  return (
+    current !== "Cancelled" &&
+    canTransitionTripRequest(current, "Cancelled", hasStartedExecution)
+  );
+}
+
 export function canTransitionTripExecution(
   current: TripExecutionStatus,
   target: TripExecutionStatus,
