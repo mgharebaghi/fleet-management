@@ -1,8 +1,10 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
+import { IconActionButton, IconActionGroup } from "@/components/ui/icon-action-button/icon-action-button";
+import { DeleteIcon, MoveDownIcon, MoveUpIcon } from "@/components/ui/icon/icons";
 import { Dialog } from "@/components/ui/dialog/dialog";
 import {
   FieldLabel,
@@ -15,7 +17,21 @@ import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
 import { SearchableSelect } from "@/components/ui/searchable-select/searchable-select";
 import { StatusBadge } from "@/components/ui/status-badge/status-badge";
 import type { TripLocationReference } from "../../application/trip-records";
-import { LocationPicker } from "../location/location-picker";
+import {
+  LOCATION_CREATED_EVENT,
+  LocationPicker,
+} from "../location/location-picker";
+import type { MapRoute } from "../../../../maps/map-route";
+import {
+  acceptAssistedSuggestion,
+  editAssistedValue,
+  emptyAssistedField,
+  proposeAssistedValue,
+  suggestPointDistances,
+  type AssistedField,
+} from "../route/route-plan-assist";
+import editorStyles from "../route/route-plan-editor.module.css";
+import { RoutePlanMap } from "../route/route-plan-map";
 import {
   routePointLocationError,
   type CreateWizardPassenger,
@@ -58,16 +74,76 @@ export function RouteStep({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [passengerKey, setPassengerKey] = useState(passengers[0]?.key ?? 0);
   const [pointKeys, setPointKeys] = useState<number[]>([]);
+  const [pointLocationIds, setPointLocationIds] = useState<Record<number, string>>(
+    {},
+  );
+  const [catalog, setCatalog] = useState(locations);
   const [nextPointKey, setNextPointKey] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [detailsKey, setDetailsKey] = useState<number | null>(null);
+  const [routeDetailsOpen, setRouteDetailsOpen] = useState(false);
+  const [distanceField, setDistanceField] = useState<AssistedField>(emptyAssistedField);
+  const [durationField, setDurationField] = useState<AssistedField>(emptyAssistedField);
+  const [pointDistances, setPointDistances] = useState<Record<number, AssistedField>>({});
   const dialogTitleId = useId();
+
+  useEffect(() => {
+    function rememberLocation(event: Event) {
+      const location = (
+        event as CustomEvent<{ location?: TripLocationReference }>
+      ).detail?.location;
+      if (!location) return;
+      setCatalog((current) =>
+        current.some((item) => item.locationId === location.locationId)
+          ? current
+          : [...current, location],
+      );
+    }
+    window.addEventListener(LOCATION_CREATED_EVENT, rememberLocation);
+    return () =>
+      window.removeEventListener(LOCATION_CREATED_EVENT, rememberLocation);
+  }, []);
+
   if (hidden) return null;
 
   function resetEditor() {
     setPassengerKey(passengers[0]?.key ?? 0);
     setPointKeys([]);
+    setPointLocationIds({});
     setNextPointKey(1);
+    setDetailsKey(null);
+    setRouteDetailsOpen(false);
+    setDistanceField(emptyAssistedField());
+    setDurationField(emptyAssistedField());
+    setPointDistances({});
     setError(null);
+  }
+
+  function handleRoute(route: MapRoute | null) {
+    if (!route) return;
+    setDistanceField((current) => proposeAssistedValue(current, route.distanceKm));
+    setDurationField((current) =>
+      proposeAssistedValue(current, String(route.durationMinute)),
+    );
+    setPointDistances((current) => {
+      const fields = pointKeys.map(
+        (key) => current[key] ?? emptyAssistedField(),
+      );
+      const next = suggestPointDistances(fields, route);
+      if (!next) return current;
+      return Object.fromEntries(pointKeys.map((key, index) => [key, next[index]]));
+    });
+  }
+
+  function movePoint(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    setPointKeys((current) => {
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      const [item] = next.splice(index, 1);
+      next.splice(target, 0, item);
+      return next;
+    });
   }
 
   function saveRoute(event: React.FormEvent<HTMLFormElement>) {
@@ -139,11 +215,19 @@ export function RouteStep({
                     <p className={styles.muted}>مسافر: {passenger?.personName ?? "—"}</p>
                   </div>
                   <StatusBadge
-                    label={route.isSelected ? "مسیر انتخاب‌شده" : "مسیر جایگزین"}
+                    label={route.isSelected ? "مسیر اصلی" : "مسیر جایگزین"}
                     tone={route.isSelected ? "positive" : "info"}
                   />
                 </div>
-                <p>{route.points.length ? `${route.points.length} نقطه مسیر` : "بدون نقطه مسیر"}</p>
+                <p className={styles.muted}>
+                  {route.distanceKm ? `${route.distanceKm} کیلومتر` : "مسافت ثبت نشده"}
+                  {" · "}
+                  {route.estimatedDurationMinute
+                    ? `${route.estimatedDurationMinute} دقیقه`
+                    : "مدت ثبت نشده"}
+                  {" · "}
+                  {route.points.length ? `${route.points.length} نقطه میانی` : "بدون نقطه میانی"}
+                </p>
                 <ActionButton
                   type="button"
                   variant="secondary"
@@ -189,100 +273,281 @@ export function RouteStep({
                 onValueChange={(value) => setPassengerKey(Number(value))}
               />
               <FormField>
-                <FieldLabel htmlFor={`${dialogTitleId}-route-name`} required>نام مسیر</FieldLabel>
-                <input id={`${dialogTitleId}-route-name`} name="routeName" className={formControlClassName} placeholder="مثلاً: مسیر اصلی یا جایگزین" />
+                <FieldLabel htmlFor={`${dialogTitleId}-route-name`} required>عنوان مسیر</FieldLabel>
+                <input
+                  id={`${dialogTitleId}-route-name`}
+                  name="routeName"
+                  className={formControlClassName}
+                  placeholder="مثلاً: مسیر اصلی یا جایگزین"
+                  aria-describedby={`${dialogTitleId}-route-name-hint`}
+                />
+                <p id={`${dialogTitleId}-route-name-hint`} className={editorStyles.fieldHint}>
+                  برای تشخیص این مسیر از مسیرهای جایگزین
+                </p>
               </FormField>
             </FormGrid>
           </section>
 
-          <section className={styles.modalSection}>
-            <h3 className={styles.modalSectionTitle}>تنظیمات مسیر</h3>
-            <FormGrid columns={2}>
-              <FormField>
-                <FieldLabel htmlFor={`${dialogTitleId}-selected`}>وضعیت انتخاب</FieldLabel>
-                <select id={`${dialogTitleId}-selected`} name="isSelected" className={formControlClassName} defaultValue="true">
-                  <option value="true">مسیر انتخاب‌شده</option>
-                  <option value="false">مسیر جایگزین</option>
-                </select>
-              </FormField>
-              <FormField>
-                <FieldLabel htmlFor={`${dialogTitleId}-alternative`}>شماره مسیر جایگزین</FieldLabel>
-                <input id={`${dialogTitleId}-alternative`} name="alternativeNo" inputMode="numeric" dir="ltr" className={formControlClassName} />
-              </FormField>
-              <FormField>
-                <FieldLabel htmlFor={`${dialogTitleId}-distance`}>مسافت (کیلومتر)</FieldLabel>
-                <input id={`${dialogTitleId}-distance`} name="distanceKm" inputMode="decimal" dir="ltr" className={formControlClassName} />
-              </FormField>
-              <FormField>
-                <FieldLabel htmlFor={`${dialogTitleId}-duration`}>مدت تخمینی (دقیقه)</FieldLabel>
-                <input id={`${dialogTitleId}-duration`} name="estimatedDurationMinute" inputMode="numeric" dir="ltr" className={formControlClassName} />
-              </FormField>
-            </FormGrid>
-          </section>
+          <div className={editorStyles.editor}>
+          <FormField>
+            <FieldLabel htmlFor={`${dialogTitleId}-selected`}>نوع مسیر</FieldLabel>
+            <select id={`${dialogTitleId}-selected`} name="isSelected" className={formControlClassName} defaultValue="true">
+              <option value="true">مسیر اصلی</option>
+              <option value="false">مسیر جایگزین</option>
+            </select>
+          </FormField>
 
-          <section className={styles.modalSection}>
-            <h3 className={styles.modalSectionTitle}>توضیحات</h3>
+          {(() => {
+            const passenger = passengers.find((item) => item.key === passengerKey);
+            return (
+              <>
+                <div className={editorStyles.endpoint}>
+                  <span className={editorStyles.endpointLabel}>مبدأ</span>
+                  <span className={editorStyles.endpointName}>{passenger?.originName ?? "—"}</span>
+                </div>
+                <div>
+                  <p className={editorStyles.sectionLabel}>نقاط میانی</p>
+                  {pointKeys.length === 0 ? (
+                    <p className={styles.muted}>نقطه میانی الزامی نیست.</p>
+                  ) : (
+                    <ol className={editorStyles.points}>
+                      {pointKeys.map((pointKey, index) => {
+                        const distance = pointDistances[pointKey] ?? emptyAssistedField();
+                        return (
+                          <li key={pointKey} className={editorStyles.point}>
+                            <p className={editorStyles.stopHeading}>
+                              <span className={editorStyles.order}>{(index + 1).toLocaleString("fa-IR")}</span>
+                              نقطه میانی
+                            </p>
+                            <LocationPicker
+                              name={`point.${index}.locationId`}
+                              label="مکان"
+                              locations={catalog}
+                              required
+                              layout="stop"
+                              onValueChange={(locationId) =>
+                                setPointLocationIds((current) => ({
+                                  ...current,
+                                  [pointKey]: locationId,
+                                }))
+                              }
+                              actions={
+                                <>
+                                  <button
+                                    type="button"
+                                    className={editorStyles.textButton}
+                                    aria-expanded={detailsKey === pointKey}
+                                    onClick={() =>
+                                      setDetailsKey((current) =>
+                                        current === pointKey ? null : pointKey,
+                                      )
+                                    }
+                                  >
+                                    جزئیات بیشتر
+                                  </button>
+                                  <IconActionGroup>
+                                    <IconActionButton
+                                      label="انتقال به بالا"
+                                      icon={<MoveUpIcon />}
+                                      disabled={index === 0}
+                                      onClick={() => movePoint(index, -1)}
+                                    />
+                                    <IconActionButton
+                                      label="انتقال به پایین"
+                                      icon={<MoveDownIcon />}
+                                      disabled={index === pointKeys.length - 1}
+                                      onClick={() => movePoint(index, 1)}
+                                    />
+                                    <IconActionButton
+                                      label="حذف"
+                                      icon={<DeleteIcon />}
+                                      tone="danger"
+                                      onClick={() => {
+                                        setPointKeys((current) => current.filter((key) => key !== pointKey));
+                                        setPointLocationIds((current) => {
+                                          const next = { ...current };
+                                          delete next[pointKey];
+                                          return next;
+                                        });
+                                        setPointDistances((current) => {
+                                          const next = { ...current };
+                                          delete next[pointKey];
+                                          return next;
+                                        });
+                                      }}
+                                    />
+                                  </IconActionGroup>
+                                </>
+                              }
+                            />
+                            <input type="hidden" name={`point.${index}.sequenceNo`} value={String(index + 1)} />
+                            <div hidden={detailsKey !== pointKey} className={editorStyles.details}>
+                              <FormGrid columns={2}>
+                                <FormField>
+                                  <FieldLabel htmlFor={`${dialogTitleId}-point-distance-${pointKey}`}>فاصله از شروع (کیلومتر)</FieldLabel>
+                                  <input
+                                    id={`${dialogTitleId}-point-distance-${pointKey}`}
+                                    name={`point.${index}.distanceFromStartKm`}
+                                    inputMode="decimal"
+                                    dir="ltr"
+                                    className={formControlClassName}
+                                    value={distance.value}
+                                    onChange={(event) =>
+                                      setPointDistances((current) => ({
+                                        ...current,
+                                        [pointKey]: editAssistedValue(distance, event.target.value),
+                                      }))
+                                    }
+                                  />
+                                  {distance.suggestion && (
+                                    <p className={editorStyles.suggestion}>
+                                      <button
+                                        type="button"
+                                        className={editorStyles.textButton}
+                                        onClick={() =>
+                                          setPointDistances((current) => ({
+                                            ...current,
+                                            [pointKey]: acceptAssistedSuggestion(distance),
+                                          }))
+                                        }
+                                      >
+                                        استفاده از مقدار پیشنهادی ({distance.suggestion})
+                                      </button>
+                                    </p>
+                                  )}
+                                </FormField>
+                                <FormField>
+                                  <FieldLabel htmlFor={`${dialogTitleId}-zone-${pointKey}`}>محدوده ترافیکی</FieldLabel>
+                                  <input id={`${dialogTitleId}-zone-${pointKey}`} name={`point.${index}.trafficZone`} className={formControlClassName} />
+                                </FormField>
+                                <div className={styles.spanFull}>
+                                  <FormField>
+                                    <FieldLabel htmlFor={`${dialogTitleId}-point-description-${pointKey}`}>توضیحات نقطه</FieldLabel>
+                                    <input id={`${dialogTitleId}-point-description-${pointKey}`} name={`point.${index}.description`} maxLength={1000} className={formControlClassName} />
+                                  </FormField>
+                                </div>
+                              </FormGrid>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  )}
+                  <ActionButton
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setPointKeys((current) => [...current, nextPointKey]);
+                      setPointDistances((current) => ({
+                        ...current,
+                        [nextPointKey]: emptyAssistedField(),
+                      }));
+                      setNextPointKey((current) => current + 1);
+                    }}
+                  >
+                    + افزودن نقطه میانی
+                  </ActionButton>
+                </div>
+                <div className={editorStyles.endpoint}>
+                  <span className={editorStyles.endpointLabel}>مقصد</span>
+                  <span className={editorStyles.endpointName}>{passenger?.destinationName ?? "—"}</span>
+                </div>
+                {dialogOpen && (
+                  <div className={editorStyles.mapColumn}>
+                    <RoutePlanMap
+                      origin={passenger?.originLocation ?? null}
+                      destination={passenger?.destinationLocation ?? null}
+                      intermediates={pointKeys.map((pointKey) => ({
+                        location:
+                          catalog.find(
+                            (item) => String(item.locationId) === pointLocationIds[pointKey],
+                          ) ?? null,
+                      }))}
+                      onRoute={handleRoute}
+                    />
+                  </div>
+                )}
+              </>
+            );
+          })()}
+
+          <div className={editorStyles.estimates}>
             <FormField>
-              <FieldLabel htmlFor={`${dialogTitleId}-description`}>توضیحات مسیر</FieldLabel>
-              <input id={`${dialogTitleId}-description`} name="routeDescription" className={formControlClassName} placeholder="توضیحات تکمیلی درباره شرایط یا الزامات مسیر…" />
+              <FieldLabel htmlFor={`${dialogTitleId}-distance`}>مسافت (کیلومتر)</FieldLabel>
+              <input
+                id={`${dialogTitleId}-distance`}
+                name="distanceKm"
+                inputMode="decimal"
+                dir="ltr"
+                className={formControlClassName}
+                value={distanceField.value}
+                onChange={(event) =>
+                  setDistanceField((current) => editAssistedValue(current, event.target.value))
+                }
+              />
+              {distanceField.suggestion && (
+                <p className={editorStyles.suggestion}>
+                  <button
+                    type="button"
+                    className={editorStyles.textButton}
+                    onClick={() => setDistanceField((current) => acceptAssistedSuggestion(current))}
+                  >
+                    استفاده از مقدار پیشنهادی ({distanceField.suggestion})
+                  </button>
+                </p>
+              )}
             </FormField>
-          </section>
+            <FormField>
+              <FieldLabel htmlFor={`${dialogTitleId}-duration`}>مدت تخمینی (دقیقه)</FieldLabel>
+              <input
+                id={`${dialogTitleId}-duration`}
+                name="estimatedDurationMinute"
+                inputMode="numeric"
+                dir="ltr"
+                className={formControlClassName}
+                value={durationField.value}
+                onChange={(event) =>
+                  setDurationField((current) => editAssistedValue(current, event.target.value))
+                }
+              />
+              {durationField.suggestion && (
+                <p className={editorStyles.suggestion}>
+                  <button
+                    type="button"
+                    className={editorStyles.textButton}
+                    onClick={() => setDurationField((current) => acceptAssistedSuggestion(current))}
+                  >
+                    استفاده از مقدار پیشنهادی ({durationField.suggestion})
+                  </button>
+                </p>
+              )}
+            </FormField>
+          </div>
 
-          <section className={styles.modalSection}>
-            <div className={styles.routePointsHeader}>
-              <div>
-                <h3 className={styles.modalSectionTitle}>نقاط مسیر</h3>
-                <p className={styles.muted}>در صورت نیاز می‌توانید نقاط میانی مسیر را اضافه کنید.</p>
-              </div>
-              <ActionButton
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setPointKeys((current) => [...current, nextPointKey]);
-                  setNextPointKey((current) => current + 1);
-                }}
-              >
-                + افزودن نقطه
-              </ActionButton>
+          <div>
+            <button
+              type="button"
+              className={editorStyles.textButton}
+              aria-expanded={routeDetailsOpen}
+              onClick={() => setRouteDetailsOpen((open) => !open)}
+            >
+              جزئیات بیشتر
+            </button>
+            <div hidden={!routeDetailsOpen} className={editorStyles.details}>
+              <FormGrid columns={2}>
+                <FormField>
+                  <FieldLabel htmlFor={`${dialogTitleId}-alternative`}>شمارهٔ مسیر جایگزین</FieldLabel>
+                  <input id={`${dialogTitleId}-alternative`} name="alternativeNo" inputMode="numeric" dir="ltr" className={formControlClassName} />
+                </FormField>
+                <FormField className={styles.spanFull}>
+                  <FieldLabel htmlFor={`${dialogTitleId}-description`}>توضیحات مسیر</FieldLabel>
+                  <input id={`${dialogTitleId}-description`} name="routeDescription" maxLength={1000} className={formControlClassName} />
+                </FormField>
+              </FormGrid>
             </div>
-
-            {pointKeys.length === 0 ? (
-              <p className={styles.compactPointsEmpty}>هنوز نقطه‌ای به مسیر اضافه نشده است.</p>
-            ) : (
-              <div className={styles.routePointsEditorList}>
-                {pointKeys.map((pointKey, index) => (
-                  <article key={pointKey} className={styles.pointCard}>
-                    <div className={styles.pointCardHeader}>
-                      <h4>نقطه {index + 1}</h4>
-                      <ActionButton type="button" variant="secondary" size="sm" onClick={() => setPointKeys((current) => current.filter((key) => key !== pointKey))}>حذف نقطه</ActionButton>
-                    </div>
-                    <FormGrid columns={2}>
-                      <LocationPicker name={`point.${index}.locationId`} label="مکان" locations={locations} required />
-                      <FormField>
-                        <FieldLabel htmlFor={`${dialogTitleId}-sequence-${pointKey}`}>ترتیب</FieldLabel>
-                        <input id={`${dialogTitleId}-sequence-${pointKey}`} name={`point.${index}.sequenceNo`} defaultValue={index + 1} inputMode="numeric" dir="ltr" className={formControlClassName} />
-                      </FormField>
-                      <FormField>
-                        <FieldLabel htmlFor={`${dialogTitleId}-point-distance-${pointKey}`}>فاصله از شروع (کیلومتر)</FieldLabel>
-                        <input id={`${dialogTitleId}-point-distance-${pointKey}`} name={`point.${index}.distanceFromStartKm`} inputMode="decimal" dir="ltr" className={formControlClassName} />
-                      </FormField>
-                      <FormField>
-                        <FieldLabel htmlFor={`${dialogTitleId}-zone-${pointKey}`}>محدوده ترافیکی</FieldLabel>
-                        <input id={`${dialogTitleId}-zone-${pointKey}`} name={`point.${index}.trafficZone`} className={formControlClassName} />
-                      </FormField>
-                      <div className={styles.spanFull}>
-                        <FormField>
-                          <FieldLabel htmlFor={`${dialogTitleId}-point-description-${pointKey}`}>توضیحات نقطه</FieldLabel>
-                          <input id={`${dialogTitleId}-point-description-${pointKey}`} name={`point.${index}.description`} className={formControlClassName} />
-                        </FormField>
-                      </div>
-                    </FormGrid>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
+          </div>
+          </div>
 
           <FormActions>
             <ActionButton type="button" variant="secondary" onClick={() => { setDialogOpen(false); resetEditor(); }}>انصراف</ActionButton>

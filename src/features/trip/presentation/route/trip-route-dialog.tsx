@@ -64,15 +64,17 @@ export function TripRouteDialog({
         size="wide"
         className={styles.routeDialog}
       >
-        <TripRouteForm
-          tripRequestId={tripRequestId}
-          passengers={passengers}
-          locations={locations}
-          initialRoute={route}
-          targetTripId={tripId}
-          onSuccess={() => setOpen(false)}
-          onCancel={() => setOpen(false)}
-        />
+        {open ? (
+          <TripRouteForm
+            tripRequestId={tripRequestId}
+            passengers={passengers}
+            locations={locations}
+            initialRoute={route}
+            targetTripId={tripId}
+            onSuccess={() => setOpen(false)}
+            onCancel={() => setOpen(false)}
+          />
+        ) : null}
       </Dialog>
     </>
   );

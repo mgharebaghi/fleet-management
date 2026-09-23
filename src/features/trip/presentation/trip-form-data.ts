@@ -151,6 +151,9 @@ export const tripMessages: Record<
   TRIP_NOT_FOUND: "سفر مسافر موجود نیست.",
   ROUTE_NAME_REQUIRED: "نام مسیر را وارد کنید.",
   ROUTE_NAME_TOO_LONG: "نام مسیر حداکثر ۲۰۰ نویسه است.",
+  ROUTE_DESCRIPTION_TOO_LONG: "توضیحات مسیر حداکثر ۱۰۰۰ نویسه است.",
+  ROUTE_POINT_DESCRIPTION_TOO_LONG:
+    "توضیحات نقطهٔ مسیر حداکثر ۱۰۰۰ نویسه است.",
   INVALID_ROUTE_NUMBER: "شمارهٔ مسیر جایگزین باید عدد صحیح مثبت باشد.",
   INVALID_DISTANCE: "مسافت باید عدد نامنفی با حداکثر ۸ رقم صحیح و ۲ اعشار باشد.",
   INVALID_DURATION: "مدت تخمینی باید عدد صحیح نامنفی باشد.",
@@ -233,6 +236,8 @@ export const tripErrorFields: Partial<
   INVALID_ORDER: "passenger.0.pickupOrder",
   ROUTE_NAME_REQUIRED: "routeName",
   ROUTE_NAME_TOO_LONG: "routeName",
+  ROUTE_DESCRIPTION_TOO_LONG: "routeDescription",
+  ROUTE_POINT_DESCRIPTION_TOO_LONG: "point.0.description",
   INVALID_DISTANCE: "distanceKm",
   INVALID_DURATION: "estimatedDurationMinute",
   INVALID_SEQUENCE: "point.0.sequenceNo",

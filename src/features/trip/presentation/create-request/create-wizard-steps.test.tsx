@@ -13,6 +13,12 @@ import { TripRequestReviewDialog } from "./trip-request-review-dialog";
 vi.mock("@/components/ui/action-button/action-button", () =>
   import("../../../../components/ui/action-button/action-button"),
 );
+vi.mock("@/components/ui/icon-action-button/icon-action-button", () =>
+  import("../../../../components/ui/icon-action-button/icon-action-button"),
+);
+vi.mock("@/components/ui/icon/icons", () =>
+  import("../../../../components/ui/icon/icons"),
+);
 vi.mock("@/components/ui/action-link/action-link", () =>
   import("../../../../components/ui/action-link/action-link"),
 );
@@ -337,10 +343,11 @@ describe("Wizard Step 4: RouteStep", () => {
     expect(markup).toContain("بعدی: برنامه‌ریزی");
     expect(markup).toContain("افزودن مسیر برنامه‌ریزی‌شده");
     expect(markup).toContain("مشخصات مسیر");
-    expect(markup).toContain("تنظیمات مسیر");
-    expect(markup).toContain("توضیحات مسیر");
-    expect(markup).toContain("نقاط مسیر");
-    expect(markup).toContain("هنوز نقطه‌ای به مسیر اضافه نشده است.");
+    expect(markup).toContain("مبدأ");
+    expect(markup).toContain("نقاط میانی");
+    expect(markup).toContain("مقصد");
+    expect(markup).toContain("جزئیات بیشتر");
+    expect(markup).toContain("نقطه میانی الزامی نیست.");
   });
 });
 

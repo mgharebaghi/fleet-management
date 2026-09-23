@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
 import type {
   TripLocationReference,
@@ -19,6 +23,7 @@ export function RouteTab({
 }) {
   const routeGroups = groupRoutesForDisplay(details.passengers);
   const hasExistingRoutes = routeGroups.length > 0;
+  const [mappedRouteId, setMappedRouteId] = useState<number | null>(null);
 
   return (
     <section
@@ -58,6 +63,12 @@ export function RouteTab({
               passengers={details.passengers}
               locations={locations}
               isPlanningFrozen={isPlanningFrozen}
+              mapOpen={mappedRouteId === route.routeId}
+              onMapToggle={() =>
+                setMappedRouteId((current) =>
+                  current === route.routeId ? null : route.routeId,
+                )
+              }
             />
           ))}
         </div>

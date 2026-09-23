@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-import type { MapCoordinate, MapMarker } from "../map-coordinate";
+import type { MapCoordinate, MapMarker, MapPath } from "../map-coordinate";
 import styles from "./map-canvas.module.css";
 
 const NeshanMapView = dynamic(
@@ -26,6 +26,7 @@ export type MapCanvasProps = {
   initialCenter: MapCoordinate;
   initialZoom: number;
   markers: readonly MapMarker[];
+  paths?: readonly MapPath[];
   focus: MapFocus | null;
   onSelectPoint?: (coordinate: MapCoordinate) => void;
   onMarkerSelect?: (markerId: string) => void;

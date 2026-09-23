@@ -13,11 +13,27 @@ import type {
   TripRoute,
 } from "../../application/trip-records";
 import { DeleteRouteButton } from "../route/delete-route-dialog";
+import { RoutePlanMap } from "../route/route-plan-map";
 import { TripRouteDialog } from "../route/trip-route-dialog";
 import styles from "./trip-workspace.module.css";
 
 export function togglePointsDisclosure(currentlyOpen: boolean): boolean {
   return !currentlyOpen;
+}
+
+function routeOwner(
+  passengers: readonly TripPassengerRecord[],
+  route: TripRoute,
+): TripPassengerRecord | null {
+  return (
+    passengers.find((passenger) => passenger.tripId === route.tripId) ??
+    passengers.find((passenger) =>
+      passenger.executions.some((execution) =>
+        execution.routes.some((item) => item.routeId === route.routeId),
+      ),
+    ) ??
+    null
+  );
 }
 
 export type RouteCardProps = {
@@ -28,6 +44,8 @@ export type RouteCardProps = {
   locations?: TripLocationReference[];
   isPlanningFrozen?: boolean;
   defaultPointsOpen?: boolean;
+  mapOpen?: boolean;
+  onMapToggle?: () => void;
 };
 
 export function RouteCard({
@@ -38,10 +56,13 @@ export function RouteCard({
   locations,
   isPlanningFrozen,
   defaultPointsOpen = false,
+  mapOpen = false,
+  onMapToggle,
 }: RouteCardProps) {
   const [pointsOpen, setPointsOpen] = useState(defaultPointsOpen);
   const pointsListId = useId();
 
+  const owner = passengers ? routeOwner(passengers, route) : null;
   const orderedPoints = [...(route.points ?? [])].sort(
     (left, right) =>
       (left.sequenceNo ?? Number.MAX_SAFE_INTEGER) -
@@ -57,7 +78,7 @@ export function RouteCard({
           <div className={styles.routeTitleRow}>
             <h3 className={styles.routeName}>{route.routeName}</h3>
             <StatusBadge
-              label={route.isSelected ? "مسیر انتخاب‌شده" : "مسیر جایگزین"}
+              label={route.isSelected ? "مسیر اصلی" : "مسیر جایگزین"}
               tone={route.isSelected ? "positive" : "info"}
             />
           </div>
@@ -109,6 +130,27 @@ export function RouteCard({
           </div>
         )}
       </dl>
+
+      {onMapToggle && (
+        <button
+          type="button"
+          className={styles.routeMapToggle}
+          aria-expanded={mapOpen}
+          onClick={onMapToggle}
+        >
+          {mapOpen ? "بستن نقشه" : "نمایش روی نقشه"}
+        </button>
+      )}
+
+      {mapOpen && owner && (
+        <RoutePlanMap
+          origin={owner.origin}
+          destination={owner.destination}
+          intermediates={orderedPoints.map((point) => ({
+            location: point.location,
+          }))}
+        />
+      )}
 
       {route.description && (
         <p className={styles.routeDescription}>{route.description}</p>

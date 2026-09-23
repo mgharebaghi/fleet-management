@@ -20,6 +20,12 @@ vi.mock("@/components/ui/dialog/dialog", () =>
 vi.mock("@/components/ui/action-button/action-button", () =>
   import("../../../../components/ui/action-button/action-button"),
 );
+vi.mock("@/components/ui/icon-action-button/icon-action-button", () =>
+  import("../../../../components/ui/icon-action-button/icon-action-button"),
+);
+vi.mock("@/components/ui/icon/icons", () =>
+  import("../../../../components/ui/icon/icons"),
+);
 vi.mock("@/components/ui/form-field/form-field", () =>
   import("../../../../components/ui/form-field/form-field"),
 );
@@ -169,8 +175,10 @@ describe("TripRouteForm - Existing vs New Route & Validation", () => {
     );
     expect(markup).toContain('name="routeName"');
     expect(markup).not.toContain('name="routeId"');
-    expect(markup).toContain("اطلاعات مسیر");
-    expect(markup).toContain("برآورد مسیر");
+    expect(markup).toContain("مبدأ");
+    expect(markup).toContain("نقاط میانی");
+    expect(markup).toContain("جزئیات بیشتر");
+    expect(markup).toContain("مسافت (کیلومتر)");
   });
 
   it("2. Existing Route: existing persisted Route data hydrates correctly", () => {
@@ -198,7 +206,7 @@ describe("TripRouteForm - Existing vs New Route & Validation", () => {
     expect(values["point.1.description"]).toBe("درب شمالی کارخانه");
   });
 
-  it("3. Existing Route: user can continue to Step 2 without re-entering required fields", () => {
+  it("3. Existing Route: hydrated values stay editable on the single page", () => {
     const hydrated = hydrateRouteFormValues(mockRouteA, 701);
 
     // Validation passes smoothly with hydrated values
@@ -224,7 +232,16 @@ describe("TripRouteForm - Existing vs New Route & Validation", () => {
     expect(markup).toContain('value="18.5"');
     expect(markup).toContain('value="35"');
     expect(markup).toContain("ویرایش مسیر برنامه‌ریزی‌شده");
-    expect(markup).toContain("بعدی");
+    expect(markup).toContain("ذخیره تغییرات مسیر");
+    expect(markup).toContain("عنوان مسیر");
+    expect(markup).toContain("برای تشخیص این مسیر از مسیرهای جایگزین");
+    expect(markup).toContain("نقطه میانی");
+    expect(markup).toContain('aria-label="انتقال به بالا"');
+    expect(markup).toContain('aria-label="حذف"');
+    expect(markup).not.toContain("ترتیب");
+    expect(markup).toContain("فاصله از شروع (کیلومتر)");
+    expect(markup).toContain("محدوده ترافیکی");
+    expect(markup).toMatch(/<div hidden="" class="[^"]*details/);
   });
 
   it("4. Multi-passenger isolation: resolving existing route is trip-specific", () => {

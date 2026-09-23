@@ -1,0 +1,18 @@
+.layout {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.mapSlot {
+  --map-frame-height: 260px;
+  min-width: 0;
+  isolation: isolate;
+}
+
+.notice {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
