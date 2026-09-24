@@ -52,15 +52,20 @@ for (const target of adminRoutes) {
     await page.goto("/people");
 
     const gate = gateNextNavigation();
+    let navigationArmed = false;
     await page.route(`**${target.path}*`, async (route) => {
       const request = route.request();
-      // Opening a sidebar group prefetches its links. Those are real `rsc: 1`
-      // requests and can reach this handler before the click. Next tags them
-      // with `next-router-prefetch` or `next-router-segment-prefetch`; the
-      // click's own navigation fetch carries neither. Passing prefetches
-      // through keeps the gate keyed to the click alone.
+      const url = new URL(request.url());
+      // `*` would also match `/fleet/vehicle-insurances` for the vehicles path.
+      if (url.pathname !== target.path) {
+        await route.continue();
+        return;
+      }
+      // Opening a sidebar group prefetches its links before the click. Next tags
+      // those with `next-router-prefetch` or `next-router-segment-prefetch`.
       const headers = request.headers();
       if (
+        !navigationArmed ||
         headers.rsc !== "1" ||
         headers["next-router-prefetch"] ||
         headers["next-router-segment-prefetch"]
@@ -77,6 +82,7 @@ for (const target of adminRoutes) {
       await fleet.click();
       await expect(fleet).toHaveAttribute("aria-expanded", "true");
     }
+    navigationArmed = true;
     await sidebar.getByRole("link", { name: target.linkName }).click();
 
     await gate.reached;

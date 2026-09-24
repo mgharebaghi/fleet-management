@@ -1,10 +1,12 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { Dialog } from "../ui/dialog/dialog";
+import { LoadingIndicator } from "../ui/loading-indicator/loading-indicator";
 import { AdminNavIcon } from "./admin-nav-icons";
 import {
   ADMIN_NAV_SECTIONS,
@@ -165,6 +167,7 @@ function NavList({
                             tripBadge={tripQueueBadge}
                           />
                         )}
+                        {child.href === "/fleet/vehicles" && <VehicleListNavPending />}
                       </Link>
                     </li>
                   );
@@ -176,6 +179,24 @@ function NavList({
         );
       })}
     </ul>
+  );
+}
+
+// Client navigation into the vehicle list does not mount `(admin)/loading.tsx`
+// while its RSC response is still in flight. Surface the same indicator in the
+// content area for that link so the wait is visible.
+function VehicleListNavPending() {
+  const { pending } = useLinkStatus();
+  if (!pending || typeof document === "undefined") return null;
+  const content = document.querySelector("[data-admin-content]");
+  if (!content) return null;
+  return createPortal(
+    <LoadingIndicator
+      variant="page"
+      label="در حال بارگذاری…"
+      description="محتوای بخش مدیریت در حال آماده‌سازی است."
+    />,
+    content,
   );
 }
 
