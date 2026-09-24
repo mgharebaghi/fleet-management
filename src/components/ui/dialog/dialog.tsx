@@ -58,15 +58,26 @@ export function Dialog({
     // (globals.css sets overflow-x on both html and body, which disables
     // the usual body->viewport overflow propagation), so lock it there.
     const rootElement = document.documentElement;
+    const contentElement = document.querySelector("[data-admin-content]");
     if (openDialogScrollLocks === 0) {
       rootOverflowBeforeFirstDialog = rootElement.style.overflow;
+      if (contentElement instanceof HTMLElement) {
+        contentElement.dataset.scrollLock = contentElement.style.overflow;
+      }
     }
     openDialogScrollLocks += 1;
     rootElement.style.overflow = "hidden";
+    if (contentElement instanceof HTMLElement) {
+      contentElement.style.overflow = "hidden";
+    }
     return () => {
       openDialogScrollLocks = Math.max(0, openDialogScrollLocks - 1);
       if (openDialogScrollLocks === 0) {
         rootElement.style.overflow = rootOverflowBeforeFirstDialog;
+        if (contentElement instanceof HTMLElement) {
+          contentElement.style.overflow = contentElement.dataset.scrollLock ?? "";
+          delete contentElement.dataset.scrollLock;
+        }
       }
     };
   }, [open]);

@@ -57,6 +57,7 @@ test.describe("Admin shell navigation", () => {
       "page",
     );
 
+    await sidebar.getByRole("button", { name: "ناوگان" }).click();
     await sidebar.getByRole("link", { name: "خودروهای سازمان" }).click();
     await expect(page).toHaveURL(/\/fleet\/vehicles$/);
     await expect(
@@ -89,7 +90,7 @@ test.describe("Admin shell navigation", () => {
     expect(drawerBox).not.toBeNull();
     expect(drawerBox!.y).toBe(0);
     expect(drawerBox!.height).toBe(844);
-    await expect(page.locator("html")).toHaveCSS("overflow", "hidden");
+    await expect(page.locator("[data-admin-content]")).toHaveCSS("overflow-y", "hidden");
 
     const hasHorizontalScroll = await page.evaluate(
       () =>
@@ -106,7 +107,7 @@ test.describe("Admin shell navigation", () => {
     await mobilePanel.getByRole("link", { name: "رانندگان" }).click();
     await expect(page).toHaveURL(/\/drivers$/);
     await expect(mobilePanel).toBeHidden();
-    await expect(page.locator("html")).not.toHaveCSS("overflow", "hidden");
+    await expect(page.locator("[data-admin-content]")).toHaveCSS("overflow-y", "auto");
   });
 });
 

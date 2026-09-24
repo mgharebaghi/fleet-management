@@ -129,6 +129,7 @@ export class PrismaTripWriteSession implements TripWriteSession {
       where: { TripRequestId: id },
       select: {
         Status: true,
+        RequestedTravelDateTime: true,
         Trip: {
           select: {
             TripId: true,
@@ -146,6 +147,7 @@ export class PrismaTripWriteSession implements TripWriteSession {
     return row
       ? {
           status: row.Status,
+          requestedTravelDateTime: row.RequestedTravelDateTime,
           passengers: row.Trip.map((trip) => ({
             tripId: trip.TripId,
             executions: trip.TripExecution.map((execution) => ({
@@ -379,13 +381,25 @@ export class PrismaTripWriteSession implements TripWriteSession {
     });
   }
 
-  async startTripExecutions(tripRequestId: number) {
+  async startTripExecutions(
+    tripRequestId: number,
+    actualPickupDateTime: Date | null,
+  ) {
     await this.client.tripExecution.updateMany({
       where: {
         Status: "Planned",
         Trip: { TripRequestId: tripRequestId },
       },
       data: { Status: "InProgress" },
+    });
+    if (actualPickupDateTime === null) return;
+    await this.client.tripExecution.updateMany({
+      where: {
+        Status: "InProgress",
+        ActualPickupDateTime: null,
+        Trip: { TripRequestId: tripRequestId },
+      },
+      data: { ActualPickupDateTime: actualPickupDateTime },
     });
   }
 

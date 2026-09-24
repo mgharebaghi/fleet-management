@@ -14,7 +14,9 @@
 }
 
 .md {
-  min-height: 44px;
+  min-height: 38px;
+  padding: 6px 13px;
+  font-size: 13px;
 }
 
 .sm {

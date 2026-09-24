@@ -113,6 +113,7 @@ export type TripPassengerLifecycleSnapshot = {
 
 export type TripRequestLifecycleSnapshot = {
   status: string;
+  requestedTravelDateTime: Date | null;
   passengers: TripPassengerLifecycleSnapshot[];
 };
 
@@ -137,21 +138,41 @@ export function everyPassengerHasPersistedPlan(
   );
 }
 
+function passengerExecutionCompleted(
+  passenger: TripPassengerLifecycleSnapshot,
+): boolean {
+  const active = passenger.executions.filter(
+    (execution) => execution.status !== "Cancelled",
+  );
+  return (
+    active.length > 0 &&
+    active.every((execution) => execution.status === "Completed")
+  );
+}
+
 export function everyPassengerExecutionCompleted(
   snapshot: TripRequestLifecycleSnapshot,
 ): boolean {
   return (
     snapshot.passengers.length > 0 &&
-    snapshot.passengers.every((passenger) => {
-      const active = passenger.executions.filter(
-        (execution) => execution.status !== "Cancelled",
-      );
-      return (
-        active.length > 0 &&
-        active.every((execution) => execution.status === "Completed")
-      );
-    })
+    snapshot.passengers.every(passengerExecutionCompleted)
   );
+}
+
+export function departureInstantForTripStart(input: {
+  entered: Date | null;
+  planned: Date | null;
+}): Date | null {
+  if (input.entered !== null) return input.entered;
+  return input.planned;
+}
+
+export function passengersAwaitingExecutionCompletion(
+  snapshot: TripRequestLifecycleSnapshot,
+): number {
+  return snapshot.passengers.filter(
+    (passenger) => !passengerExecutionCompleted(passenger),
+  ).length;
 }
 
 export function jalaliYearOf(dateTime: Date): number {

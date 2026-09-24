@@ -5,12 +5,17 @@ export type AdminNavIconName =
   | "insurance"
   | "catalog"
   | "drivers"
-  | "trips";
+  | "trips"
+  | "create";
 
 export type AdminNavChild = {
   label: string;
   href: string;
   icon: AdminNavIconName;
+  /** A creation link, visually distinct from the other pages in its group. */
+  action?: boolean;
+  /** Trip workspace and voucher routes belong to the request list. */
+  includesTripFiles?: boolean;
 };
 
 export type AdminNavSection = {
@@ -42,12 +47,65 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     ],
   },
   { label: "رانندگان", href: "/drivers", icon: "drivers" },
-  { label: "سفرها", href: "/trips", icon: "trips" },
+  {
+    label: "سفرها",
+    href: "/trips",
+    icon: "trips",
+    children: [
+      {
+        label: "ثبت درخواست سفر",
+        href: "/trips/create",
+        icon: "create",
+        action: true,
+      },
+      {
+        label: "فهرست درخواست‌ها",
+        href: "/trips/requests",
+        icon: "catalog",
+        includesTripFiles: true,
+      },
+    ],
+  },
 ];
 
 /** A section/link counts as active for itself and everything nested under it. */
 export function isAdminNavPathActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+const tripFilePath = /^\/trips\/\d+(\/|$)/;
+
+export function isAdminNavChildActive(
+  pathname: string,
+  child: AdminNavChild,
+): boolean {
+  if (child.includesTripFiles && tripFilePath.test(pathname)) {
+    return true;
+  }
+
+  return isAdminNavPathActive(pathname, child.href);
+}
+
+/** The one child that should carry the primary current-page mark. */
+export function findActiveAdminNavChild(
+  pathname: string,
+  section: AdminNavSection,
+): AdminNavChild | undefined {
+  return section.children
+    ?.filter((child) => isAdminNavChildActive(pathname, child))
+    .sort((left, right) => right.href.length - left.href.length)[0];
+}
+
+/** True when the group heading itself is the current page, not one of its children. */
+export function isAdminNavGroupPage(
+  pathname: string,
+  section: AdminNavSection,
+): boolean {
+  return (
+    !findActiveAdminNavChild(pathname, section) &&
+    isAdminNavPathActive(pathname, section.href) &&
+    !section.children?.some((child) => child.href === section.href)
+  );
 }
 
 /**
@@ -57,9 +115,7 @@ export function isAdminNavPathActive(pathname: string, href: string): boolean {
  */
 export function findAdminNavTrail(pathname: string): string[] | null {
   for (const section of ADMIN_NAV_SECTIONS) {
-    const child = section.children?.find((candidate) =>
-      isAdminNavPathActive(pathname, candidate.href),
-    );
+    const child = findActiveAdminNavChild(pathname, section);
 
     if (child) {
       return [section.label, child.label];

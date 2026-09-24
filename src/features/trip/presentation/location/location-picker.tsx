@@ -168,11 +168,11 @@ export function LocationPicker({
         </>
       ) : (
         <>
-          <div className={styles.fieldRow}>
-            {locationSelect}
+          {locationSelect}
+          <div className={styles.fieldActions}>
             {mapButton}
+            {createButton}
           </div>
-          {createButton}
         </>
       )}
       {createdNotice && (

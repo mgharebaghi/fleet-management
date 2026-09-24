@@ -11,6 +11,7 @@ import { makeReadTrips } from "../../composition/trip.factory";
 import { DriverVehicleTab } from "./assignment/trip-assignment-tab";
 import { DetailsTab } from "./details/trip-details-tab";
 import { WorkspaceIdentity } from "./identity/trip-workspace-identity";
+import { NextActionPanel } from "./next-action-panel";
 import { PassengersTab } from "./passengers/trip-passengers-tab";
 import { RouteTab } from "./route/trip-route-tab";
 import { StatusCompletionTab } from "./status/trip-status-tab";
@@ -117,22 +118,25 @@ export async function TripWorkspacePage({
       <TripWorkspaceFocus sectionId={section} />
       <div className={styles.workspace}>
         <WorkspaceIdentity view={view} backHref="/trips/requests" />
-        <TripWorkspaceTabs
-          tripRequestId={details.tripRequestId}
-          activeSection={section}
-          tripRequestStatus={details.status}
-        >
-          <ActiveTabPanel
-            section={section}
-            details={details}
-            view={view}
-            people={people}
-            locations={locations}
-            assignments={assignments}
-            isPlanningFrozen={isPlanningFrozen}
-            requestIsTerminal={requestIsTerminal}
-          />
-        </TripWorkspaceTabs>
+        <div className={styles.workspaceBody}>
+          <TripWorkspaceTabs
+            tripRequestId={details.tripRequestId}
+            activeSection={section}
+            tripRequestStatus={details.status}
+          >
+            <ActiveTabPanel
+              section={section}
+              details={details}
+              view={view}
+              people={people}
+              locations={locations}
+              assignments={assignments}
+              isPlanningFrozen={isPlanningFrozen}
+              requestIsTerminal={requestIsTerminal}
+            />
+          </TripWorkspaceTabs>
+          <NextActionPanel details={details} view={view} />
+        </div>
       </div>
     </PageShell>
   );

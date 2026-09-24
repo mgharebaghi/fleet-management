@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   ADMIN_NAV_SECTIONS,
+  findActiveAdminNavChild,
   findAdminNavTrail,
+  isAdminNavGroupPage,
   isAdminNavPathActive,
   isAdminNavSectionActive,
 } from "./admin-nav-items";
@@ -79,5 +81,39 @@ describe("isAdminNavSectionActive", () => {
 
     expect(isAdminNavSectionActive("/trips", tripSection)).toBe(true);
     expect(isAdminNavSectionActive("/trips/123", tripSection)).toBe(true);
+  });
+});
+
+describe("active navigation trail", () => {
+  const tripSection = ADMIN_NAV_SECTIONS.find(
+    (section) => section.label === "سفرها",
+  )!;
+
+  it("marks only the related child on detail and edit routes", () => {
+    expect(findAdminNavTrail("/people/4/edit")).toEqual(["افراد"]);
+    expect(findAdminNavTrail("/drivers/4")).toEqual(["رانندگان"]);
+    expect(findAdminNavTrail("/fleet/vehicles/8/edit")).toEqual([
+      "ناوگان",
+      "خودروهای سازمان",
+    ]);
+    expect(findAdminNavTrail("/fleet/vehicle-insurances/3/edit")).toEqual([
+      "ناوگان",
+      "بیمه ها",
+    ]);
+    expect(findAdminNavTrail("/trips/create")).toEqual([
+      "سفرها",
+      "ثبت درخواست سفر",
+    ]);
+    expect(findAdminNavTrail("/trips/15")).toEqual([
+      "سفرها",
+      "فهرست درخواست‌ها",
+    ]);
+    expect(findAdminNavTrail("/trips/15/voucher/2")).toEqual([
+      "سفرها",
+      "فهرست درخواست‌ها",
+    ]);
+    expect(findActiveAdminNavChild("/trips", tripSection)).toBeUndefined();
+    expect(isAdminNavGroupPage("/trips", tripSection)).toBe(true);
+    expect(isAdminNavGroupPage("/trips/requests", tripSection)).toBe(false);
   });
 });

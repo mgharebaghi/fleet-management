@@ -66,6 +66,57 @@ export function FieldErrors({ id, messages }: FieldErrorsProps) {
   );
 }
 
+type FieldHintProps = {
+  id?: string;
+  children: ReactNode;
+};
+
+/** Short guidance that belongs to the field above it, not to the whole form. */
+export function FieldHint({ id, children }: FieldHintProps) {
+  return (
+    <p className={styles.hint} id={id}>
+      {children}
+    </p>
+  );
+}
+
+type FormSectionProps = {
+  title?: string;
+  titleId?: string;
+  description?: string;
+  /** A compact note, such as the required-field key, aligned with the title. */
+  aside?: ReactNode;
+  children: ReactNode;
+};
+
+/** A tight group of related fields. Feature forms keep their own fields inside. */
+export function FormSection({
+  title,
+  titleId,
+  description,
+  aside,
+  children,
+}: FormSectionProps) {
+  return (
+    <section className={styles.section}>
+      {(title || description || aside) && (
+        <header className={styles.sectionHeader}>
+          <div>
+            {title && (
+              <h2 className={styles.sectionTitle} id={titleId}>
+                {title}
+              </h2>
+            )}
+            {description && <p className={styles.sectionDescription}>{description}</p>}
+          </div>
+          {aside}
+        </header>
+      )}
+      <div className={styles.sectionBody}>{children}</div>
+    </section>
+  );
+}
+
 type FormActionsProps = {
   /** Separates the actions from the fields above them on page-level forms. */
   separated?: boolean;

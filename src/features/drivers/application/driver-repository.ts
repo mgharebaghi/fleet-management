@@ -9,6 +9,8 @@ export interface DriverSession {
   license(id: number): Promise<License | null>;
   licenseNumberExists(number: string, excludingLicenseId?: number): Promise<boolean>;
   overlap(input: NewAssignment, by: "driver" | "vehicle", excludingAssignmentId?: number): Promise<boolean>;
+  /** Driver holding a current assignment of this vehicle, if one exists. Current means the period has started and has not ended, matching assignmentState. */
+  currentAssignmentHolder(vehicleId: number, now: Date, excludingAssignmentId?: number): Promise<number | null>;
   assignment(id: number): Promise<Assignment | null>;
   createDriver(personId: number): Promise<number>;
   createLicense(input: NewLicense): Promise<number>;
@@ -26,4 +28,6 @@ export interface DriverRepository {
   details(id: number): Promise<DriverDetails | null>;
   availablePeople(): Promise<PersonReference[]>;
   availableVehicles(): Promise<VehicleReference[]>;
+  /** Vehicles whose assignment period is current at `now`. Ended and future periods are omitted. */
+  currentVehicleAssignments(now: Date): Promise<Array<{ vehicleId: number; assignmentId: number }>>;
 }

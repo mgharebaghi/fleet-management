@@ -5,6 +5,7 @@ import {
   canTransitionTripExecution,
   canTransitionTripRequest,
   everyPassengerExecutionCompleted,
+  departureInstantForTripStart,
   everyPassengerHasPersistedPlan,
   jalaliYearOf,
   nextTripRequestNo,
@@ -128,12 +129,14 @@ describe("Trip request planning completeness", () => {
     expect(
       everyPassengerHasPersistedPlan({
         status: "New",
+        requestedTravelDateTime: null,
         passengers: [{ tripId: 1, executions: [] }],
       }),
     ).toBe(false);
     expect(
       everyPassengerHasPersistedPlan({
         status: "New",
+        requestedTravelDateTime: null,
         passengers: [
           {
             tripId: 1,
@@ -154,6 +157,7 @@ describe("Trip request planning completeness", () => {
     expect(
       everyPassengerExecutionCompleted({
         status: "InProgress",
+        requestedTravelDateTime: null,
         passengers: [
           {
             tripId: 1,
@@ -171,6 +175,7 @@ describe("Trip request planning completeness", () => {
     expect(
       everyPassengerExecutionCompleted({
         status: "InProgress",
+        requestedTravelDateTime: null,
         passengers: [
           {
             tripId: 1,
@@ -185,5 +190,22 @@ describe("Trip request planning completeness", () => {
         ],
       }),
     ).toBe(true);
+  });
+});
+
+describe("departure instant for trip start", () => {
+  const planned = new Date("2026-02-01T08:00:00Z");
+  const entered = new Date("2026-02-01T09:30:00Z");
+
+  it("uses the planned departure when the operator leaves the actual time empty", () => {
+    expect(departureInstantForTripStart({ entered: null, planned })).toEqual(planned);
+  });
+
+  it("keeps an entered instant ahead of the planned one", () => {
+    expect(departureInstantForTripStart({ entered, planned })).toEqual(entered);
+  });
+
+  it("returns null when neither instant exists", () => {
+    expect(departureInstantForTripStart({ entered: null, planned: null })).toBeNull();
   });
 });

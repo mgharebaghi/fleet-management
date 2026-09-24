@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useActionState, useEffect, useId, useState, type FormEvent, type Ref } from "react";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog/confirm-dialog";
@@ -23,6 +23,11 @@ import { saveTripExecutionAction } from "../trip.actions";
 import { formatTripDateTime } from "../trip-format";
 import { tehranDateTimeInputs, tripMessages } from "../trip-form-data";
 import { executionStatusLabel } from "../trip-status";
+import {
+  dropoffBeforePickup,
+  readExecutionDraft,
+  type PassengerExecutionDraft,
+} from "./execution-draft";
 import styles from "../trip-forms.module.css";
 
 function executionStatusTone(
@@ -45,11 +50,25 @@ export function TripExecutionForm({
   trip,
   execution,
   onCancel,
+  draft,
+  embedded = false,
+  formRef,
+  formId,
+  invalidField,
+  externalMessage,
+  onDraftChange,
 }: {
   tripRequestId: number;
   trip: TripPassengerRecord;
   execution: TripExecutionRecord;
   onCancel?: () => void;
+  draft?: PassengerExecutionDraft;
+  embedded?: boolean;
+  formRef?: Ref<HTMLFormElement>;
+  formId?: string;
+  invalidField?: string | null;
+  externalMessage?: string | null;
+  onDraftChange?: (draft: PassengerExecutionDraft) => void;
 }) {
   const started = executionHasStarted(execution);
   const isCompleted = execution.status === "Completed";
@@ -70,9 +89,36 @@ export function TripExecutionForm({
   const [cancelOpen, setCancelOpen] = useState(false);
   const pickup = tehranDateTimeInputs(execution.actualPickupDateTime);
   const dropoff = tehranDateTimeInputs(execution.actualDropoffDateTime);
+  const seeded = (name: keyof PassengerExecutionDraft, fallback: string) =>
+    draft?.[name] ?? fallback;
   const value = (name: string, fallback = "") =>
     state.values?.[name] ?? fallback;
-  const fieldInvalid = (name: string) => state.field === name;
+  const fieldInvalid = (name: string) =>
+    state.field === name || invalidField === name;
+  const [periodInvalid, setPeriodInvalid] = useState(false);
+  const dropoffInvalid =
+    periodInvalid ||
+    fieldInvalid("actualDropoffDay") ||
+    fieldInvalid("actualDropoffTime");
+  const dropoffMessage = periodInvalid
+    ? tripMessages.INVALID_EXECUTION_PERIOD
+    : dropoffInvalid
+      ? externalMessage ?? (state.error ? tripMessages[state.error] : null)
+      : null;
+
+  function syncDraft(form: HTMLFormElement) {
+    const next = readExecutionDraft(form);
+    setPeriodInvalid(dropoffBeforePickup(next));
+    onDraftChange?.(next);
+  }
+
+  useEffect(() => {
+    if (!dropoffInvalid) return;
+    document
+      .getElementById(`${prefix}-dropoff`)
+      ?.querySelector<HTMLElement>("button, input, select")
+      ?.focus();
+  }, [dropoffInvalid, prefix]);
 
   return (
     <div className={styles.executionForm}>
@@ -106,7 +152,9 @@ export function TripExecutionForm({
       </div>
 
       <form
-        action={formAction}
+        id={formId}
+        ref={formRef}
+        action={embedded ? undefined : formAction}
         noValidate
         aria-label={
           isCompleted
@@ -115,6 +163,8 @@ export function TripExecutionForm({
         }
         className={styles.executionForm}
         aria-busy={pending}
+        onChange={(event: FormEvent<HTMLFormElement>) => syncDraft(event.currentTarget)}
+        onInput={(event: FormEvent<HTMLFormElement>) => syncDraft(event.currentTarget)}
       >
         {state.error && (
           <InlineNotice tone="danger" role="alert">
@@ -140,37 +190,44 @@ export function TripExecutionForm({
             <JalaliDatePicker
               name="actualPickupDay"
               label="تاریخ واقعی سوارشدن"
-              defaultValue={value("actualPickupDay", pickup.day)}
+              defaultValue={value("actualPickupDay", seeded("actualPickupDay", pickup.day))}
               disabled={pending}
             />
             <TimeSelect
               id={`${prefix}-actual-pickup-time`}
               name="actualPickupTime"
               label="ساعت واقعی سوارشدن"
-              defaultValue={value("actualPickupTime", pickup.time)}
+              defaultValue={value("actualPickupTime", seeded("actualPickupTime", pickup.time))}
               disabled={pending}
             />
           </div>
         </fieldset>
 
         {/* Group 2: پیاده‌شدن مسافر */}
-        <fieldset className={styles.executionGroup}>
+        <fieldset id={`${prefix}-dropoff`} className={styles.executionGroup}>
           <legend className={styles.executionGroupLegend}>پیاده‌شدن مسافر</legend>
           <div className={styles.executionGrid2Col}>
             <JalaliDatePicker
               name="actualDropoffDay"
               label="تاریخ واقعی پیاده‌شدن"
-              defaultValue={value("actualDropoffDay", dropoff.day)}
+              defaultValue={value("actualDropoffDay", seeded("actualDropoffDay", dropoff.day))}
               disabled={pending}
+              invalid={dropoffInvalid}
             />
             <TimeSelect
               id={`${prefix}-actual-dropoff-time`}
               name="actualDropoffTime"
               label="ساعت واقعی پیاده‌شدن"
-              defaultValue={value("actualDropoffTime", dropoff.time)}
+              defaultValue={value("actualDropoffTime", seeded("actualDropoffTime", dropoff.time))}
               disabled={pending}
             />
           </div>
+          {dropoffMessage && (
+            <FieldErrors
+              id={`${prefix}-dropoff-error`}
+              messages={[dropoffMessage]}
+            />
+          )}
         </fieldset>
 
         {/* Group 3: کیلومترشمار */}
@@ -189,7 +246,7 @@ export function TripExecutionForm({
                 dir="ltr"
                 defaultValue={value(
                   "startOdometer",
-                  execution.startOdometer ?? "",
+                  seeded("startOdometer", execution.startOdometer ?? ""),
                 )}
                 disabled={pending}
                 aria-invalid={fieldInvalid("startOdometer")}
@@ -212,7 +269,7 @@ export function TripExecutionForm({
                 className={formControlClassName}
                 inputMode="decimal"
                 dir="ltr"
-                defaultValue={value("endOdometer", execution.endOdometer ?? "")}
+                defaultValue={value("endOdometer", seeded("endOdometer", execution.endOdometer ?? ""))}
                 disabled={pending}
                 aria-invalid={fieldInvalid("endOdometer")}
               />
@@ -240,7 +297,7 @@ export function TripExecutionForm({
                 id={`${prefix}-execution-status`}
                 name="executionStatus"
                 className={formControlClassName}
-                defaultValue={value("executionStatus", defaultStatus)}
+                defaultValue={value("executionStatus", seeded("executionStatus", defaultStatus))}
                 disabled={pending}
               >
                 <option value="InProgress">در حال اجرا</option>
@@ -259,7 +316,7 @@ export function TripExecutionForm({
                 rows={3}
                 defaultValue={value(
                   "executionDescription",
-                  execution.description ?? "",
+                  seeded("executionDescription", execution.description ?? ""),
                 )}
                 disabled={pending}
               />
@@ -272,6 +329,7 @@ export function TripExecutionForm({
           بخش «برنامه‌ریزی سفر» مدیریت می‌شود.
         </p>
 
+        {!embedded && (
         <FormActions separated>
           <ActionButton type="submit" disabled={pending} pending={pending}>
             {pending
@@ -301,6 +359,7 @@ export function TripExecutionForm({
             </ActionButton>
           )}
         </FormActions>
+        )}
       </form>
 
       <ConfirmDialog

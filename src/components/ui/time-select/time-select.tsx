@@ -26,7 +26,7 @@ type TimeSelectProps = {
   id: string;
   /** Name of the hidden field carrying the `HH:mm` value. */
   name: string;
-  label: string;
+  label?: string;
   /** `HH:mm` the field starts on, if any. */
   defaultValue?: string;
   disabled?: boolean;
@@ -223,7 +223,7 @@ export function TimeSelect({
       ref={panelRef}
       role="dialog"
       aria-modal="false"
-      aria-label={`انتخاب ${label}`}
+      aria-label={label ? `انتخاب ${label}` : "انتخاب ساعت"}
       style={
         dialogAncestor
           ? panelPosition
@@ -387,7 +387,7 @@ export function TimeSelect({
 
   return (
     <div className={styles.field} ref={containerRef}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      {label ? <FieldLabel htmlFor={id}>{label}</FieldLabel> : null}
       <input ref={hiddenInputRef} type="hidden" name={name} value={value} readOnly />
       <button
         className={styles.trigger}

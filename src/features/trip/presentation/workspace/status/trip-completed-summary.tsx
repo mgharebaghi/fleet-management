@@ -5,41 +5,34 @@ import { VehiclePlate } from "@/components/ui/vehicle-plate/vehicle-plate";
 import type { TripAssignmentReference } from "../../../application/trip-records";
 import styles from "../trip-workspace.module.css";
 
-export function CompletedSummary({
+export function CompletedSummary() {
+  return (
+    <div className={styles.emptyStateBlock}>
+      <InlineNotice tone="info" role="status">
+        پروندهٔ این سفر با موفقیت تکمیل شده است.
+      </InlineNotice>
+    </div>
+  );
+}
+
+export function TripCrewSection({
   uniqueAssignments,
 }: {
   uniqueAssignments: TripAssignmentReference[];
 }) {
   return (
-    <>
-      <div className={styles.emptyStateBlock}>
-        <InlineNotice tone="info" role="status">
-          پروندهٔ این سفر با موفقیت تکمیل شده است.
-        </InlineNotice>
-      </div>
-
-      <section className={styles.workspaceSection}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <h3>مشخصات راننده و خودرو</h3>
-            <p>اطلاعات راننده و خودروی مجری سفر</p>
-          </div>
-        </div>
-        {uniqueAssignments.length === 0 ? (
-          <p className={styles.muted}>اطلاعات راننده و خودرو ثبت‌نشده است.</p>
-        ) : (
-          <div className={styles.stack}>
-            {uniqueAssignments.map((assignment) => (
-              <article
-                key={assignment.assignmentId}
-                className={styles.operationalSectionCard}
-              >
-                <div className={styles.operationalCardHeader}>
-                  <h4>راننده و خودرو</h4>
-                  <StatusBadge label="تکمیل‌شده" tone="positive" />
-                </div>
-                <div className={styles.operationalAssignmentItem}>
-                  <dl className={styles.compactFacts}>
+    <section className={styles.workspaceSection} aria-label="راننده و خودرو">
+      <h3 className={styles.sectionHeading}>راننده و خودرو</h3>
+      {uniqueAssignments.length === 0 ? (
+        <p className={styles.muted}>اطلاعات راننده و خودرو ثبت‌نشده است.</p>
+      ) : (
+        <div className={styles.executionList}>
+          {uniqueAssignments.map((assignment) => (
+            <article
+              key={assignment.assignmentId}
+              className={styles.executionRow}
+            >
+              <dl className={styles.compactFacts}>
                     <div>
                       <dt>راننده</dt>
                       <dd>
@@ -94,12 +87,10 @@ export function CompletedSummary({
                       </dd>
                     </div>
                   </dl>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-    </>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

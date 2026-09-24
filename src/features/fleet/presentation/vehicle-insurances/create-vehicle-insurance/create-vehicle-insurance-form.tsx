@@ -3,7 +3,7 @@
 import { useActionState, useMemo } from "react";
 import { ActionButton } from "../../../../../components/ui/action-button/action-button";
 import { JalaliDatePicker } from "../../../../../components/ui/date-picker/jalali-date-picker";
-import { FormField, FieldLabel, FieldErrors, FormActions, formControlClassName } from "../../../../../components/ui/form-field/form-field";
+import { FormField, FieldLabel, FieldErrors, FormActions, FormSection, formControlClassName } from "../../../../../components/ui/form-field/form-field";
 import { FormGrid } from "../../../../../components/ui/form-grid/form-grid";
 import { InlineNotice } from "../../../../../components/ui/inline-notice/inline-notice";
 import { LoadingIndicator } from "../../../../../components/ui/loading-indicator/loading-indicator";
@@ -38,6 +38,7 @@ export function CreateVehicleInsuranceForm({ vehicles }: { vehicles: InsuranceVe
       {(state.error || state.formError) && <InlineNotice tone="danger" role="alert">
         {state.formError ? "ثبت بیمه انجام نشد. اطلاعات را بررسی کنید و دوباره تلاش کنید." : "اطلاعات مشخص‌شده را اصلاح کنید."}
       </InlineNotice>}
+      <FormSection title="مشخصات بیمه" description="خودرو، نوع بیمه‌نامه و دورهٔ پوشش.">
       <FormGrid>
         <FormField>
           <SearchableSelect
@@ -69,6 +70,7 @@ export function CreateVehicleInsuranceForm({ vehicles }: { vehicles: InsuranceVe
           <FieldErrors id={`${field}-error`} messages={errors[field] ? [errors[field]] : []} />
         </FormField>)}
       </FormGrid>
+      </FormSection>
       {pending && <LoadingIndicator label="در حال ثبت بیمه…" />}
       <FormActions separated>
         <ActionButton type="submit" disabled={pending} pending={pending}>{pending ? "در حال ثبت…" : "ثبت بیمه خودرو"}</ActionButton>

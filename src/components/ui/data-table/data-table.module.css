@@ -1,7 +1,9 @@
 .frame {
   overflow-x: auto;
   border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-group);
+  border-radius: 16px;
+  background: var(--app-surface);
+  box-shadow: var(--app-card-shadow);
 }
 
 .table {
@@ -12,16 +14,17 @@
 
 .table th,
 .table td {
-  padding: 13px var(--space-4);
-  border-bottom: 1px solid var(--app-border-subtle);
+  padding: 11px 17px;
+  border-bottom: 1px solid var(--app-border);
+  font-size: 13px;
   vertical-align: middle;
 }
 
 .table th {
   background: var(--app-surface-subtle);
-  color: var(--app-label);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
+  color: var(--app-text-muted);
+  font-size: 12px;
+  font-weight: 650;
   white-space: nowrap;
 }
 
@@ -30,7 +33,7 @@
 }
 
 .table tbody tr:hover {
-  background: color-mix(in srgb, var(--app-accent) 4%, transparent);
+  background: color-mix(in srgb, var(--app-info-background) 33%, var(--app-surface));
 }
 
 .caption {

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionLink } from "../../../components/ui/action-link/action-link";
 import { PageShell } from "../../../components/ui/page-shell/page-shell";
@@ -16,6 +17,7 @@ import { VehiclePlate } from "../../fleet/presentation/vehicles/list-vehicles/ve
 import { makeReadDrivers } from "../composition/driver.factory";
 import { assignmentState, licenseEligible, localDay } from "../application/assignment-rules";
 import type { Assignment, License, VehicleReference } from "../application/driver-records";
+import { DriverRecordTabs, driverRecordTabHref, type DriverRecordTab } from "./driver-record-tabs";
 import { DriverForm } from "./driver-form";
 import { DriverFormDialog } from "./driver-form-dialog";
 import { DriverFilters } from "./driver-filters";
@@ -64,7 +66,7 @@ function LicenseBadge({ license, now }: { license: License; now: Date }) {
   const eligible = licenseEligible(license, now);
   return <StatusBadge tone={eligible ? "positive" : "negative"} label={!license.isActive ? "غیرفعال" : eligible ? "فعال و معتبر" : license.expireDate && license.expireDate.toISOString().slice(0, 10) < localDay(now) ? "منقضی" : "هنوز صادر نشده"} />;
 }
-function AssignmentContent({ assignment: a, now, state, vehicles }: { assignment: Assignment; now: Date; state: "future" | "current" | "past"; vehicles: VehicleReference[] }) {
+function AssignmentContent({ assignment: a, now, state, vehicles, currentAssignments }: { assignment: Assignment; now: Date; state: "future" | "current" | "past"; vehicles: VehicleReference[]; currentAssignments: readonly { vehicleId: number; assignmentId: number }[] }) {
   const timeStatus = getAssignmentTimeStatus(a, now);
   const progress = getAssignmentProgress(a, now);
   // Past (completed) assignments are the immutable record; current and future
@@ -83,7 +85,7 @@ function AssignmentContent({ assignment: a, now, state, vehicles }: { assignment
         </DriverFormDialog>}
         {editable && <IconActionGroup>
           <DriverFormDialog iconTrigger triggerLabel={`ویرایش تخصیص ${a.vehicle.vehicleCode}`} dialogTitle="ویرایش تخصیص خودرو" titleId={`edit-assignment-${a.assignmentId}-title`} size="list">
-            <DriverForm kind="editAssignment" driverId={a.driverId} assignmentId={a.assignmentId} vehicles={vehicles} initialValues={initialValues} />
+            <DriverForm kind="editAssignment" driverId={a.driverId} assignmentId={a.assignmentId} vehicles={vehicles} currentAssignments={currentAssignments} initialValues={initialValues} />
           </DriverFormDialog>
           <DeleteAssignmentButton driverId={a.driverId} assignmentId={a.assignmentId} vehicleLabel={`${a.vehicle.brandName} ${a.vehicle.modelName} — ${a.vehicle.vehicleCode}`} />
         </IconActionGroup>}
@@ -117,71 +119,97 @@ function primaryLicense(licenses: License[], now: Date): License | null {
   if (!eligible.length) return null;
   return eligible.slice().sort((a, b) => (b.expireDate?.getTime() ?? Infinity) - (a.expireDate?.getTime() ?? Infinity))[0];
 }
-export async function DriverDetailsPage({ driverId }: { driverId: number }) {
+function selectedDriverTab(tab: string | undefined): DriverRecordTab {
+  if (tab === "assignments" || tab === "history") return tab;
+  return "licenses";
+}
+export async function DriverDetailsPage({ driverId, tab }: { driverId: number; tab?: string }) {
   const reader = makeReadDrivers();
   const driver = await reader.details(driverId);
   if (!driver) notFound();
   const vehicles = await reader.availableVehicles();
   const now = new Date();
+  const currentAssignments = await reader.currentVehicleAssignments(now);
   const current = driver.assignments.filter(a => assignmentState(a, now) === "current");
   const future = driver.assignments.filter(a => assignmentState(a, now) === "future");
   const history = driver.assignments.filter(a => assignmentState(a, now) === "past");
   const license = primaryLicense(driver.licenses, now);
   const licenseDialogKey = driver.licenses.map(l => l.licenseId).join(",");
   const assignmentDialogKey = driver.assignments.map(a => a.assignmentId).join(",");
+  const activeTab = selectedDriverTab(tab);
+  const canAssign = driver.isActive && license !== null && vehicles.length > 0;
+  const assignBlocked = !driver.isActive
+    ? "شخص غیرفعال است. سوابق محفوظ می‌ماند و تخصیص جدید مجاز نیست."
+    : !license
+      ? driver.licenses.length
+        ? "گواهینامهٔ معتبری برای امروز وجود ندارد، بنابراین تخصیص جدید غیرفعال است."
+        : "گواهینامهٔ معتبری ثبت نشده است. تا وقتی گواهینامهٔ فعال و معتبر نباشد، تخصیص خودرو غیرفعال است."
+      : !vehicles.length
+        ? "خودروی فعالی برای تخصیص موجود نیست."
+        : null;
   return <PageShell>
-    <PageHeader eyebrow="پروندهٔ راننده" title={`${driver.firstName} ${driver.lastName}`}
-      avatar={<DriverAvatar />}
-      action={<BackLink label="بازگشت به رانندگان" href="/drivers" />}
-      compactAction
-      description={<span className={styles.identityMeta}>
-        <span className={styles.identityBadges}>
-          {personBadge(driver.isActive)}
-          <StatusBadge tone={license ? "positive" : "negative"} label={license ? "دارای گواهینامه معتبر" : "بدون گواهینامه معتبر"} />
-        </span>
-        <span className={styles.identityCodes}>
-          <span>شمارهٔ پرسنلی: <TechnicalValue>{driver.personnelNo ?? "—"}</TechnicalValue></span>
-          <span>کد ملی: <TechnicalValue>{driver.nationalCode ?? "—"}</TechnicalValue></span>
-        </span>
-      </span>} />
-    <section id="licenses-section" className={styles.section} aria-label="گواهینامه‌ها">
+    <header className={styles.pageHead}>
+      <div>
+        <p className={styles.pageKicker}>پروندهٔ راننده</p>
+        <h1>{driver.firstName} {driver.lastName}</h1>
+        <p className={styles.pageSubtitle}>شمارهٔ پرسنلی <TechnicalValue>{driver.personnelNo ?? "—"}</TechnicalValue></p>
+      </div>
+      <Link className={styles.backLink} href="/drivers">بازگشت به رانندگان</Link>
+    </header>
+    <section className={styles.identityCard}>
+      <DriverAvatar />
+      <div className={styles.identityCopy}>
+        <h2>{driver.firstName} {driver.lastName}</h2>
+        <p>شمارهٔ پرسنلی <TechnicalValue>{driver.personnelNo ?? "—"}</TechnicalValue></p>
+        <p>کد ملی <TechnicalValue>{driver.nationalCode ?? "—"}</TechnicalValue></p>
+      </div>
+      <div className={styles.identityBadges}>
+        {personBadge(driver.isActive)}
+        <StatusBadge tone={license ? "positive" : "negative"} label={license ? "دارای گواهینامه معتبر" : "بدون گواهینامه معتبر"} />
+      </div>
+    </section>
+    <div className={styles.workspaceBody}>
+    <div className={styles.recordCard}>
+    <DriverRecordTabs driverId={driverId} active={activeTab} counts={{ licenses: driver.licenses.length, assignments: current.length + future.length, history: history.length }}>
+    <div className={styles.tabPanel} role="tabpanel" id={`driver-panel-${activeTab}`} aria-labelledby={`driver-tab-${activeTab}`}>
+    {activeTab === "licenses" && <section aria-label="گواهینامه‌ها">
       <div className={styles.sectionHeader}>
         <h2>گواهینامه‌ها</h2>
         <div className={styles.sectionHeaderActions}>
-          {driver.licenses.length > 0 && <span className={styles.sectionCount}>{driver.licenses.length} مورد</span>}
           <DriverFormDialog key={licenseDialogKey} triggerLabel="افزودن گواهینامه" dialogTitle="ثبت گواهینامه" titleId="license-dialog-title">
             <DriverForm kind="license" driverId={driverId} />
           </DriverFormDialog>
         </div>
       </div>
-      {!driver.licenses.length ? <ResultState title="گواهینامه‌ای ثبت نشده" description="پیش از تخصیص خودرو، گواهینامهٔ معتبر ثبت کنید." /> : <>
+      {!driver.licenses.length ? <p className={styles.emptyLine}>گواهینامه‌ای ثبت نشده. پیش از تخصیص خودرو، گواهینامهٔ معتبر اضافه کنید.</p> : <>
         <DataTable caption="گواهینامه‌ها"><thead><tr><th>نوع</th><th>شماره</th><th>دوره اعتبار</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody>{driver.licenses.map(l => { const expiry = getLicenseExpiryStatus(l, now); return <tr key={l.licenseId}><td>{l.licenseType}</td><td><TechnicalValue>{l.licenseNo}</TechnicalValue></td><td><StatusTimeline tone={expiry.tone} statusLabel={expiry.label} startLabel={`صدور ${day(l.issueDate)}`} endLabel={`انقضا ${day(l.expireDate)}`} progress={expiry.progress} /></td><td><LicenseBadge license={l} now={now} /></td><td><IconActionGroup><DriverFormDialog iconTrigger triggerLabel={`ویرایش گواهینامه ${l.licenseType}`} dialogTitle="ویرایش گواهینامه" titleId={`edit-license-${l.licenseId}-title`}><DriverForm kind="editLicense" driverId={driverId} licenseId={l.licenseId} initialValues={{ licenseType: l.licenseType, licenseNo: l.licenseNo, issueDate: inputDay(l.issueDate), expireDate: inputDay(l.expireDate), isActive: String(l.isActive) }} /></DriverFormDialog><DeleteLicenseButton driverId={driverId} licenseId={l.licenseId} licenseType={l.licenseType} licenseNo={l.licenseNo} /></IconActionGroup></td></tr>; })}</tbody></DataTable>
         <RecordCardList>{driver.licenses.map(l => { const expiry = getLicenseExpiryStatus(l, now); return <RecordCard key={l.licenseId}><RecordCardHeader title={l.licenseType} badge={<LicenseBadge license={l} now={now} />} /><RecordCardDetails><RecordCardDetail label="شماره"><TechnicalValue>{l.licenseNo}</TechnicalValue></RecordCardDetail><RecordCardDetail label="دوره اعتبار"><StatusTimeline tone={expiry.tone} statusLabel={expiry.label} startLabel={`صدور ${day(l.issueDate)}`} endLabel={`انقضا ${day(l.expireDate)}`} progress={expiry.progress} /></RecordCardDetail></RecordCardDetails><IconActionGroup><DriverFormDialog iconTrigger triggerLabel={`ویرایش گواهینامه ${l.licenseType}`} dialogTitle="ویرایش گواهینامه" titleId={`edit-license-card-${l.licenseId}-title`}><DriverForm kind="editLicense" driverId={driverId} licenseId={l.licenseId} initialValues={{ licenseType: l.licenseType, licenseNo: l.licenseNo, issueDate: inputDay(l.issueDate), expireDate: inputDay(l.expireDate), isActive: String(l.isActive) }} /></DriverFormDialog><DeleteLicenseButton driverId={driverId} licenseId={l.licenseId} licenseType={l.licenseType} licenseNo={l.licenseNo} /></IconActionGroup></RecordCard>; })}</RecordCardList>
       </>}
-    </section>
-    <section id="assignment-section" className={styles.section} aria-label="تخصیص خودرو">
-      <section className={styles.subsection} aria-label="تخصیص جاری">
-        <div className={styles.sectionHeader}>
-          <h2>تخصیص جاری</h2>
-          <DriverFormDialog key={assignmentDialogKey} triggerLabel="تخصیص جدید" dialogTitle="ثبت تخصیص" titleId="assignment-dialog-title" size="list" disabled={!driver.licenses.length}>
-            {!driver.isActive ? <ResultState title="شخص غیرفعال است" description="سوابق محفوظ است؛ تخصیص جدید برای شخص غیرفعال مجاز نیست." /> : !vehicles.length ? <ResultState title="خودروی فعالی موجود نیست" description="برای تخصیص، خودروی فعال لازم است." /> : <DriverForm kind="assignment" driverId={driverId} vehicles={vehicles} />}
-          </DriverFormDialog>
-        </div>
-        {!driver.licenses.length && <p className={styles.sectionHint}>برای ثبت تخصیص، ابتدا باید یک گواهینامه برای راننده ثبت شود.</p>}
-        {current.length ? current.map(a => <AssignmentContent key={a.assignmentId} assignment={a} now={now} state="current" vehicles={vehicles} />) : <ResultState title="تخصیص جاری ندارد" description="تخصیص‌های پایان‌یافته یا آینده در سوابق نمایش داده می‌شوند." />}
+    </section>}
+    {activeTab === "assignments" && <section aria-label="تخصیص خودرو">
+      {current.length > 0 && <div className={styles.recordGroup}><h3>تخصیص جاری</h3>{current.map(a => <AssignmentContent key={a.assignmentId} assignment={a} now={now} state="current" vehicles={vehicles} currentAssignments={currentAssignments} />)}</div>}
+      {future.length > 0 && <div className={styles.recordGroup}><h3>تخصیص‌های آینده</h3>{future.map(a => <AssignmentContent key={a.assignmentId} assignment={a} now={now} state="future" vehicles={vehicles} currentAssignments={currentAssignments} />)}</div>}
+      {current.length === 0 && future.length === 0 && <p className={styles.emptyLine}>تخصیص جاری یا آینده‌ای ثبت نشده است.</p>}
+    </section>}
+    {activeTab === "history" && <section aria-label="سوابق تخصیص">
+      {history.length ? history.map(a => <AssignmentContent key={a.assignmentId} assignment={a} now={now} state="past" vehicles={vehicles} currentAssignments={currentAssignments} />) : <p className={styles.emptyLine}>تخصیص پایان‌یافته‌ای ثبت نشده است.</p>}
+    </section>}
+    </div>
+    </DriverRecordTabs>
+    </div>
+    <aside className={styles.sideColumn} aria-label="اقدام بعدی">
+      <section className={styles.nextPanel}>
+        <h2>اقدام بعدی</h2>
+        <p className={assignBlocked ? styles.warningNote : styles.infoNote}>
+          {current.length ? "این راننده همین الان خودرو دارد." : "تخصیص جاری ثبت نشده است."}
+          {assignBlocked ? ` ${assignBlocked}` : " می‌توانید خودرو را به این راننده تخصیص دهید."}
+        </p>
+        {!license && activeTab !== "licenses" && <Link className={styles.backLink} href={driverRecordTabHref(driverId, "licenses")}>گواهینامه‌ها</Link>}
+        {canAssign && <DriverFormDialog key={assignmentDialogKey} triggerLabel="تخصیص خودرو به راننده" dialogTitle="تخصیص خودرو به راننده" titleId="assignment-dialog-title" size="list">
+          <DriverForm kind="assignment" driverId={driverId} vehicles={vehicles} currentAssignments={currentAssignments} />
+        </DriverFormDialog>}
       </section>
-      {future.length > 0 && <section className={styles.subsection} aria-label="تخصیص‌های آینده">
-        <div className={styles.sectionHeader}>
-          <h2>تخصیص‌های آینده</h2>
-        </div>
-        {future.map(a => <AssignmentContent key={a.assignmentId} assignment={a} now={now} state="future" vehicles={vehicles} />)}
-      </section>}
-      <section className={styles.subsection} aria-label="تاریخچه">
-        <div className={styles.sectionHeader}>
-          <h2>تاریخچه</h2>
-        </div>
-        {history.length ? history.map(a => <AssignmentContent key={a.assignmentId} assignment={a} now={now} state="past" vehicles={vehicles} />) : <ResultState title="سابقه‌ای موجود نیست" description="تخصیص‌های پایان‌یافته اینجا باقی می‌مانند." />}
-      </section>
-    </section>
+    </aside>
+    </div>
   </PageShell>;
 }
