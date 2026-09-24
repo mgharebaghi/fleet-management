@@ -2,9 +2,10 @@
   display: inline-flex;
   align-items: stretch;
   overflow: hidden;
-  border: 1px solid var(--app-control-border);
-  border-radius: var(--radius-sm);
-  background: var(--app-surface);
+  border: 1px solid #aab7c7;
+  border-radius: 5px;
+  background: #fff;
+  color: #1b2b3d;
   font-size: var(--font-size-xs);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
@@ -22,8 +23,8 @@
   align-items: center;
   gap: var(--space-1);
   padding: 3px 8px;
-  background: var(--app-info-background);
-  color: var(--app-info-text);
+  background: #2f74b9;
+  color: #fff;
 }
 
 .plateIranLabel {

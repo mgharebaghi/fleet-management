@@ -32,6 +32,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <PendingTripRequestsBadge />
         </Suspense>
       }
+      tripQueueBadge={
+        <Suspense fallback={null}>
+          <PendingTripRequestsBadge />
+        </Suspense>
+      }
     >
       {children}
     </AdminShell>

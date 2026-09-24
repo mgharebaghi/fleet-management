@@ -102,12 +102,13 @@ describe.sequential("Drivers SQL Server integration", () => {
   });
   it("deletes both a current and a future assignment", async () => {
     const f = await fixture();
-    // A future assignment can only coexist with a current one if the current
-    // one has a defined end at or before the future one's start (two open-ended
-    // rows for the same driver would overlap forever and rightly conflict).
+    const freeVehicle = await fixture();
+    // The future row uses a vehicle that is free right now. A vehicle with a
+    // current assignment cannot take another row, even one that would start
+    // at the current row's end.
     const currentEnd = new Date(Date.now() + 60 * 60 * 1000);
     const currentId = id(await useCase.assignVehicle({ ...f.input, toDateTime: currentEnd }));
-    const futureId = id(await useCase.assignVehicle({ ...f.input, fromDateTime: currentEnd, toDateTime: null }));
+    const futureId = id(await useCase.assignVehicle({ ...f.input, vehicleId: freeVehicle.vehicleId, fromDateTime: new Date(Date.now() + 2 * 60 * 60 * 1000), toDateTime: null }));
     expect(await useCase.deleteAssignment(f.driverId, futureId)).toEqual({ success: true, id: futureId });
     expect(await useCase.deleteAssignment(f.driverId, currentId)).toEqual({ success: true, id: currentId });
     expect((await repository.details(f.driverId))!.assignments).toHaveLength(0);
@@ -115,7 +116,7 @@ describe.sequential("Drivers SQL Server integration", () => {
   it("closes an assignment then allows a new one starting at or after its end, and rejects one starting before", async () => {
     const f = await fixture();
     const assignmentId = id(await useCase.assignVehicle(f.input));
-    const end = new Date(Date.now() + 60 * 60 * 1000);
+    const end = new Date("2026-01-02T08:00:00Z");
     id(await useCase.closeAssignment(assignmentId, end, null));
 
     // Previous assignment still active at the new start (1ms before it ends) -> reject.
@@ -144,11 +145,12 @@ describe.sequential("Drivers SQL Server integration", () => {
     // Both windows sit in the future relative to real time, so the edited row
     // stays current (not yet completed/immutable) for the whole test.
     const a = await fixture(), b = await fixture();
+    const firstStart = new Date(Date.now() + 30 * 60 * 1000);
     const soon = new Date(Date.now() + 60 * 60 * 1000);
     const extendedEnd = new Date(Date.now() + 2 * 60 * 60 * 1000);
     const secondStart = new Date(Date.now() + 5 * 60 * 60 * 1000);
     const secondEnd = new Date(Date.now() + 6 * 60 * 60 * 1000);
-    const firstId = id(await useCase.assignVehicle({ ...a.input, toDateTime: soon }));
+    const firstId = id(await useCase.assignVehicle({ ...a.input, fromDateTime: firstStart, toDateTime: soon }));
     id(await useCase.assignVehicle({ ...a.input, fromDateTime: secondStart, toDateTime: secondEnd }));
     const updated = { ...a.input, assignmentId: firstId, vehicleId: b.vehicleId, toDateTime: extendedEnd, startOdometer: "10.10", endOdometer: "20.20", description: "corrected" };
     expect(await useCase.updateAssignment(updated)).toEqual({ success: true, id: firstId });
@@ -157,6 +159,18 @@ describe.sequential("Drivers SQL Server integration", () => {
     const overlappingStart = new Date(secondStart.getTime() + 30 * 60 * 1000);
     const overlappingEnd = new Date(secondEnd.getTime() + 60 * 60 * 1000);
     expect(await useCase.updateAssignment({ ...updated, fromDateTime: overlappingStart, toDateTime: overlappingEnd })).toEqual({ success: false, error: "DRIVER_OVERLAP" });
+  });
+  it("rejects a vehicle with a current assignment and still accepts one whose history has ended", async () => {
+    const holder = await fixture(), other = await fixture(), ended = await fixture();
+    const now = new Date();
+    const currentId = id(await useCase.assignVehicle({ ...holder.input, fromDateTime: new Date(now.getTime() - 60 * 60 * 1000) }));
+    const pastId = id(await useCase.assignVehicle({ ...ended.input, fromDateTime: new Date("2020-01-01T08:00:00Z"), toDateTime: new Date("2020-01-02T08:00:00Z") }));
+    const busy = await repository.currentVehicleAssignments(now);
+    expect(busy.some(row => row.vehicleId === holder.vehicleId && row.assignmentId === currentId)).toBe(true);
+    expect(busy.some(row => row.assignmentId === pastId)).toBe(false);
+    const later = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    expect(await useCase.assignVehicle({ ...other.input, vehicleId: holder.vehicleId, fromDateTime: later })).toEqual({ success: false, error: "VEHICLE_CURRENTLY_ASSIGNED" });
+    expect((await useCase.assignVehicle({ ...other.input, vehicleId: ended.vehicleId, fromDateTime: later })).success).toBe(true);
   });
   it("detects driver and vehicle overlap including future open periods and allows adjacent boundaries", async () => {
     const a = await fixture(), b = await fixture();

@@ -436,10 +436,10 @@ describe("Trip workspace presentation", () => {
     }));
     const markup = await renderWorkspace("completion");
     expect(markup).toContain("توضیح اجرای اول");
-    expect(markup).not.toContain("Brand");
-    expect(markup).not.toContain("Model");
+    expect(markup).toContain("رضا راننده");
+    expect(markup).toContain("۲ مسافر · ۰ تکمیل‌شده · ۲ باقی‌مانده");
     expect(markup).toContain("توضیح اجرای دوم");
-    expect(markup).toContain("تکمیل اجرا");
+    expect(markup).toContain("ثبت پیاده‌شدن");
     expect(markup).not.toContain("(اختیاری)");
   });
 
@@ -465,7 +465,9 @@ describe("Trip workspace presentation", () => {
         }),
       );
       const markup = await renderWorkspace("completion");
-      expect(markup).toContain("سابقه اجرای سفر");
+      expect(markup).toContain("مسافران و نظرسنجی");
+      expect(markup).toContain("راننده و خودرو");
+      expect(markup).not.toContain("مشخصات راننده و خودرو");
       expect(markup).not.toContain("این سفر به پایان رسیده");
       expect(markup).toContain("سابقهٔ اجرا");
       expect(markup).not.toContain("تکمیل اجرا");
@@ -515,7 +517,7 @@ describe("Trip workspace presentation", () => {
     const markup = await renderWorkspace("completion");
     expect(markup).toContain("ثبت درخواست");
     expect(markup).not.toContain("ثبت تخصیص‌یافته");
-    expect(markup).toContain("اقدام درخواست");
+    expect(markup).toContain("اقدام بعدی");
     expect(markup).not.toContain("اقدامات سفر");
   });
 
@@ -574,18 +576,24 @@ describe("Trip workspace presentation", () => {
       passengers: [passenger({ executions: [execution({ status: "InProgress" })] })],
     }));
     const markup = await renderWorkspace("completion");
-    expect(markup).toContain("ثبت / ویرایش اطلاعات اجرای مسافران");
-    expect(markup).toContain("اطلاعات اجرای مسافران");
+    expect(markup).not.toContain("ثبت / ویرایش اطلاعات اجرای مسافران");
+    expect(markup).toContain("مسافران و نظرسنجی");
+    expect(markup).toContain("راننده و خودرو");
     expect(markup).toContain("حرکت واقعی");
-    expect(markup).toContain("بازگشت واقعی");
+    expect(markup).toContain("پیاده‌شدن واقعی");
+    expect(markup).toContain(">ثبت پیاده‌شدن<");
+    expect(markup).toContain("ثبت پیاده‌شدن مسافران");
+    expect(markup).not.toContain("#passenger-dropoff");
+    expect(markup).not.toContain(">تکمیل سفر<");
   });
 
   it("offers request cancellation in the lifecycle action area only while eligible", async () => {
     const detailsTab = await renderWorkspace("details");
-    expect(detailsTab).not.toContain(">لغو درخواست<");
+    expect(detailsTab).toContain("اقدام بعدی");
+    expect(detailsTab).toContain(">لغو درخواست<");
     const cancellable = await renderWorkspace("completion");
     const cancelAt = cancellable.indexOf(">لغو درخواست<");
-    const lifecycleAt = cancellable.indexOf("اقدام درخواست");
+    const lifecycleAt = cancellable.indexOf("اقدام بعدی");
     expect(cancelAt).toBeGreaterThan(lifecycleAt);
     expect(cancellable).not.toContain("requestCancelRow");
     expect(cancellable).not.toContain("اگر این سفر انجام نمی‌شود");
@@ -611,6 +619,8 @@ describe("Trip workspace presentation", () => {
     const markup = await renderWorkspace("completion");
     expect(markup).toContain("شروع سفر");
     expect(markup.indexOf(">لغو درخواست<")).toBeGreaterThan(markup.indexOf(">شروع سفر<"));
+    expect(markup).toContain("زمان واقعی حرکت");
+    expect(markup).toContain("اگر خالی بماند، زمان برنامه‌ریزی‌شدهٔ حرکت ثبت می‌شود.");
     expect(markup).toContain("خلاصهٔ عملیاتی سفر آمادهٔ شروع");
     expect(markup).toContain("آمادهٔ شروع");
     expect(markup).toContain("رضا راننده");
@@ -623,7 +633,10 @@ describe("Trip workspace presentation", () => {
     }));
     const completedMarkup = await renderWorkspace("completion");
     expect(completedMarkup).toContain("پروندهٔ این سفر با موفقیت تکمیل شده است");
-    expect(completedMarkup).toContain("مشخصات راننده و خودرو");
+    expect(completedMarkup).toContain("راننده و خودرو");
+    expect(completedMarkup).toContain("شماره پرسنلی راننده");
+    expect(completedMarkup).toContain("وضعیت گواهینامه");
+    expect(completedMarkup).not.toContain("مشخصات راننده و خودرو");
     expect(completedMarkup).toContain("رضا راننده");
     expect(completedMarkup).toContain("Brand");
     expect(completedMarkup).toContain("Model");

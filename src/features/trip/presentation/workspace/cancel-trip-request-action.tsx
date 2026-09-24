@@ -32,7 +32,7 @@ export function CancelTripRequestAction({
     <>
       <ActionButton
         type="button"
-        variant="danger"
+        variant="secondary"
         size="sm"
         disabled={pending}
         onClick={() => setOpen(true)}

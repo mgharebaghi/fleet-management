@@ -1,15 +1,27 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useEffect, useId, useRef } from "react";
+import { useRouter } from "next/navigation";
 
-import { ActionButton } from "@/components/ui/action-button/action-button";
+import { JalaliDatePicker } from "@/components/ui/date-picker/jalali-date-picker";
+import { FieldLabel } from "@/components/ui/form-field/form-field";
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
+import { TimeSelect } from "@/components/ui/time-select/time-select";
 import type { TripRequestDetails } from "../../application/trip-records";
 import { changeTripRequestStatusAction } from "../trip.actions";
 import { tripMessages } from "../trip-form-data";
 import { CancelTripRequestAction } from "./cancel-trip-request-action";
+import { PhaseSubmitButton } from "./phase-submit-button";
 import styles from "./trip-workspace.module.css";
 import type { TripWorkspaceView } from "./trip-workspace-view";
+
+function useSafeRouter() {
+  try {
+    return useRouter();
+  } catch {
+    return null;
+  }
+}
 
 export function TripRequestStatusControl({
   details,
@@ -20,10 +32,17 @@ export function TripRequestStatusControl({
   view: TripWorkspaceView;
   compact?: boolean;
 }) {
+  const router = useSafeRouter();
   const [state, formAction, pending] = useActionState(
     changeTripRequestStatusAction.bind(null, details.tripRequestId),
     {},
   );
+  const refreshed = useRef(false);
+  useEffect(() => {
+    if (!state.success || refreshed.current) return;
+    refreshed.current = true;
+    router?.refresh();
+  }, [router, state.success]);
   const prefix = useId();
   const action = view.nextAction;
   const statusValue =
@@ -62,15 +81,33 @@ export function TripRequestStatusControl({
       )}
       <div className={styles.statusActions}>
         {statusValue ? (
-          <form action={formAction}>
+          <form action={formAction} className={styles.phaseForm}>
             <input type="hidden" name="requestStatus" value={statusValue} />
-            <ActionButton
-              type="submit"
-              disabled={pending || !action.enabled}
+            {statusValue === "InProgress" && (
+              <div className={styles.phaseDeparture}>
+                <FieldLabel htmlFor={`${prefix}-departure-time`}>
+                  زمان واقعی حرکت
+                </FieldLabel>
+                <div className={styles.phaseDepartureFields}>
+                  <JalaliDatePicker
+                    name="actualDepartureDay"
+                    invalid={state.field === "actualDepartureDay"}
+                  />
+                  <TimeSelect
+                    id={`${prefix}-departure-time`}
+                    name="actualDepartureTime"
+                  />
+                </div>
+                <p className={styles.muted}>
+                  اگر خالی بماند، زمان برنامه‌ریزی‌شدهٔ حرکت ثبت می‌شود.
+                </p>
+              </div>
+            )}
+            <PhaseSubmitButton
               pending={pending}
-            >
-              {pending ? "در حال ثبت…" : action.label}
-            </ActionButton>
+              enabled={action.enabled}
+              label={action.label}
+            />
           </form>
         ) : (
           action.id !== "plan-assignment" &&

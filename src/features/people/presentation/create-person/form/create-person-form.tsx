@@ -10,6 +10,7 @@ import {
   FieldLabel,
   FormActions,
   FormField,
+  FormSection,
   formControlClassName,
 } from "../../../../../components/ui/form-field/form-field";
 import { FormGrid } from "../../../../../components/ui/form-grid/form-grid";
@@ -81,15 +82,16 @@ export function CreatePersonForm() {
         aria-labelledby="person-details-title"
         noValidate
       >
-        <div className={styles.formHeader}>
-          <div>
-            <h2 id="person-details-title">اطلاعات شخص</h2>
-            <p>اطلاعات هویتی، سازمانی و تاریخ استخدام را وارد کنید.</p>
-          </div>
-          <p className={styles.requiredHint}>
-            <span aria-hidden="true">*</span> فیلد الزامی
-          </p>
-        </div>
+        <FormSection
+          title="اطلاعات شخص"
+          titleId="person-details-title"
+          description="اطلاعات هویتی، سازمانی و تاریخ استخدام را وارد کنید."
+          aside={
+            <p className={styles.requiredHint}>
+              <span aria-hidden="true">*</span> فیلد الزامی
+            </p>
+          }
+        >
 
         <FormGrid>
           <FormField>
@@ -227,6 +229,7 @@ export function CreatePersonForm() {
             />
           </FormField>
         </FormGrid>
+        </FormSection>
 
         {isPending && <LoadingIndicator label="در حال ثبت اطلاعات…" />}
 

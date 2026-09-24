@@ -1,24 +1,15 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import Script from "next/script";
 import type { ReactNode } from "react";
 import "./globals.css";
 
-const iranSansXFaNum = localFont({
-  variable: "--font-iran-sans-x",
+const mikhak = localFont({
+  variable: "--font-mikhak",
   display: "swap",
   fallback: ["Tahoma", "Arial", "sans-serif"],
-  src: [
-    {
-      path: "./fonts/IRANSansXFaNum-Regular.woff2",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "./fonts/IRANSansXFaNum-Bold.woff2",
-      weight: "700",
-      style: "normal",
-    },
-  ],
+  src: "./fonts/Mikhak-FD.woff2",
+  weight: "100 900",
 });
 
 export const metadata: Metadata = {
@@ -33,8 +24,13 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="fa" dir="rtl" className={iranSansXFaNum.variable}>
-      <body>{children}</body>
+    <html lang="fa" dir="rtl" className={mikhak.variable} suppressHydrationWarning>
+      <body>
+        <Script id="fleet-theme" strategy="beforeInteractive">
+          {`(function(){try{var t=localStorage.getItem('fleet-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`}
+        </Script>
+        {children}
+      </body>
     </html>
   );
 }

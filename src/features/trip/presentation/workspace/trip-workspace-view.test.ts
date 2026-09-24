@@ -217,6 +217,29 @@ describe("Trip workspace view model", () => {
     expect(view.canCancel).toBe(false);
   });
 
+  it("maps InProgress with no completed passengers to passenger dropoff", () => {
+    const view = projectTripWorkspace(
+      details({
+        status: "InProgress",
+        passengers: [
+          passenger({
+            executions: [execution({ status: "InProgress" })],
+          }),
+          passenger({
+            tripId: 12,
+            passenger: { ...person, personId: 2, firstName: "مریم" },
+            executions: [
+              execution({ tripExecutionId: 21, tripId: 12, status: "InProgress" }),
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(view.nextAction.id).toBe("record-return");
+    expect(view.nextAction.label).toBe("ثبت پیاده‌شدن مسافران");
+    expect(view.nextAction.hint).toBeNull();
+  });
+
   it("maps InProgress mixed passengers to complete request disabled until all complete", () => {
     const view = projectTripWorkspace(
       details({
@@ -249,12 +272,36 @@ describe("Trip workspace view model", () => {
     expect(view.passengerCount).toBe(2);
     expect(view.originSummary).toBe("تهران");
     expect(view.destinationSummary).toBe("قم");
-    expect(view.nextAction.id).toBe("complete-request");
-    expect(view.nextAction.label).toBe("تکمیل سفر");
-    expect(view.nextAction.enabled).toBe(false);
+    expect(view.nextAction.id).toBe("record-return");
+    expect(view.nextAction.label).toBe("ثبت پیاده‌شدن مسافران");
+    expect(view.nextAction.enabled).toBe(true);
+    expect(view.nextAction.hint).toBe("۱ مسافر هنوز پیاده‌شدن ثبت‌نشده دارد.");
+    expect(view.nextAction.sectionId).toBe("completion");
     expect(view.passengers[0]?.canRecordIncident).toBe(true);
     expect(view.passengers[0]?.canSurvey).toBe(true);
     expect(view.passengers[1]?.canRecordIncident).toBe(false);
+  });
+
+  it("maps InProgress with every passenger completed to completing the trip", () => {
+    const view = projectTripWorkspace(
+      details({
+        status: "InProgress",
+        passengers: [
+          passenger({
+            executions: [
+              execution({
+                status: "Completed",
+                actualDropoffDateTime: new Date("2026-03-22T08:30:00Z"),
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(view.nextAction.id).toBe("complete-request");
+    expect(view.nextAction.label).toBe("تکمیل سفر");
+    expect(view.nextAction.enabled).toBe(true);
+    expect(view.nextAction.hint).toBeNull();
   });
 
   it("maps Completed and Cancelled without inventing transitions", () => {

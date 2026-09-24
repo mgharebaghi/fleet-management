@@ -22,7 +22,10 @@ export function BrandMark() {
           priority
         />
       </div>
-      <strong className={styles.name}>{PRODUCT_NAME}</strong>
+      <div className={styles.copy}>
+        <strong className={styles.name}>FleetManagement</strong>
+        <small className={styles.tagline}>مدیریت یکپارچه ناوگان</small>
+      </div>
     </div>
   );
 }

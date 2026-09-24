@@ -216,8 +216,10 @@
 .wizardFooter {
   display: flex;
   justify-content: flex-end;
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--app-border);
+  padding: 12px 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 15px;
+  background: var(--app-surface);
 }
 
 .wizardNav {

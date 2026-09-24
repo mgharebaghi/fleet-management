@@ -4,6 +4,10 @@ import { assignmentError, assignmentState, licenseEligible, localDay, odometerEr
 
 const failure = (error: DriverFailure): DriverResult => ({ success: false, error });
 
+async function currentHolder(session: { currentAssignmentHolder(vehicleId: number, now: Date, excludingAssignmentId?: number): Promise<number | null> }, vehicleId: number, now: Date, excludingAssignmentId?: number) {
+  return session.currentAssignmentHolder(vehicleId, now, excludingAssignmentId);
+}
+
 function normalizedLicense(input: NewLicense): NewLicense {
   return { ...input, licenseType: input.licenseType.trim(), licenseNo: input.licenseNo.trim() };
 }
@@ -83,8 +87,11 @@ export class ManageDrivers {
       if (!vehicle) return failure("VEHICLE_NOT_FOUND");
       if (!vehicle.isActive) return failure("VEHICLE_INACTIVE");
       if (!(await session.licenses(value.driverId)).some(license => licenseEligible(license, value.fromDateTime))) return failure("NO_ELIGIBLE_LICENSE");
+      const holder = await currentHolder(session, value.vehicleId, this.now());
+      if (holder !== null && holder !== value.driverId) return failure("VEHICLE_CURRENTLY_ASSIGNED");
       if (await session.overlap(value, "driver")) return failure("DRIVER_OVERLAP");
       if (await session.overlap(value, "vehicle")) return failure("VEHICLE_OVERLAP");
+      if (holder === value.driverId) return failure("VEHICLE_CURRENTLY_ASSIGNED");
       return { success: true, id: await session.createAssignment(value) };
     });
   }
@@ -120,8 +127,11 @@ export class ManageDrivers {
       if (!vehicle) return failure("VEHICLE_NOT_FOUND");
       if (!vehicle.isActive) return failure("VEHICLE_INACTIVE");
       if (!(await session.licenses(value.driverId)).some(license => licenseEligible(license, value.fromDateTime))) return failure("NO_ELIGIBLE_LICENSE");
+      const holder = await currentHolder(session, value.vehicleId, this.now(), value.assignmentId);
+      if (holder !== null && holder !== value.driverId) return failure("VEHICLE_CURRENTLY_ASSIGNED");
       if (await session.overlap(value, "driver", value.assignmentId)) return failure("DRIVER_OVERLAP");
       if (await session.overlap(value, "vehicle", value.assignmentId)) return failure("VEHICLE_OVERLAP");
+      if (holder === value.driverId) return failure("VEHICLE_CURRENTLY_ASSIGNED");
       await session.updateAssignment(value);
       return { success: true, id: value.assignmentId };
     });

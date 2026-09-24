@@ -34,13 +34,27 @@
 /* A full-height panel against the page's start edge, for navigation that
    would be a sidebar if the screen were wide enough. */
 .dialog.drawer {
-  width: min(86vw, 320px);
-  max-width: 320px;
+  width: min(86vw, 300px);
+  max-width: 300px;
   max-height: none;
   height: 100dvh;
   margin: 0 0 0 auto;
   border: none;
   border-radius: 0;
+  background: var(--app-sidebar);
+  color: #fff;
+}
+
+.dialog.drawer .panel,
+.dialog.drawer .header {
+  background: var(--app-sidebar);
+  color: #fff;
+  border-color: rgb(255 255 255 / 10%);
+}
+
+.dialog.drawer .header h2,
+.dialog.drawer .closeButton {
+  color: #fff;
 }
 
 .dialog.drawer .panel {

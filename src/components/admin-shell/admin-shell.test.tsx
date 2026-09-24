@@ -26,7 +26,7 @@ describe("AdminShell", () => {
     expect(renderShell()).toContain("محتوای صفحه");
   });
 
-  it("carries the product brand in the top bar", () => {
+  it("carries the product brand in the sidebar", () => {
     expect(renderShell()).toContain("نشان سامانه مدیریت ناوگان");
   });
 

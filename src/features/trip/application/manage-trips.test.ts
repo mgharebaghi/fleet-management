@@ -612,7 +612,7 @@ describe("Trip request status", () => {
       success: true,
       id: 1,
     });
-    expect(session.startTripExecutions).toHaveBeenCalledWith(1);
+    expect(session.startTripExecutions).toHaveBeenCalledWith(1, null);
     expect(session.updateRequestStatus).toHaveBeenCalledWith(1, "InProgress");
 
     session.requestLifecycle.mockResolvedValue({
@@ -647,6 +647,92 @@ describe("Trip request status", () => {
       success: false,
       error: "INVALID_REQUEST_TRANSITION",
     });
+  });
+
+  it("stores the planned departure when start omits an actual time", async () => {
+    const planned = new Date("2026-02-01T08:00:00Z");
+    const createdAt = new Date("2026-01-15T08:00:00Z");
+    session.requestLifecycle.mockResolvedValue({
+      status: "Assigned",
+      requestedTravelDateTime: planned,
+      requestDateTime: createdAt,
+      passengers: [
+        {
+          tripId: 1,
+          executions: [
+            {
+              tripExecutionId: 2,
+              status: "Planned",
+              actualPickupDateTime: null,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(await manage.changeRequestStatus(1, "InProgress", null)).toEqual({
+      success: true,
+      id: 1,
+    });
+    expect(session.startTripExecutions).toHaveBeenCalledWith(1, planned);
+    expect(session.startTripExecutions).not.toHaveBeenCalledWith(1, createdAt);
+  });
+
+  it("prefers an entered departure and rejects an invalid one", async () => {
+    const planned = new Date("2026-02-01T08:00:00Z");
+    const entered = new Date("2026-02-01T09:30:00Z");
+    session.requestLifecycle.mockResolvedValue({
+      status: "Assigned",
+      requestedTravelDateTime: planned,
+      passengers: [
+        {
+          tripId: 1,
+          executions: [
+            {
+              tripExecutionId: 2,
+              status: "Planned",
+              actualPickupDateTime: null,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(await manage.changeRequestStatus(1, "InProgress", entered)).toEqual({
+      success: true,
+      id: 1,
+    });
+    expect(session.startTripExecutions).toHaveBeenCalledWith(1, entered);
+
+    expect(
+      await manage.changeRequestStatus(1, "InProgress", new Date("invalid")),
+    ).toEqual({ success: false, error: "INVALID_DATE" });
+  });
+
+  it("does not send a departure when a later status change runs", async () => {
+    session.requestLifecycle.mockResolvedValue({
+      status: "InProgress",
+      requestedTravelDateTime: new Date("2026-02-01T08:00:00Z"),
+      passengers: [
+        {
+          tripId: 1,
+          executions: [
+            {
+              tripExecutionId: 2,
+              status: "Completed",
+              actualPickupDateTime: new Date("2026-02-01T08:15:00Z"),
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(await manage.changeRequestStatus(1, "Completed", null)).toEqual({
+      success: true,
+      id: 1,
+    });
+    expect(session.startTripExecutions).not.toHaveBeenCalled();
+    expect(session.updateExecution).not.toHaveBeenCalled();
   });
 });
 
@@ -1074,6 +1160,22 @@ describe("Trip execution and survey", () => {
       {
         ...startedExecutionInput,
         actualDropoffDateTime: new Date("2026-02-01T07:59:00Z"),
+      },
+      "INVALID_EXECUTION_PERIOD",
+    ],
+    [
+      {
+        ...startedExecutionInput,
+        status: "Completed",
+        actualDropoffDateTime: new Date("2026-02-01T05:00:00Z"),
+      },
+      "INVALID_EXECUTION_PERIOD",
+    ],
+    [
+      {
+        ...startedExecutionInput,
+        status: "Completed",
+        actualDropoffDateTime: new Date("2026-01-31T08:00:00Z"),
       },
       "INVALID_EXECUTION_PERIOD",
     ],

@@ -10,6 +10,7 @@ import {
   FieldLabel,
   FormActions,
   FormField,
+  FormSection,
   formControlClassName,
 } from "../../../../../components/ui/form-field/form-field";
 import { FormGrid } from "../../../../../components/ui/form-grid/form-grid";
@@ -102,15 +103,16 @@ export function UpdatePersonForm({ person }: { person: Person }) {
       >
         <input type="hidden" name="personId" value={person.personId} />
 
-        <div className={styles.formHeader}>
-          <div>
-            <h2 id="person-details-title">اطلاعات شخص</h2>
-            <p>اطلاعات هویتی، سازمانی و تاریخ استخدام را ویرایش کنید.</p>
-          </div>
-          <p className={styles.requiredHint}>
-            <span aria-hidden="true">*</span> فیلد الزامی
-          </p>
-        </div>
+        <FormSection
+          title="اطلاعات شخص"
+          titleId="person-details-title"
+          description="اطلاعات هویتی، سازمانی و تاریخ استخدام را ویرایش کنید."
+          aside={
+            <p className={styles.requiredHint}>
+              <span aria-hidden="true">*</span> فیلد الزامی
+            </p>
+          }
+        >
 
         <FormGrid>
           <FormField>
@@ -268,6 +270,7 @@ export function UpdatePersonForm({ person }: { person: Person }) {
             </label>
           </FormField>
         </FormGrid>
+        </FormSection>
 
         {isPending && <LoadingIndicator label="در حال ذخیره اطلاعات…" />}
 

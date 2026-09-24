@@ -5,18 +5,7 @@
   flex: 1;
   place-items: center;
   padding: var(--space-6);
-  background:
-    radial-gradient(
-      circle at 88% 0%,
-      rgb(32 198 183 / 14%) 0,
-      transparent 32%
-    ),
-    radial-gradient(
-      circle at 8% 100%,
-      rgb(17 58 109 / 8%) 0,
-      transparent 34%
-    ),
-    linear-gradient(135deg, var(--app-canvas), var(--color-neutral-50));
+  background: var(--app-canvas);
   color: var(--app-text);
 }
 

@@ -2,8 +2,10 @@ import { InlineNotice } from "../../../../components/ui/inline-notice/inline-not
 import { JalaliDatePicker } from "../../../../components/ui/date-picker/jalali-date-picker";
 import {
   FieldErrors,
+  FieldHint,
   FieldLabel,
   FormField,
+  FormSection,
   formControlClassName,
 } from "../../../../components/ui/form-field/form-field";
 import { FormGrid } from "../../../../components/ui/form-grid/form-grid";
@@ -74,7 +76,10 @@ export function RequestStep({
         </InlineNotice>
       )}
 
-      <div className={styles.requestBasics}>
+      <FormSection
+        title="نوع و هدف"
+        description="نوع درخواست مشخص می‌کند مبدأ و مقصد مشترک‌اند یا برای هر مسافر جدا ثبت می‌شوند."
+      >
         <FormGrid>
           <FormField>
             <FieldLabel htmlFor={`${prefix}-request-type`} required>
@@ -135,13 +140,11 @@ export function RequestStep({
           readOnly
         />
         {selectedType && (
-          <p className={styles.hint}>
-            {typeExplanation(selectedType.typeCode)}
-          </p>
+          <FieldHint>{typeExplanation(selectedType.typeCode)}</FieldHint>
         )}
-      </div>
+      </FormSection>
 
-      <fieldset className={styles.requestDateTimeFieldset}>
+      <FormSection title="زمان حرکت" description="تاریخ و ساعت درخواستی سفر.">
         <div className={styles.requestDateTimeGroup}>
           <JalaliDatePicker
             name="requestedTravelDay"
@@ -157,9 +160,13 @@ export function RequestStep({
             disabled={isDisabled}
           />
         </div>
-      </fieldset>
+      </FormSection>
 
       {(shareOrigin || shareDestination) && (
+        <FormSection
+          title="مسیر مشترک"
+          description="این مکان برای همهٔ مسافران این درخواست یکسان است."
+        >
         <FormGrid columns={12}>
           {shareOrigin && (
             <FormField className={styles.requestLocationField}>
@@ -190,8 +197,10 @@ export function RequestStep({
             </FormField>
           )}
         </FormGrid>
+        </FormSection>
       )}
 
+      <FormSection title="توضیحات">
       <FormField>
         <FieldLabel htmlFor={`${prefix}-request-description`}>
           توضیحات
@@ -205,6 +214,7 @@ export function RequestStep({
           disabled={isDisabled}
         />
       </FormField>
+      </FormSection>
 
       <CreateWizardNavigation
         onPrimary={onNext}

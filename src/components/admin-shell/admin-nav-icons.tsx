@@ -71,6 +71,12 @@ const NAV_ICONS: Record<AdminNavIconName, React.ReactNode> = {
       <path d="M12 3.7v5.2M5 16.1l4.4-2.6M19 16.1l-4.4-2.6" />
     </>
   ),
+  create: (
+    <>
+      <circle cx="12" cy="12" r="8.3" />
+      <path d="M12 8.2v7.6M8.2 12h7.6" />
+    </>
+  ),
   trips: (
     <>
       <path d="M5 19.5V7.8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v11.7" />

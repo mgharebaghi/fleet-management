@@ -1,6 +1,7 @@
 import {
   canCancelTripRequest,
   everyPassengerExecutionCompleted,
+  passengersAwaitingExecutionCompletion,
   everyPassengerHasPersistedPlan,
   isTripRequestStatus,
   requestHasStartedExecution,
@@ -219,6 +220,7 @@ const LEGACY_TAB_SECTIONS: Record<string, WorkspaceSectionId> = {
 function lifecycleSnapshot(details: TripRequestDetails) {
   return {
     status: details.status,
+    requestedTravelDateTime: details.requestedTravelDateTime,
     passengers: details.passengers.map((trip) => ({
       tripId: trip.tripId,
       executions: trip.executions.map((execution) => ({
@@ -317,14 +319,26 @@ function nextActionFor(details: TripRequestDetails): TripNextAction {
   }
 
   if (details.status === "InProgress") {
+    if (!executionsComplete) {
+      const remaining = passengersAwaitingExecutionCompletion(snapshot);
+      const completedCount = details.passengers.length - remaining;
+      return {
+        id: "record-return",
+        label: "ثبت پیاده‌شدن مسافران",
+        sectionId: "completion",
+        enabled: true,
+        hint:
+          completedCount > 0
+            ? `${new Intl.NumberFormat("fa-IR").format(remaining)} مسافر هنوز پیاده‌شدن ثبت‌نشده دارد.`
+            : null,
+      };
+    }
     return {
       id: "complete-request",
       label: "تکمیل سفر",
       sectionId: "completion",
-      enabled: executionsComplete,
-      hint: executionsComplete
-        ? null
-        : "اجرای همهٔ مسافران باید تکمیل شده باشد.",
+      enabled: true,
+      hint: null,
     };
   }
 

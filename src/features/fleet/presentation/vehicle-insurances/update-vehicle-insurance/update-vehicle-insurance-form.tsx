@@ -4,7 +4,7 @@ import { useActionState, useMemo } from "react";
 import type { ConfirmDialogIdentityLine } from "../../../../../components/ui/confirm-dialog/confirm-dialog";
 import { ConfirmedSubmitButton } from "../../../../../components/ui/confirmed-submit/confirmed-submit-button";
 import { JalaliDatePicker } from "../../../../../components/ui/date-picker/jalali-date-picker";
-import { FormField, FieldLabel, FieldErrors, FormActions, formControlClassName } from "../../../../../components/ui/form-field/form-field";
+import { FormField, FieldLabel, FieldErrors, FormActions, FormSection, formControlClassName } from "../../../../../components/ui/form-field/form-field";
 import { FormGrid } from "../../../../../components/ui/form-grid/form-grid";
 import { InlineNotice } from "../../../../../components/ui/inline-notice/inline-notice";
 import { LoadingIndicator } from "../../../../../components/ui/loading-indicator/loading-indicator";
@@ -81,6 +81,7 @@ export function UpdateVehicleInsuranceForm({
             ? "ذخیره تغییرات انجام نشد. اطلاعات را بررسی کنید و دوباره تلاش کنید."
             : "اطلاعات مشخص‌شده را اصلاح کنید."}
       </InlineNotice>}
+      <FormSection title="مشخصات بیمه" description="خودرو، نوع بیمه‌نامه و دورهٔ پوشش.">
       <FormGrid>
         <FormField>
           <SearchableSelect
@@ -118,6 +119,7 @@ export function UpdateVehicleInsuranceForm({
           </label>
         </FormField>
       </FormGrid>
+      </FormSection>
       {pending && <LoadingIndicator label="در حال ذخیره تغییرات…" />}
       <FormActions separated>
         <ConfirmedSubmitButton

@@ -18,6 +18,7 @@ import {
   canTransitionTripExecution,
   canTransitionTripRequest,
   everyPassengerExecutionCompleted,
+  departureInstantForTripStart,
   everyPassengerHasPersistedPlan,
   executionHasStarted,
   isNonTerminalTripExecutionStatus,
@@ -645,6 +646,7 @@ export class ManageTrips {
   async changeRequestStatus(
     tripRequestId: number,
     targetStatus: string,
+    enteredDeparture: Date | null = null,
   ): Promise<TripResult> {
     if (!isValidTripId(tripRequestId)) return failure("INVALID_ID");
     if (!isTripRequestStatus(targetStatus)) {
@@ -677,7 +679,16 @@ export class ManageTrips {
         if (!everyPassengerHasPersistedPlan(current)) {
           return failure("PLANNING_REQUIRED");
         }
-        await session.startTripExecutions(tripRequestId);
+        if (enteredDeparture !== null && !isValidTripDate(enteredDeparture)) {
+          return failure("INVALID_DATE");
+        }
+        const planned = current.requestedTravelDateTime;
+        const departure = departureInstantForTripStart({
+          entered: enteredDeparture,
+          planned:
+            planned !== null && isValidTripDate(planned) ? planned : null,
+        });
+        await session.startTripExecutions(tripRequestId, departure);
       }
       if (
         targetStatus === "Completed" &&

@@ -11,8 +11,9 @@
   gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-group);
+  border-radius: 15px;
   background: var(--app-surface);
+  box-shadow: var(--app-card-shadow);
 }
 
 .header {

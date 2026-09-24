@@ -7,13 +7,9 @@ import { persistedPlanningExecution } from "../../trip-execution-current";
 import styles from "../trip-workspace.module.css";
 import type { TripWorkspaceView } from "../trip-workspace-view";
 import { AssignedOperationalSummary } from "./trip-assigned-summary";
-import { CompletedSummary } from "./trip-completed-summary";
-import {
-  InProgressPassengerExecutions,
-  TerminalExecutionHistory,
-} from "./trip-execution-records";
+import { CompletedSummary, TripCrewSection } from "./trip-completed-summary";
+import { PassengerExecutionBoard } from "./trip-execution-records";
 import { PassengerSurveySection } from "./trip-passenger-survey";
-import { StatusActionSection } from "./trip-status-action";
 
 function uniqueAssignmentsFor(
   details: TripRequestDetails,
@@ -32,7 +28,6 @@ function uniqueAssignmentsFor(
 
 export function StatusCompletionTab({
   details,
-  view,
   requestIsTerminal,
 }: {
   details: TripRequestDetails;
@@ -48,10 +43,6 @@ export function StatusCompletionTab({
       aria-label="وضعیت و اقدام سفر"
       tabIndex={-1}
     >
-      {!requestIsTerminal && (
-        <StatusActionSection details={details} view={view} />
-      )}
-
       {details.status === "Cancelled" && (
         <div className={styles.emptyStateBlock}>
           <InlineNotice tone="danger" role="status">
@@ -60,9 +51,7 @@ export function StatusCompletionTab({
         </div>
       )}
 
-      {details.status === "Completed" && (
-        <CompletedSummary uniqueAssignments={uniqueAssignments} />
-      )}
+      {details.status === "Completed" && <CompletedSummary />}
 
       {details.status === "Assigned" && (
         <AssignedOperationalSummary
@@ -71,18 +60,22 @@ export function StatusCompletionTab({
         />
       )}
 
-      {details.status === "InProgress" && (
-        <InProgressPassengerExecutions details={details} view={view} />
+      {(details.status === "InProgress" || requestIsTerminal) && (
+        <>
+          <TripCrewSection uniqueAssignments={uniqueAssignments} />
+          <PassengerExecutionBoard
+            details={details}
+            editable={details.status === "InProgress"}
+            allowSurvey={details.status !== "Cancelled"}
+          />
+        </>
       )}
 
-      {requestIsTerminal &&
-        details.passengers.some((t) => t.executions.length > 0) && (
-          <TerminalExecutionHistory details={details} />
+      {details.status !== "Cancelled" &&
+        details.status !== "InProgress" &&
+        details.status !== "Completed" && (
+          <PassengerSurveySection details={details} />
         )}
-
-      {details.status !== "Cancelled" && (
-        <PassengerSurveySection details={details} />
-      )}
     </section>
   );
 }

@@ -9,4 +9,5 @@ export class ReadDrivers {
   details(id: number) { return validId(id) ? this.repository.details(id) : Promise.resolve(null); }
   availablePeople() { return this.repository.availablePeople(); }
   availableVehicles() { return this.repository.availableVehicles(); }
+  currentVehicleAssignments(now: Date) { return this.repository.currentVehicleAssignments(now); }
 }

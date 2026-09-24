@@ -1,16 +1,16 @@
 .control {
   width: 100%;
   min-width: 0;
-  min-height: 46px;
-  padding: 10px var(--space-3);
-  border: 1px solid var(--app-control-border);
-  border-radius: var(--app-radius-control);
-  background: var(--app-surface);
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  background: var(--app-surface-subtle);
   color: var(--app-text);
   font: inherit;
   line-height: 1.5;
   outline: none;
-  color-scheme: light;
+  color-scheme: inherit;
   box-shadow: var(--app-shadow-control);
   transition:
     border-color var(--app-motion-fast),
@@ -53,7 +53,52 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 5px;
+}
+
+.hint {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.section {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 15px;
+  background: var(--app-surface);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.sectionDescription {
+  margin: 2px 0 0;
+  color: var(--app-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.sectionBody {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
 }
 
 .labelRow {
@@ -63,9 +108,9 @@
 }
 
 .label {
-  color: var(--app-label);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
+  color: var(--app-text-muted);
+  font-size: 12px;
+  font-weight: 650;
   line-height: 1.7;
 }
 
@@ -95,9 +140,9 @@
 }
 
 .separatedActions {
-  margin-top: var(--space-2);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--app-border-subtle);
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--app-border);
 }
 
 @media (max-width: 760px) {

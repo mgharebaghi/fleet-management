@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fa" dir="rtl" data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FleetManagement — کانسپت طراحی</title>
+<meta name="description" content="کانسپت تعاملی طراحی رابط کاربری سامانه مدیریت ناوگان، رانندگان، افراد و سفرها">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2316223c'/%3E%3Cpath d='M13 42h38M19 38l5-13h16l5 13M23 43a4 4 0 1 0 0 8 4 4 0 0 0 0-8m18 0a4 4 0 1 0 0 8 4 4 0 0 0 0-8' stroke='%2369e5c0' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="brand-logo">FM</div><div><strong>FleetManagement</strong><small>مدیریت یکپارچه ناوگان</small></div></div>
+    <div class="sidebar-context"><span class="context-dot"></span><div><b>سازمان مرکزی</b><small>محیط نمایشی</small></div><span class="chevron">⌄</span></div>
+    <nav id="side-nav" aria-label="منوی سامانه"></nav>
+    <div class="sidebar-bottom"><div class="sample-flag">◈ <span>کانسپت تعاملی <small>همه داده‌ها نمایشی‌اند</small></span></div><div class="user"><span class="avatar">م</span><div><b>مدیر سامانه</b><small>حساب نمونه</small></div><span>•••</span></div></div>
+  </aside>
+  <div class="shell">
+    <header class="topbar"><button class="mobile-menu icon-btn" id="menu-toggle" aria-label="باز کردن منو">☰</button><div class="breadcrumbs" id="breadcrumbs"></div><div class="top-actions"><span class="top-date" id="top-date"></span><button class="theme-toggle" id="theme-toggle" aria-label="تغییر تم" title="تغییر تم"><span id="theme-icon">☾</span><span id="theme-label">تاریک</span></button><span class="user-pip">م</span></div></header>
+    <div class="concept-ribbon"><span>کانسپت طراحی</span> برای بررسی تجربه کاربری؛ هیچ اطلاعاتی به پروژه اصلی یا سرور شما نوشته نمی‌شود. <button id="ribbon-close" aria-label="بستن پیام">×</button></div>
+    <main id="view" tabindex="-1"></main>
+  </div>
+</div>
+<div class="scrim" id="scrim"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/app.js" defer></script>
+</body></html>

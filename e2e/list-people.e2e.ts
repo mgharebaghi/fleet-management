@@ -233,14 +233,14 @@ test.describe.serial("List People", () => {
     const noMatchSearch = `${token}-NOTFOUND`;
     await page.getByLabel("جستجوی اشخاص").fill(noMatchSearch);
 
-    await expect(page).toHaveURL(
-      new RegExp(`search=${encodeURIComponent(noMatchSearch)}`),
-    );
+    await expect
+      .poll(() => getUrlSearchParams(page).get("search"), { timeout: 20_000 })
+      .toBe(noMatchSearch);
     await expect(
       page.getByRole("heading", {
         name: "نتیجه‌ای مطابق جستجو یا فیلتر شما پیدا نشد",
       }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 20_000 });
     await expect(
       page.getByRole("heading", { name: "هنوز شخصی ثبت نشده است" }),
     ).toHaveCount(0);

@@ -19,27 +19,27 @@ export async function defineDriverAction(_state: DriverActionState, data: FormDa
   return submit(data, v => makeManageDrivers().defineDriver(Number(v.personId)), id => `/drivers/${id}`);
 }
 export async function addLicenseAction(driverId: number, _state: DriverActionState, data: FormData) {
-  return submit(data, v => makeManageDrivers().addLicense({ driverId, licenseType: v.licenseType ?? "", licenseNo: v.licenseNo ?? "", issueDate: parseDate(v.issueDate), expireDate: parseDate(v.expireDate), isActive: v.isActive === "true" }), () => `/drivers/${driverId}`);
+  return submit(data, v => makeManageDrivers().addLicense({ driverId, licenseType: v.licenseType ?? "", licenseNo: v.licenseNo ?? "", issueDate: parseDate(v.issueDate), expireDate: parseDate(v.expireDate), isActive: v.isActive === "true" }), () => `/drivers/${driverId}?tab=licenses`);
 }
 export async function updateLicenseAction(driverId: number, licenseId: number, _state: DriverActionState, data: FormData) {
-  return submit(data, v => makeManageDrivers().updateLicense({ licenseId, driverId, licenseType: v.licenseType ?? "", licenseNo: v.licenseNo ?? "", issueDate: parseDate(v.issueDate), expireDate: parseDate(v.expireDate), isActive: v.isActive === "true" }), () => `/drivers/${driverId}`);
+  return submit(data, v => makeManageDrivers().updateLicense({ licenseId, driverId, licenseType: v.licenseType ?? "", licenseNo: v.licenseNo ?? "", issueDate: parseDate(v.issueDate), expireDate: parseDate(v.expireDate), isActive: v.isActive === "true" }), () => `/drivers/${driverId}?tab=licenses`);
 }
 export async function deleteLicenseAction(driverId: number, _state: DriverActionState, data: FormData) {
   const values = formValues(data);
   if (!values) return { error: "INVALID_FORM" } satisfies DriverActionState;
-  return submit(data, () => makeManageDrivers().deleteLicense(driverId, Number(values.licenseId)), () => `/drivers/${driverId}`);
+  return submit(data, () => makeManageDrivers().deleteLicense(driverId, Number(values.licenseId)), () => `/drivers/${driverId}?tab=licenses`);
 }
 export async function assignVehicleAction(driverId: number, _state: DriverActionState, data: FormData) {
-  return submit(data, v => makeManageDrivers().assignVehicle({ driverId, vehicleId: Number(v.vehicleId), fromDateTime: parseDateTime(v.fromDay, v.fromTime) ?? new Date(NaN), toDateTime: parseDateTime(v.toDay, v.toTime), startOdometer: v.startOdometer?.trim() || null, endOdometer: v.endOdometer?.trim() || null, description: v.description ?? null }), () => `/drivers/${driverId}`);
+  return submit(data, v => makeManageDrivers().assignVehicle({ driverId, vehicleId: Number(v.vehicleId), fromDateTime: parseDateTime(v.fromDay, v.fromTime) ?? new Date(NaN), toDateTime: parseDateTime(v.toDay, v.toTime), startOdometer: v.startOdometer?.trim() || null, endOdometer: v.endOdometer?.trim() || null, description: v.description ?? null }), () => `/drivers/${driverId}?tab=assignments`);
 }
 export async function updateAssignmentAction(driverId: number, assignmentId: number, _state: DriverActionState, data: FormData) {
-  return submit(data, v => makeManageDrivers().updateAssignment({ assignmentId, driverId, vehicleId: Number(v.vehicleId), fromDateTime: parseDateTime(v.fromDay, v.fromTime) ?? new Date(NaN), toDateTime: parseDateTime(v.toDay, v.toTime), startOdometer: v.startOdometer?.trim() || null, endOdometer: v.endOdometer?.trim() || null, description: v.description ?? null }), () => `/drivers/${driverId}`);
+  return submit(data, v => makeManageDrivers().updateAssignment({ assignmentId, driverId, vehicleId: Number(v.vehicleId), fromDateTime: parseDateTime(v.fromDay, v.fromTime) ?? new Date(NaN), toDateTime: parseDateTime(v.toDay, v.toTime), startOdometer: v.startOdometer?.trim() || null, endOdometer: v.endOdometer?.trim() || null, description: v.description ?? null }), () => `/drivers/${driverId}?tab=assignments`);
 }
 export async function closeAssignmentAction(driverId: number, assignmentId: number, _state: DriverActionState, data: FormData) {
-  return submit(data, v => makeManageDrivers().closeAssignment(assignmentId, parseDateTime(v.toDay, v.toTime) ?? new Date(NaN), v.endOdometer?.trim() || null), () => `/drivers/${driverId}`);
+  return submit(data, v => makeManageDrivers().closeAssignment(assignmentId, parseDateTime(v.toDay, v.toTime) ?? new Date(NaN), v.endOdometer?.trim() || null), () => `/drivers/${driverId}?tab=assignments`);
 }
 export async function deleteAssignmentAction(driverId: number, assignmentId: number, _state: DriverActionState, data: FormData) {
   const values = formValues(data);
   if (!values) return { error: "INVALID_FORM" } satisfies DriverActionState;
-  return submit(data, () => makeManageDrivers().deleteAssignment(driverId, assignmentId), () => `/drivers/${driverId}`);
+  return submit(data, () => makeManageDrivers().deleteAssignment(driverId, assignmentId), () => `/drivers/${driverId}?tab=assignments`);
 }

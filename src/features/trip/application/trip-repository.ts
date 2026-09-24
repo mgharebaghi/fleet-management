@@ -82,7 +82,10 @@ export interface TripWriteSession {
   }>;
   updateRequestStatus(id: number, status: TripRequestStatus): Promise<void>;
   cancelPlannedExecutions(tripRequestId: number): Promise<void>;
-  startTripExecutions(tripRequestId: number): Promise<void>;
+  startTripExecutions(
+    tripRequestId: number,
+    actualPickupDateTime: Date | null,
+  ): Promise<void>;
   route(id: number): Promise<{
     routeId: number;
     tripId: number | null;

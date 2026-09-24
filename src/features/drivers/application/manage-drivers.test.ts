@@ -9,15 +9,16 @@ const license: NewLicense = { driverId: 1, licenseType: "Heavy", licenseNo: "LIC
 const assignment: NewAssignment = { driverId: 1, vehicleId: 2, fromDateTime: new Date("2026-01-01T08:00:00Z"), toDateTime: null, startOdometer: "100.10", endOdometer: null, description: null };
 const vehicle = { vehicleId: 2, vehicleCode: "V2", plate: "12", isActive: true };
 const session = {
-  person: vi.fn(), driverForPerson: vi.fn(), driver: vi.fn(), vehicle: vi.fn(), licenses: vi.fn(), license: vi.fn(), licenseNumberExists: vi.fn(), overlap: vi.fn(), assignment: vi.fn(), createDriver: vi.fn(), createLicense: vi.fn(), updateLicense: vi.fn(), deleteLicense: vi.fn(), createAssignment: vi.fn(), updateAssignment: vi.fn(), closeAssignment: vi.fn(), deleteAssignment: vi.fn(),
+  person: vi.fn(), driverForPerson: vi.fn(), driver: vi.fn(), vehicle: vi.fn(), licenses: vi.fn(), license: vi.fn(), licenseNumberExists: vi.fn(), overlap: vi.fn(), currentAssignmentHolder: vi.fn(), assignment: vi.fn(), createDriver: vi.fn(), createLicense: vi.fn(), updateLicense: vi.fn(), deleteLicense: vi.fn(), createAssignment: vi.fn(), updateAssignment: vi.fn(), closeAssignment: vi.fn(), deleteAssignment: vi.fn(),
 } satisfies DriverSession;
-const repository = { atomic: async <T>(work: (s: DriverSession) => Promise<T>) => work(session), list: vi.fn(), details: vi.fn(), availablePeople: vi.fn(), availableVehicles: vi.fn() } satisfies DriverRepository;
+const repository = { atomic: async <T>(work: (s: DriverSession) => Promise<T>) => work(session), list: vi.fn(), details: vi.fn(), availablePeople: vi.fn(), availableVehicles: vi.fn(), currentVehicleAssignments: vi.fn() } satisfies DriverRepository;
 const useCase = new ManageDrivers(repository, () => new Date("2026-06-01T08:00:00Z"));
 beforeEach(() => {
   vi.resetAllMocks();
   session.person.mockResolvedValue(person); session.driver.mockResolvedValue({ ...person, driverId: 1 });
   session.vehicle.mockResolvedValue(vehicle); session.licenses.mockResolvedValue([{ ...license, licenseId: 1 }]);
   session.license.mockResolvedValue({ ...license, licenseId: 1 });
+  session.currentAssignmentHolder.mockResolvedValue(null);
   session.assignment.mockResolvedValue({ ...assignment, assignmentId: 3, vehicle });
   session.createDriver.mockResolvedValue(1); session.createLicense.mockResolvedValue(2); session.createAssignment.mockResolvedValue(3);
 });
@@ -82,6 +83,28 @@ describe("assign vehicle", () => {
   it("rejects missing vehicle", async () => { session.vehicle.mockResolvedValue(null); expect(await useCase.assignVehicle(assignment)).toEqual(fails("VEHICLE_NOT_FOUND")); });
   it("rejects inactive vehicle", async () => { session.vehicle.mockResolvedValue({ ...vehicle, isActive: false }); expect(await useCase.assignVehicle(assignment)).toEqual(fails("VEHICLE_INACTIVE")); });
   it("rejects driver without eligible license", async () => { session.licenses.mockResolvedValue([]); expect(await useCase.assignVehicle(assignment)).toEqual(fails("NO_ELIGIBLE_LICENSE")); });
+  it("rejects a vehicle that is currently assigned to another driver even when the requested period does not overlap", async () => {
+    session.currentAssignmentHolder.mockResolvedValue(9);
+    const future = { ...assignment, fromDateTime: new Date("2099-01-01T08:00:00Z"), toDateTime: null };
+    expect(await useCase.assignVehicle(future)).toEqual(fails("VEHICLE_CURRENTLY_ASSIGNED"));
+    expect(session.createAssignment).not.toHaveBeenCalled();
+    expect(session.overlap).not.toHaveBeenCalled();
+  });
+  it("allows a vehicle whose only assignment has already ended", async () => {
+    expect(await useCase.assignVehicle(assignment)).toEqual({ success: true, id: 3 });
+    expect(session.currentAssignmentHolder).toHaveBeenCalled();
+  });
+  it("rejects a vehicle the same driver currently holds when the new period does not overlap", async () => {
+    session.currentAssignmentHolder.mockResolvedValue(1);
+    const later = { ...assignment, fromDateTime: new Date("2099-06-01T08:00:00Z"), toDateTime: new Date("2099-06-02T08:00:00Z") };
+    expect(await useCase.assignVehicle(later)).toEqual(fails("VEHICLE_CURRENTLY_ASSIGNED"));
+    expect(session.createAssignment).not.toHaveBeenCalled();
+  });
+  it("keeps driver overlap when the same driver still holds the vehicle and the periods overlap", async () => {
+    session.currentAssignmentHolder.mockResolvedValue(1);
+    session.overlap.mockImplementation(async (_input, by) => by === "driver");
+    expect(await useCase.assignVehicle(assignment)).toEqual(fails("DRIVER_OVERLAP"));
+  });
 });
 describe("time boundaries", () => {
   const at = new Date("2026-01-01T08:00:00Z");

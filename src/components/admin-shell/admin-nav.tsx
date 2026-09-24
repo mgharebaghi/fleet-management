@@ -1,16 +1,20 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { Dialog } from "../ui/dialog/dialog";
+import { LoadingIndicator } from "../ui/loading-indicator/loading-indicator";
 import { AdminNavIcon } from "./admin-nav-icons";
 import {
   ADMIN_NAV_SECTIONS,
+  findActiveAdminNavChild,
   findAdminNavTrail,
-  isAdminNavPathActive,
+  isAdminNavGroupPage,
   isAdminNavSectionActive,
+  type AdminNavSection,
 } from "./admin-nav-items";
 import styles from "./admin-shell.module.css";
 
@@ -18,62 +22,138 @@ const numberFormatter = new Intl.NumberFormat("fa-IR");
 
 type NavListProps = {
   pathname: string;
+  idPrefix: string;
   pendingTripRequestsCount?: number;
   tripBadge?: ReactNode;
+  tripQueueBadge?: ReactNode;
   onNavigate?: () => void;
 };
 
 /** The link list itself, shared by the desktop sidebar and the mobile drawer. */
-function NavList({
-  pathname,
+function TripCount({
   pendingTripRequestsCount,
   tripBadge,
+}: {
+  pendingTripRequestsCount?: number;
+  tripBadge?: ReactNode;
+}) {
+  if (tripBadge !== undefined) {
+    return tripBadge;
+  }
+
+  if (pendingTripRequestsCount === undefined || pendingTripRequestsCount <= 0) {
+    return null;
+  }
+
+  return (
+    <span
+      className={styles.navBadge}
+      aria-label={`${numberFormatter.format(pendingTripRequestsCount)} درخواست جدید`}
+    >
+      {numberFormatter.format(pendingTripRequestsCount)}
+    </span>
+  );
+}
+
+function NavList({
+  pathname,
+  idPrefix,
+  pendingTripRequestsCount,
+  tripBadge,
+  tripQueueBadge,
   onNavigate,
 }: NavListProps) {
+  const [opened, setOpened] = useState<Record<string, boolean>>({});
+  const [trackedPathname, setTrackedPathname] = useState(pathname);
+  if (pathname !== trackedPathname) {
+    setTrackedPathname(pathname);
+    setOpened({});
+  }
+
+  function groupOpen(section: AdminNavSection) {
+    const choice = opened[section.href];
+    if (choice !== undefined) {
+      return choice;
+    }
+
+    return isAdminNavSectionActive(pathname, section);
+  }
+
+  function toggleGroup(section: AdminNavSection) {
+    setOpened((current) => ({
+      ...current,
+      [section.href]: !groupOpen(section),
+    }));
+  }
+
   return (
     <ul className={styles.navList}>
       {ADMIN_NAV_SECTIONS.map((section) => {
+        const activeChild = findActiveAdminNavChild(pathname, section);
         const sectionActive = isAdminNavSectionActive(pathname, section);
+        const groupIsPage = isAdminNavGroupPage(pathname, section);
+        const open = section.children ? groupOpen(section) : false;
+        const panelId = `${idPrefix}-${section.href.replaceAll("/", "-")}`;
 
         return (
           <li key={section.href} className={styles.navSection}>
-            <Link
-              href={section.href}
-              className={styles.navLink}
-              aria-current={sectionActive ? "page" : undefined}
-              onClick={onNavigate}
-            >
-              <span className={styles.navIcon}>
-                <AdminNavIcon name={section.icon} />
-              </span>
-              <span className={styles.navLabel}>{section.label}</span>
-              {section.href === "/trips" &&
-                (tripBadge !== undefined
-                  ? tripBadge
-                  : pendingTripRequestsCount !== undefined &&
-                    pendingTripRequestsCount > 0 && (
-                      <span
-                        className={styles.navBadge}
-                        aria-label={`${numberFormatter.format(pendingTripRequestsCount)} درخواست جدید`}
-                      >
-                        {numberFormatter.format(pendingTripRequestsCount)}
-                      </span>
-                    ))}
-            </Link>
+            {section.children ? (
+              <button
+                type="button"
+                className={styles.navLink}
+                aria-expanded={open}
+                aria-controls={panelId}
+                aria-current={groupIsPage ? "page" : undefined}
+                data-section-active={
+                  sectionActive && !groupIsPage ? "true" : undefined
+                }
+                onClick={() => toggleGroup(section)}
+              >
+                <span className={styles.navIcon}>
+                  <AdminNavIcon name={section.icon} />
+                </span>
+                <span className={styles.navLabel}>{section.label}</span>
+                {section.href === "/trips" && (
+                  <TripCount
+                    pendingTripRequestsCount={pendingTripRequestsCount}
+                    tripBadge={tripBadge}
+                  />
+                )}
+                <NavChevron open={open} />
+              </button>
+            ) : (
+              <Link
+                href={section.href}
+                className={styles.navLink}
+                aria-current={sectionActive ? "page" : undefined}
+                onClick={onNavigate}
+              >
+                <span className={styles.navIcon}>
+                  <AdminNavIcon name={section.icon} />
+                </span>
+                <span className={styles.navLabel}>{section.label}</span>
+              </Link>
+            )}
 
             {section.children && (
-              <ul className={styles.navSubList}>
+              <div className={styles.navSubPanel} data-open={open ? "true" : undefined}>
+              <ul
+                className={styles.navSubList}
+                id={panelId}
+                inert={open ? undefined : true}
+              >
                 {section.children.map((child) => {
-                  const childActive = isAdminNavPathActive(
-                    pathname,
-                    child.href,
-                  );
+                  const childActive = activeChild?.href === child.href;
 
                   return (
                     <li key={child.href}>
                       <Link
                         href={child.href}
-                        className={styles.navSubLink}
+                        className={
+                          child.action
+                            ? `${styles.navSubLink} ${styles.navAction}`
+                            : styles.navSubLink
+                        }
                         aria-current={childActive ? "page" : undefined}
                         onClick={onNavigate}
                       >
@@ -81,11 +161,19 @@ function NavList({
                           <AdminNavIcon name={child.icon} />
                         </span>
                         <span className={styles.navLabel}>{child.label}</span>
+                        {child.includesTripFiles && (
+                          <TripCount
+                            pendingTripRequestsCount={pendingTripRequestsCount}
+                            tripBadge={tripQueueBadge}
+                          />
+                        )}
+                        {child.href === "/fleet/vehicles" && <VehicleListNavPending />}
                       </Link>
                     </li>
                   );
                 })}
               </ul>
+              </div>
             )}
           </li>
         );
@@ -94,15 +182,45 @@ function NavList({
   );
 }
 
+// Client navigation into the vehicle list does not mount `(admin)/loading.tsx`
+// while its RSC response is still in flight. Surface the same indicator in the
+// content area for that link so the wait is visible.
+function VehicleListNavPending() {
+  const { pending } = useLinkStatus();
+  if (!pending || typeof document === "undefined") return null;
+  const content = document.querySelector("[data-admin-content]");
+  if (!content) return null;
+  return createPortal(
+    <LoadingIndicator
+      variant="page"
+      label="در حال بارگذاری…"
+      description="محتوای بخش مدیریت در حال آماده‌سازی است."
+    />,
+    content,
+  );
+}
+
+function NavChevron({ open }: { open: boolean }) {
+  return (
+    <span className={styles.navChevron} data-open={open ? "true" : undefined} aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    </span>
+  );
+}
+
 type AdminNavComponentProps = {
   pendingTripRequestsCount?: number;
   tripBadge?: ReactNode;
+  tripQueueBadge?: ReactNode;
 };
 
 /** Always-visible desktop sidebar navigation; CSS hides it under the mobile breakpoint. */
 export function AdminSidebarNav({
   pendingTripRequestsCount,
   tripBadge,
+  tripQueueBadge,
 }: AdminNavComponentProps = {}) {
   const pathname = usePathname() ?? "";
 
@@ -110,8 +228,10 @@ export function AdminSidebarNav({
     <nav className={styles.sidebarNav} aria-label="پیمایش اصلی">
       <NavList
         pathname={pathname}
+        idPrefix="sidebar"
         pendingTripRequestsCount={pendingTripRequestsCount}
         tripBadge={tripBadge}
+        tripQueueBadge={tripQueueBadge}
       />
     </nav>
   );
@@ -128,11 +248,15 @@ export function AdminBreadcrumb() {
 
   return (
     <p className={styles.breadcrumb}>
+      <span>FleetManagement</span>
+      <span className={styles.breadcrumbSeparator} aria-hidden="true">
+        ‹
+      </span>
       {trail.map((label, index) => (
         <span key={label}>
           {index > 0 && (
             <span className={styles.breadcrumbSeparator} aria-hidden="true">
-              /
+              ‹
             </span>
           )}
           {label}
@@ -151,6 +275,7 @@ export function AdminBreadcrumb() {
 export function AdminMobileNav({
   pendingTripRequestsCount,
   tripBadge,
+  tripQueueBadge,
 }: AdminNavComponentProps = {}) {
   const pathname = usePathname() ?? "";
   const [open, setOpen] = useState(false);
@@ -186,8 +311,10 @@ export function AdminMobileNav({
         <nav aria-label="پیمایش اصلی (موبایل)">
           <NavList
             pathname={pathname}
+            idPrefix="drawer"
             pendingTripRequestsCount={pendingTripRequestsCount}
             tripBadge={tripBadge}
+            tripQueueBadge={tripQueueBadge}
             onNavigate={() => setOpen(false)}
           />
         </nav>

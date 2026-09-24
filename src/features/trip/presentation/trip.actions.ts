@@ -89,19 +89,29 @@ export async function changeTripRequestStatusAction(
   tripRequestId: number,
   _state: TripActionState,
   data: FormData,
-): Promise<TripActionState> {
+): Promise<TripActionState & { success?: boolean }> {
   const values = tripFormValues(data);
   if (!values) return { error: "INVALID_FORM" };
+  const status = values.requestStatus ?? "";
+  const enteredDeparture =
+    status === "InProgress"
+      ? parseTehranDateTime(values.actualDepartureDay, values.actualDepartureTime)
+      : null;
+  if (enteredDeparture && Number.isNaN(enteredDeparture.getTime())) {
+    return { error: "INVALID_DATE", field: "actualDepartureDay", values };
+  }
   const result = await run(values, () =>
     makeManageTrips().changeRequestStatus(
       tripRequestId,
-      values.requestStatus ?? "",
+      status,
+      enteredDeparture,
     ),
   );
   if (!("id" in result)) return result;
   revalidatePath(`/trips/${tripRequestId}`);
   revalidatePath("/trips");
-  redirect(`/trips/${tripRequestId}`);
+  revalidatePath("/trips/requests");
+  return { ...result, success: true, values };
 }
 
 export async function startTripAction(
@@ -311,6 +321,63 @@ export async function saveTripExecutionAction(
   redirect(
     `/trips/${tripRequestId}?tab=${tripExecutionId === null ? "assignment" : "completion"}`,
   );
+}
+
+export type PassengerExecutionSave = {
+  tripId: number;
+  tripExecutionId: number;
+  values: Record<string, string>;
+};
+
+export type PassengerExecutionBatchResult = {
+  savedTripIds: number[];
+  failed?: {
+    tripId: number;
+    error: TripActionState["error"];
+    field?: string;
+  };
+};
+
+export async function savePassengerExecutionsAction(
+  tripRequestId: number,
+  items: PassengerExecutionSave[],
+): Promise<PassengerExecutionBatchResult> {
+  const savedTripIds: number[] = [];
+
+  for (const item of items) {
+    const result = await run(item.values, () =>
+      makeManageTrips().saveExecution({
+        tripId: item.tripId,
+        tripExecutionId: item.tripExecutionId,
+        vehicleDriverAssignmentId: Number(item.values.assignmentId),
+        actualPickupDateTime: parseTehranDateTime(
+          item.values.actualPickupDay,
+          item.values.actualPickupTime,
+        ),
+        actualDropoffDateTime: parseTehranDateTime(
+          item.values.actualDropoffDay,
+          item.values.actualDropoffTime,
+        ),
+        startOdometer: item.values.startOdometer?.trim() || null,
+        endOdometer: item.values.endOdometer?.trim() || null,
+        status: item.values.executionStatus ?? "",
+        description: item.values.executionDescription ?? null,
+      }),
+    );
+
+    if (!("id" in result)) {
+      return {
+        savedTripIds,
+        failed: { tripId: item.tripId, error: result.error, field: result.field },
+      };
+    }
+
+    savedTripIds.push(item.tripId);
+  }
+
+  revalidatePath(`/trips/${tripRequestId}`);
+  revalidatePath("/trips");
+  return { savedTripIds };
 }
 
 export async function savePassengerSurveyAction(

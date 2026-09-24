@@ -371,13 +371,13 @@ test.describe.serial("Trip management", () => {
       await page.goto("/trips");
       await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
       await expect(
-        page.getByRole("link", { name: /ثبت (درخواست )?سفر/ }),
+        page.getByRole("link", { name: "ثبت درخواست سفر", exact: true }),
       ).toBeVisible();
       await expect(
         page.getByRole("link", { name: /رسیدگی به درخواست‌ها|مشاهده و رسیدگی|مشاهده سفرها/ }),
       ).toBeVisible();
 
-      await page.getByRole("link", { name: /ثبت (درخواست )?سفر/ }).click();
+      await page.getByRole("link", { name: "ثبت درخواست سفر", exact: true }).click();
       await expect(page).toHaveURL(/\/trips\/create$/, { timeout: 60_000 });
       const form = page.locator('form[aria-label="ثبت درخواست سفر"]');
       const requestStep = form.locator("section").filter({
@@ -729,7 +729,7 @@ test.describe.serial("Trip management", () => {
       ).toBeVisible();
       await page.goto(`/trips/${requestId}?tab=completion`);
 
-      await page.getByRole("button", { name: "ثبت / ویرایش اطلاعات اجرای مسافران" }).click();
+      await page.getByRole("button", { name: "ثبت پیاده‌شدن مسافران", exact: true }).click();
       const completionDialog = page.getByRole("dialog", {
         name: "ثبت / ویرایش اطلاعات اجرای مسافران",
       });
@@ -777,8 +777,8 @@ test.describe.serial("Trip management", () => {
       await executionForm
         .getByLabel("وضعیت اجرای مسافر", { exact: true })
         .selectOption("Completed");
-      await executionForm
-        .getByRole("button", { name: "ثبت و ذخیره اطلاعات" })
+      await completionDialog
+        .getByRole("button", { name: "ثبت اطلاعات مسافران", exact: true })
         .click();
       await eventually(page).toHaveURL(/\?tab=completion/);
 

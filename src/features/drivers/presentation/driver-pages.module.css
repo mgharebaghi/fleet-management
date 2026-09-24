@@ -1,19 +1,234 @@
 /* Stretching to the identity block's height keeps the portrait and the name,
    badges and codes reading as one profile row rather than an icon beside text;
    the bounds stop a wrapped long name from turning it into a large panel. */
+.pageHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 15px;
+}
+
+.pageKicker {
+  margin: 0;
+  color: var(--app-primary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pageHead h1 {
+  margin: 1px 0 3px;
+  color: var(--app-heading);
+  font-size: 28px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+
+.pageSubtitle {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 13px;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 6px 13px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.identityCard,
+.panel,
+.nextPanel {
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: var(--app-surface);
+  box-shadow: var(--app-card-shadow);
+}
+
+.identityCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  margin-bottom: 15px;
+}
+
+.identityCopy {
+  min-width: 0;
+  flex: 1;
+}
+
+.identityCopy h2 {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: 19px;
+}
+
+.identityCopy p {
+  margin: 2px 0 0;
+  color: var(--app-text-muted);
+  font-size: 13px;
+}
+
+.workspaceBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.75fr);
+  gap: 15px;
+  align-items: start;
+  min-width: 0;
+}
+
+.mainColumn,
+.sideColumn {
+  display: grid;
+  gap: 15px;
+  min-width: 0;
+}
+
+.recordCard {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: var(--app-surface);
+  box-shadow: var(--app-card-shadow);
+}
+
+.tabBar {
+  display: flex;
+  gap: 5px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.tabLink {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--app-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.tabLink[data-active="true"] {
+  border-bottom-color: var(--app-primary);
+  color: var(--app-primary);
+  font-weight: 800;
+}
+
+.tabContentArea {
+  position: relative;
+  min-width: 0;
+}
+
+.tabPanel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px;
+}
+
+.tabLoadingOverlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(2px);
+  z-index: 20;
+  pointer-events: none;
+}
+
+:global([data-theme="dark"]) .tabLoadingOverlay {
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.tabLoadingCard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-5);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-control);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.panel,
+.nextPanel {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  min-width: 0;
+}
+
+.nextPanel h2,
+.panel h2,
+.recordGroup h3 {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: 16px;
+}
+
+.infoNote,
+.warningNote,
+.emptyLine {
+  margin: 0;
+  padding: 11px 13px;
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.infoNote {
+  background: var(--app-info-background);
+  color: var(--app-info-text);
+}
+
+.warningNote {
+  background: var(--app-warning-background);
+  color: var(--app-warning-text);
+}
+
+.emptyLine {
+  background: var(--app-surface-subtle);
+  color: var(--app-text-muted);
+}
+
+.recordGroup {
+  display: grid;
+  gap: 10px;
+}
+
 .avatar {
   display: grid;
   flex: 0 0 auto;
-  align-self: stretch;
   place-items: center;
-  aspect-ratio: 1;
-  width: auto;
-  min-height: 64px;
-  max-height: 104px;
+  width: 72px;
+  height: 72px;
   overflow: hidden;
-  padding: var(--space-2);
+  padding: 8px;
   border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-group);
+  border-radius: 12px;
   background: var(--app-canvas-accent);
 }
 
@@ -23,10 +238,38 @@
   object-fit: contain;
 }
 
-@media (max-width: 560px) {
-  .avatar {
-    min-height: 52px;
-    max-height: 72px;
+@media (max-width: 1150px) {
+  .workspaceBody {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sideColumn {
+    order: -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .tabLink {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .pageHead {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .pageHead h1 {
+    font-size: 24px;
+  }
+
+  .backLink {
+    width: 100%;
+  }
+
+  .identityCard {
+    align-items: flex-start;
+    flex-wrap: wrap;
   }
 }
 

@@ -21,7 +21,7 @@ import {
 type JalaliDatePickerProps = {
   /** Name of the hidden field carrying the Gregorian `yyyy-mm-dd` value. */
   name: string;
-  label: string;
+  label?: string;
   /** Gregorian `yyyy-mm-dd` the field starts on, if any. */
   defaultValue?: string;
   /** Latest selectable Gregorian `yyyy-mm-dd`; later days are disabled. */
@@ -59,6 +59,8 @@ export function JalaliDatePicker({
     gregorianToJalali(defaultValue || getTodayGregorianDate()),
   );
   const containerRef = useRef<HTMLDivElement>(null);
+  const hiddenDateRef = useRef<HTMLInputElement>(null);
+  const skipInitialDateEvent = useRef(true);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [panelPosition, setPanelPosition] = useState<{ top: number; left: number } | null>(null);
@@ -69,6 +71,14 @@ export function JalaliDatePicker({
   // own overflow:hidden/scrolling body. Pages without a Dialog ancestor keep
   // the original in-place panel so their existing structure/tests are unaffected.
   const [dialogAncestor, setDialogAncestor] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (skipInitialDateEvent.current) {
+      skipInitialDateEvent.current = false;
+      return;
+    }
+    hiddenDateRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
+  }, [selectedDate]);
 
   useLayoutEffect(() => {
     setDialogAncestor(containerRef.current?.closest("dialog") ?? null);
@@ -184,7 +194,7 @@ export function JalaliDatePicker({
       ref={panelRef}
       role="dialog"
       aria-modal="false"
-      aria-label={`انتخاب ${label}`}
+      aria-label={label ? `انتخاب ${label}` : "انتخاب تاریخ"}
       // `right: "auto"` cancels the CSS class's `inset-inline-start` (which
       // resolves to `right` in this RTL app) so the inline `left` from a
       // physical viewport measurement is the only horizontal constraint.
@@ -260,11 +270,11 @@ export function JalaliDatePicker({
 
   return (
     <div className={styles.field} ref={containerRef}>
-      <FieldLabel htmlFor={fieldId}>{label}</FieldLabel>
+      {label ? <FieldLabel htmlFor={fieldId}>{label}</FieldLabel> : null}
 
       {/* The Gregorian value is what the form submits; the calendar is the
           only way to set it, so there is no free-text date entry. */}
-      <input type="hidden" name={name} value={selectedDate} readOnly />
+      <input ref={hiddenDateRef} type="hidden" name={name} value={selectedDate} readOnly />
 
       <div className={styles.controlRow}>
         <button

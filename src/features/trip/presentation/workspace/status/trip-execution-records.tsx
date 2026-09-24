@@ -1,179 +1,187 @@
+"use client";
+
+import { useState } from "react";
+
 import { StatusBadge } from "@/components/ui/status-badge/status-badge";
-import type { TripRequestDetails } from "../../../application/trip-records";
+import type {
+  TripExecutionRecord,
+  TripPassengerRecord,
+  TripRequestDetails,
+} from "../../../application/trip-records";
 import { TripCompletionButton } from "../../execution/trip-completion-dialog";
 import { persistedPlanningExecution } from "../../trip-execution-current";
 import { formatTripDateTime } from "../../trip-format";
+import { TripSurveyButton } from "../../survey/trip-survey-dialog";
 import { tripRequestStatusTone } from "../../trip-list-status-tone";
 import { executionStatusLabel } from "../../trip-status";
 import styles from "../trip-workspace.module.css";
 import { hasExecutionDescription } from "../trip-workspace-passenger-display";
-import type { TripWorkspaceView } from "../trip-workspace-view";
 
-export function InProgressPassengerExecutions({
+const countFormat = new Intl.NumberFormat("fa-IR");
+
+function activeExecution(passenger: TripPassengerRecord) {
+  return persistedPlanningExecution(passenger.executions);
+}
+
+export function PassengerExecutionBoard({
   details,
-  view,
+  editable,
+  allowSurvey,
 }: {
   details: TripRequestDetails;
-  view: TripWorkspaceView;
+  editable: boolean;
+  allowSurvey: boolean;
 }) {
+  const [openIds, setOpenIds] = useState<number[]>([]);
+  const rows = details.passengers.map((passenger) => ({
+    passenger,
+    execution: activeExecution(passenger),
+  }));
+  const completed = rows.filter(
+    (row) => row.execution?.status === "Completed",
+  ).length;
+  const remaining = rows.length - completed;
+
   return (
-    <section className={styles.workspaceSection}>
-      <div className={styles.sectionHeader}>
-        <div>
-          <h3>اطلاعات اجرای مسافران</h3>
+    <section id="passenger-dropoff" className={styles.workspaceSection}>
+      <div className={styles.executionSummary}>
+        <div className={styles.executionSummaryMain}>
+          <h3>مسافران و نظرسنجی</h3>
           <p>
-            زمان و کیلومتر واقعی سوارشدن و پیاده‌شدن مسافران را از برگهٔ
-            مأموریت ثبت یا ویرایش کنید.
+            {countFormat.format(rows.length)} مسافر ·{" "}
+            {countFormat.format(completed)} تکمیل‌شده ·{" "}
+            {countFormat.format(remaining)} باقی‌مانده
           </p>
         </div>
-        <div>
-          <TripCompletionButton
-            tripRequestId={details.tripRequestId}
-            passengers={details.passengers}
-          />
-        </div>
+        <p className={styles.muted}>
+          نظرسنجی اختیاری است و برای تکمیل درخواست الزامی نیست.
+        </p>
       </div>
-      <div className={styles.stack}>
-        {details.passengers.map((trip, index) => {
-          const item = view.passengers[index];
-          if (!item) return null;
-          const execution = persistedPlanningExecution(trip.executions);
-          return (
-            <article
-              className={styles.executionPassengerCard}
-              key={trip.tripId}
-            >
-              <div className={styles.executionPassengerHeader}>
-                <h3>{item.personName}</h3>
-                {item.executionStatus && (
-                  <StatusBadge
-                    label={executionStatusLabel(item.executionStatus)}
-                    tone={tripRequestStatusTone(item.executionStatus)}
-                  />
-                )}
-              </div>
-              {execution ? (
-                <div className={styles.executionRecord}>
-                  <dl className={styles.summaryFacts}>
-                    <div>
-                      <dt>وضعیت اجرا</dt>
-                      <dd>{executionStatusLabel(execution.status)}</dd>
-                    </div>
-                    <div>
-                      <dt>حرکت واقعی</dt>
-                      <dd>
-                        {execution.actualPickupDateTime
-                          ? formatTripDateTime(
-                              execution.actualPickupDateTime,
-                            )
-                          : "ثبت‌نشده (در انتظار گزارش راننده)"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>بازگشت واقعی</dt>
-                      <dd>
-                        {execution.actualDropoffDateTime
-                          ? formatTripDateTime(
-                              execution.actualDropoffDateTime,
-                            )
-                          : "ثبت‌نشده"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>کیلومتر شروع / پایان</dt>
-                      <dd>
-                        {execution.startOdometer ?? "—"} /{" "}
-                        {execution.endOdometer ?? "—"}
-                      </dd>
-                    </div>
-                  </dl>
-                  {hasExecutionDescription(execution.description) && (
-                    <p className={styles.executionDescription}>
-                      <span className={styles.inlineLabel}>
-                        توضیحات اجرا:
-                      </span>{" "}
-                      {execution.description}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className={styles.muted}>فاقد رکورد اجرا</p>
-              )}
-            </article>
-          );
-        })}
+      <div className={styles.executionList}>
+        {rows.map(({ passenger, execution }) => (
+          <PassengerExecutionRow
+            key={passenger.tripId}
+            details={details}
+            passenger={passenger}
+            execution={execution}
+            editable={editable}
+            allowSurvey={allowSurvey}
+            open={openIds.includes(passenger.tripId)}
+            onToggle={() =>
+              setOpenIds((current) =>
+                current.includes(passenger.tripId)
+                  ? current.filter((id) => id !== passenger.tripId)
+                  : [...current, passenger.tripId],
+              )
+            }
+          />
+        ))}
       </div>
     </section>
   );
 }
 
-export function TerminalExecutionHistory({
+function PassengerExecutionRow({
   details,
+  passenger,
+  execution,
+  editable,
+  allowSurvey,
+  open,
+  onToggle,
 }: {
   details: TripRequestDetails;
+  passenger: TripPassengerRecord;
+  execution: TripExecutionRecord | null;
+  editable: boolean;
+  allowSurvey: boolean;
+  open: boolean;
+  onToggle: () => void;
 }) {
+  const surveyRecorded = execution?.passengerRating !== null && execution !== null;
+  const canSurvey = allowSurvey && execution?.status === "Completed";
+  const panelId = `execution-row-${passenger.tripId}`;
+
   return (
-    <section className={styles.workspaceSection}>
-      <div className={styles.sectionHeader}>
-        <div>
-          <h3>سابقه اجرای سفر</h3>
-          <p>اطلاعات ثبت‌شدهٔ حرکت، بازگشت و کیلومتر</p>
+    <article className={styles.executionRow}>
+      <div className={styles.executionRowMain}>
+        <strong>
+          {passenger.passenger.firstName} {passenger.passenger.lastName}
+        </strong>
+        {execution ? (
+          <StatusBadge
+            label={executionStatusLabel(execution.status)}
+            tone={tripRequestStatusTone(execution.status)}
+          />
+        ) : (
+          <span className={styles.muted}>فاقد رکورد اجرا</span>
+        )}
+        <span>
+          حرکت واقعی{" "}
+          {formatTripDateTime(execution?.actualPickupDateTime ?? null)}
+        </span>
+        <span>
+          پیاده‌شدن واقعی{" "}
+          {formatTripDateTime(execution?.actualDropoffDateTime ?? null)}
+        </span>
+        {execution && (
+          <span>
+            {surveyRecorded
+              ? `امتیاز: ${execution.passengerRating} از ۵`
+              : canSurvey
+                ? "نظرسنجی ثبت نشده"
+                : "نظرسنجی بعد از پایان اجرا"}
+          </span>
+        )}
+        <div className={styles.executionRowActions}>
+          {execution && (
+            <button
+              type="button"
+              className={styles.executionReveal}
+              aria-expanded={open}
+              aria-controls={panelId}
+              onClick={onToggle}
+            >
+              {open ? "بستن جزئیات" : "جزئیات اجرا"}
+            </button>
+          )}
+          {editable && execution && (
+            <TripCompletionButton
+              tripRequestId={details.tripRequestId}
+              passengers={details.passengers}
+              focusTripId={passenger.tripId}
+              preferCompleted={execution.status !== "Completed"}
+              label={
+                execution.status === "Completed" ? "ویرایش اجرا" : "ثبت پیاده‌شدن"
+              }
+              variant="secondary"
+              size="sm"
+            />
+          )}
+          {canSurvey && execution && (
+            <TripSurveyButton
+              tripRequestId={details.tripRequestId}
+              passenger={passenger.passenger}
+              execution={execution}
+            />
+          )}
         </div>
       </div>
-      <div className={styles.stack}>
-        {details.passengers.map((trip) => (
-          <article
-            className={styles.executionPassengerCard}
-            key={trip.tripId}
-          >
-            <div className={styles.executionPassengerHeader}>
-              <h3>
-                {trip.passenger.firstName} {trip.passenger.lastName}
-              </h3>
-            </div>
-            {trip.executions.map((execution) => (
-              <div
-                className={styles.executionRecord}
-                key={execution.tripExecutionId}
-              >
-                <dl className={styles.summaryFacts}>
-                  <div>
-                    <dt>وضعیت اجرا</dt>
-                    <dd>{executionStatusLabel(execution.status)}</dd>
-                  </div>
-                  <div>
-                    <dt>حرکت</dt>
-                    <dd>
-                      {formatTripDateTime(execution.actualPickupDateTime)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>بازگشت</dt>
-                    <dd>
-                      {formatTripDateTime(execution.actualDropoffDateTime)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>کیلومتر شروع / پایان</dt>
-                    <dd>
-                      {execution.startOdometer ?? "—"} /{" "}
-                      {execution.endOdometer ?? "—"}
-                    </dd>
-                  </div>
-                </dl>
-                {hasExecutionDescription(execution.description) && (
-                  <p className={styles.executionDescription}>
-                    <span className={styles.inlineLabel}>
-                      توضیحات اجرا:
-                    </span>{" "}
-                    {execution.description}
-                  </p>
-                )}
-              </div>
-            ))}
-          </article>
-        ))}
-      </div>
-    </section>
+      {execution && (
+        <div id={panelId} hidden={!open} className={styles.executionRevealPanel}>
+          <p>
+            کیلومترشمار {execution.startOdometer ?? "—"} /{" "}
+            {execution.endOdometer ?? "—"}
+          </p>
+          {hasExecutionDescription(execution.description) && (
+            <p>{execution.description}</p>
+          )}
+          {execution.passengerComment && <p>{execution.passengerComment}</p>}
+          {execution.surveyDateTime && (
+            <p>ثبت‌شده در {formatTripDateTime(execution.surveyDateTime)}</p>
+          )}
+        </div>
+      )}
+    </article>
   );
 }

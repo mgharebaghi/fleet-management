@@ -5,7 +5,6 @@ import { formatTripDateTime } from "../../trip-format";
 import { tripRequestStatusTone } from "../../trip-list-status-tone";
 import styles from "../trip-workspace.module.css";
 import type { TripWorkspaceView } from "../trip-workspace-view";
-import { TripLifecycleProgressSection } from "./trip-lifecycle-progress";
 
 export function DetailsTab({
   details,
@@ -81,8 +80,6 @@ export function DetailsTab({
           </div>
         </dl>
       </section>
-
-      <TripLifecycleProgressSection status={details.status} />
     </section>
   );
 }

@@ -1,13 +1,14 @@
 .bar {
   display: flex;
   flex-wrap: wrap;
-  align-items: end;
-  gap: var(--space-3) var(--space-4);
-  margin-bottom: var(--space-5);
-  padding: var(--space-4);
-  border: 1px solid var(--app-border-subtle);
-  border-radius: var(--app-radius-group);
-  background: var(--app-surface-subtle);
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+  padding: 13px 17px;
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: var(--app-surface);
+  box-shadow: var(--app-card-shadow);
 }
 
 .searchField,

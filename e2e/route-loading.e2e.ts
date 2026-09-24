@@ -52,18 +52,24 @@ for (const target of adminRoutes) {
     await page.goto("/people");
 
     const gate = gateNextNavigation();
+    let navigationArmed = false;
     await page.route(`**${target.path}*`, async (route) => {
       const request = route.request();
-      // Every sidebar link is already in the viewport once /people settles, so
-      // Next.js also fires its own automatic prefetch requests for this same
-      // path (confirmed by instrumenting this page) — those are real `rsc: 1`
-      // requests too, and one can reach this handler before the click below.
-      // Next tags exactly those with `next-router-prefetch` (see
-      // fetch-server-response.js vs. segment-cache/cache.js in the Next.js
-      // source); the click's own navigation fetch never carries it. Passing
-      // prefetches through unheld keeps the gate keyed to the click alone,
-      // regardless of how the two race.
-      if (request.headers().rsc !== "1" || request.headers()["next-router-prefetch"]) {
+      const url = new URL(request.url());
+      // `*` would also match `/fleet/vehicle-insurances` for the vehicles path.
+      if (url.pathname !== target.path) {
+        await route.continue();
+        return;
+      }
+      // Opening a sidebar group prefetches its links before the click. Next tags
+      // those with `next-router-prefetch` or `next-router-segment-prefetch`.
+      const headers = request.headers();
+      if (
+        !navigationArmed ||
+        headers.rsc !== "1" ||
+        headers["next-router-prefetch"] ||
+        headers["next-router-segment-prefetch"]
+      ) {
         await route.continue();
         return;
       }
@@ -71,6 +77,12 @@ for (const target of adminRoutes) {
     });
 
     const sidebar = page.getByRole("navigation", { name: "پیمایش اصلی" });
+    if (target.path.startsWith("/fleet")) {
+      const fleet = sidebar.getByRole("button", { name: "ناوگان" });
+      await fleet.click();
+      await expect(fleet).toHaveAttribute("aria-expanded", "true");
+    }
+    navigationArmed = true;
     await sidebar.getByRole("link", { name: target.linkName }).click();
 
     await gate.reached;

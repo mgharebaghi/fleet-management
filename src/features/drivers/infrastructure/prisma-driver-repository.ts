@@ -45,6 +45,14 @@ class PrismaDriverSession implements DriverSession {
   async licenses(id: number) { return (await this.client.driverLicense.findMany({ where: { DriverId: id }, orderBy: { DriverLicenseId: "desc" } })).map(mapLicense); }
   async license(id: number) { const row = await this.client.driverLicense.findUnique({ where: { DriverLicenseId: id } }); return row ? mapLicense(row) : null; }
   async licenseNumberExists(number: string, excludingLicenseId?: number) { return await this.client.driverLicense.findFirst({ where: { LicenseNo: number, ...(excludingLicenseId ? { DriverLicenseId: { not: excludingLicenseId } } : {}) }, select: { DriverLicenseId: true } }) !== null; }
+  async currentAssignmentHolder(vehicleId: number, now: Date, excludingAssignmentId?: number) {
+    const row = await this.client.vehicleDriverAssignment.findFirst({
+      where: { VehicleId: vehicleId, ...currentAssignmentWhere(now, excludingAssignmentId) },
+      select: { DriverId: true },
+      orderBy: { AssignmentId: "asc" },
+    });
+    return row?.DriverId ?? null;
+  }
   // Half-open intervals ([From, To)), mirroring assignment-rules.ts's overlaps():
   // an existing row only conflicts if it starts before the new period ends AND
   // ends after the new period starts. A row whose ToDateTime lands exactly on
@@ -118,4 +126,20 @@ export class PrismaDriverRepository implements DriverRepository {
   }
   async availablePeople() { return (await this.client.people.findMany({ where: { IsActive: true, Driver: null }, select: personSelect, orderBy: [{ LastName: "asc" }, { PersonId: "asc" }] })).map(mapPerson); }
   async availableVehicles() { return (await this.client.vehicle.findMany({ where: { IsActive: true }, select: vehicleSelect, orderBy: [{ VehicleCode: "asc" }, { VehicleId: "asc" }] })).map(mapVehicle); }
+  async currentVehicleAssignments(now: Date) {
+    return this.client.vehicleDriverAssignment.findMany({
+      where: currentAssignmentWhere(now),
+      select: { VehicleId: true, AssignmentId: true },
+      orderBy: { AssignmentId: "asc" },
+    }).then(rows => rows.map(row => ({ vehicleId: row.VehicleId, assignmentId: row.AssignmentId })));
+  }
+}
+
+/** Start-inclusive, end-exclusive window used by assignmentState("current"). Past and future rows are excluded. */
+function currentAssignmentWhere(now: Date, excludingAssignmentId?: number): Prisma.VehicleDriverAssignmentWhereInput {
+  return {
+    FromDateTime: { lte: now },
+    OR: [{ ToDateTime: null }, { ToDateTime: { gt: now } }],
+    ...(excludingAssignmentId ? { AssignmentId: { not: excludingAssignmentId } } : {}),
+  };
 }
