@@ -154,7 +154,9 @@ contract outside the test runner; tests never migrate or clear a database.
 
 Playwright uses the production build. SQL-backed navigation assertions allow
 15 seconds for the isolated remote database response; their expected behavior
-is unchanged. For a verification run without retries, use
+is unchanged. Server startup has a separate five-minute budget that includes
+the production build on the self-hosted runner, with build output in CI logs.
+For a verification run without retries, use
 `npm run test:e2e -- --retries=0`. Synthetic responsive, light/dark and voucher
 print screenshots are written under ignored `test-results/` directories.
 

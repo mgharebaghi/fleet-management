@@ -41,7 +41,9 @@ export default defineConfig({
     command: "npm run build && npm start",
     url: "http://127.0.0.1:3100",
     reuseExistingServer: false,
-    timeout: 120_000,
+    // This includes a production build on the self-hosted CI runner.
+    timeout: 300_000,
+    stdout: "pipe",
     env: {
       HOSTNAME: "127.0.0.1",
       PORT: "3100",
