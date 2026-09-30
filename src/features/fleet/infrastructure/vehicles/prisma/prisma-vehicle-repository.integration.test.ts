@@ -15,7 +15,9 @@ const repository = new PrismaVehicleRepository(client);
 const vehicles: number[] = [], models: number[] = [], brands: number[] = [], statuses: number[] = [], types: number[] = [], fuels: number[] = [];
 let verified = false;
 async function fixture(): Promise<NewVehicle> {
-  const token = randomUUID();
+  // Keep numeric year searches from accidentally matching fixture identifiers.
+  // Mapping digits to distinct non-hex letters preserves UUID uniqueness.
+  const token = randomUUID().replace(/\d/g, digit => "ghijklmnop"[Number(digit)]);
   const brand = await client.vehicleBrand.create({ data: { BrandName: `IT-${token}` } }); brands.push(brand.BrandId);
   const type = await client.vehicleType.create({ data: { TypeName: `IT-${token}` } }); types.push(type.VehicleTypeId);
   const fuel = await client.fuelType.create({ data: { FuelTypeName: `IT-${token}` } }); fuels.push(fuel.FuelTypeId);
