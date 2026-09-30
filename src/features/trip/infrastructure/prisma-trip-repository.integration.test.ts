@@ -1,35 +1,17 @@
 import { randomUUID } from "node:crypto";
-import { config } from "dotenv";
 
 import { PrismaMssql } from "@prisma/adapter-mssql";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaClient } from "../../../generated/prisma/client";
-import { createMssqlConfigFromEnvironment } from "../../../infrastructure/database/prisma/mssql-config";
+import { loadTestDatabaseConfig } from "../../../test-support/database/test-database-config";
 import { ManageIncidents } from "../application/incident/manage-incidents";
 import { jalaliYearOf } from "../application/trip-lifecycle";
 import { ManageTrips } from "../application/manage-trips";
 import { PrismaIncidentRepository } from "./incident/prisma-incident-repository";
 import { PrismaTripRepository } from "./prisma-trip-repository";
 
-config({ path: ".env", quiet: true });
-const development = {
-  server: process.env.DATABASE_SERVER?.toLowerCase(),
-  port: process.env.DATABASE_PORT?.trim() || "1433",
-  name: process.env.DATABASE_NAME?.toLowerCase(),
-};
-config({ path: ".env.test.local", quiet: true });
-const connection = createMssqlConfigFromEnvironment("TEST_DATABASE");
-if (
-  connection.database.toLowerCase() !== "fleetmanagementdb_integrationtest" ||
-  (connection.server.toLowerCase() === development.server &&
-    String(connection.port) === development.port &&
-    connection.database.toLowerCase() === development.name)
-) {
-  throw new Error(
-    "Trip integration tests require an isolated IntegrationTest database.",
-  );
-}
+const connection = loadTestDatabaseConfig("TEST_DATABASE");
 
 const client = new PrismaClient({
   adapter: new PrismaMssql({
@@ -185,87 +167,6 @@ async function createAssignmentFixture(
   return assignment;
 }
 
-async function removeLeftoverTripIntegrationFixtures() {
-  const people = await client.people.findMany({
-    where: { FirstName: "TripIntegration" },
-    select: { PersonId: true },
-  });
-  const leftoverPersonIds = people.map((person) => person.PersonId);
-  if (leftoverPersonIds.length === 0) return;
-
-  const trips = await client.trip.findMany({
-    where: { PassengerPersonId: { in: leftoverPersonIds } },
-    select: { TripId: true, TripRequestId: true },
-  });
-  const tripIds = trips.map((trip) => trip.TripId);
-  const leftoverRequestIds = [
-    ...new Set(trips.map((trip) => trip.TripRequestId)),
-  ];
-  const executions =
-    tripIds.length === 0
-      ? []
-      : await client.tripExecution.findMany({
-          where: { TripId: { in: tripIds } },
-          select: { TripExecutionId: true },
-        });
-  const executionIds = executions.map((execution) => execution.TripExecutionId);
-  if (leftoverRequestIds.length > 0) {
-    await client.accident.deleteMany({
-      where: { TripRequestId: { in: leftoverRequestIds } },
-    });
-    await client.vehicleViolation.deleteMany({
-      where: { TripRequestId: { in: leftoverRequestIds } },
-    });
-  }
-  const routeOwners = [
-    ...(tripIds.length > 0 ? [{ TripId: { in: tripIds } }] : []),
-    ...(executionIds.length > 0
-      ? [{ TripExecutionId: { in: executionIds } }]
-      : []),
-  ];
-  if (routeOwners.length > 0) {
-    await client.routePoint.deleteMany({
-      where: { Route: { OR: routeOwners } },
-    });
-    await client.route.deleteMany({
-      where: { OR: routeOwners },
-    });
-  }
-  if (executionIds.length > 0) {
-    await client.tripExecution.deleteMany({
-      where: { TripExecutionId: { in: executionIds } },
-    });
-  }
-  if (tripIds.length > 0) {
-    await client.trip.deleteMany({ where: { TripId: { in: tripIds } } });
-  }
-  if (leftoverRequestIds.length > 0) {
-    await client.tripRequest.deleteMany({
-      where: { TripRequestId: { in: leftoverRequestIds } },
-    });
-  }
-
-  const drivers = await client.driver.findMany({
-    where: { PersonId: { in: leftoverPersonIds } },
-    select: { DriverId: true },
-  });
-  const leftoverDriverIds = drivers.map((driver) => driver.DriverId);
-  if (leftoverDriverIds.length > 0) {
-    await client.vehicleDriverAssignment.deleteMany({
-      where: { DriverId: { in: leftoverDriverIds } },
-    });
-    await client.driverLicense.deleteMany({
-      where: { DriverId: { in: leftoverDriverIds } },
-    });
-    await client.driver.deleteMany({
-      where: { DriverId: { in: leftoverDriverIds } },
-    });
-  }
-  await client.people.deleteMany({
-    where: { PersonId: { in: leftoverPersonIds } },
-  });
-}
-
 describe.sequential("Trip SQL Server integration", () => {
   beforeAll(async () => {
     const [identity] = await client.$queryRaw<
@@ -301,7 +202,6 @@ describe.sequential("Trip SQL Server integration", () => {
       throw new Error("Trip IntegrationTest baseline is invalid.");
     }
     verified = true;
-    await removeLeftoverTripIntegrationFixtures();
   }, 180_000);
 
   afterEach(async () => {

@@ -1,9 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { config } from "dotenv";
 import { PrismaMssql } from "@prisma/adapter-mssql";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "../../../../../generated/prisma/client";
-import { createMssqlConfigFromEnvironment } from "../../../../../infrastructure/database/prisma/mssql-config";
+import { loadTestDatabaseConfig } from "../../../../../test-support/database/test-database-config";
 import { PrismaVehicleInsuranceRepository } from "./prisma-vehicle-insurance-repository";
 import { CreateVehicleInsurance } from "../../../application/vehicle-insurances/create-vehicle-insurance/create-vehicle-insurance";
 import {
@@ -12,11 +11,8 @@ import {
 } from "../../../application/vehicle-insurances/ports/vehicle-insurance-writer";
 import type { NewVehicleInsurance, VehicleInsuranceSearchCriteria } from "../../../application/vehicle-insurances/vehicle-insurance";
 
-config({ path: ".env", quiet: true });
-const development = { server: process.env.DATABASE_SERVER?.trim().toLowerCase(), port: process.env.DATABASE_PORT?.trim() || "1433", name: process.env.DATABASE_NAME?.trim().toLowerCase() };
-config({ path: ".env.test.local", quiet: true });
-const connection = createMssqlConfigFromEnvironment("TEST_DATABASE");
-if (connection.database.toLowerCase() !== "fleetmanagementdb_integrationtest" || (development.server === connection.server.toLowerCase() && development.port === String(connection.port) && development.name === connection.database.toLowerCase())) throw new Error("Insurance integration tests require an isolated FleetManagementDB_Integrationtest database.");
+const connection = loadTestDatabaseConfig("TEST_DATABASE");
+
 const client = new PrismaClient({ adapter: new PrismaMssql(connection) });
 const repository = new PrismaVehicleInsuranceRepository(client);
 const insuranceIds: bigint[] = [], vehicleIds: number[] = [], modelIds: number[] = [], brandIds: number[] = [], statusIds: number[] = [];

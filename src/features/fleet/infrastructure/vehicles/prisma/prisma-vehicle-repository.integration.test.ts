@@ -1,19 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { config } from "dotenv";
 import { PrismaMssql } from "@prisma/adapter-mssql";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "../../../../../generated/prisma/client";
-import { createMssqlConfigFromEnvironment } from "../../../../../infrastructure/database/prisma/mssql-config";
+import { loadTestDatabaseConfig } from "../../../../../test-support/database/test-database-config";
 import { PrismaVehicleRepository } from "./prisma-vehicle-repository";
 import { CreateVehicle } from "../../../application/vehicles/create-vehicle/create-vehicle";
 import { VehicleInUseError, VehicleNotFoundError } from "../../../application/vehicles/ports/vehicle-writer";
 import type { NewVehicle } from "../../../application/vehicles/vehicle";
 
-config({ path: ".env", quiet: true });
-const development = { server: process.env.DATABASE_SERVER, port: process.env.DATABASE_PORT || "1433", name: process.env.DATABASE_NAME };
-config({ path: ".env.test.local", quiet: true });
-const connection = createMssqlConfigFromEnvironment("TEST_DATABASE");
-if (connection.database.toLowerCase() !== "fleetmanagementdb_integrationtest" || (development.server?.toLowerCase() === connection.server.toLowerCase() && development.port === String(connection.port) && development.name?.toLowerCase() === connection.database.toLowerCase())) throw new Error("Vehicle integration tests require an isolated FleetManagementDB_Integrationtest database.");
+const connection = loadTestDatabaseConfig("TEST_DATABASE");
+
 const client = new PrismaClient({ adapter: new PrismaMssql(connection) });
 const repository = new PrismaVehicleRepository(client);
 const vehicles: number[] = [], models: number[] = [], brands: number[] = [], statuses: number[] = [], types: number[] = [], fuels: number[] = [];

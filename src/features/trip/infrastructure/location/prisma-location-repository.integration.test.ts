@@ -1,32 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { config } from "dotenv";
 
 import { PrismaMssql } from "@prisma/adapter-mssql";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaClient } from "../../../../generated/prisma/client";
-import { createMssqlConfigFromEnvironment } from "../../../../infrastructure/database/prisma/mssql-config";
+import { loadTestDatabaseConfig } from "../../../../test-support/database/test-database-config";
 import { ManageLocations } from "../../application/location/manage-locations";
 import { PrismaLocationRepository } from "./prisma-location-repository";
 
-config({ path: ".env", quiet: true });
-const development = {
-  server: process.env.DATABASE_SERVER?.toLowerCase(),
-  port: process.env.DATABASE_PORT?.trim() || "1433",
-  name: process.env.DATABASE_NAME?.toLowerCase(),
-};
-config({ path: ".env.test.local", quiet: true });
-const connection = createMssqlConfigFromEnvironment("TEST_DATABASE");
-if (
-  connection.database.toLowerCase() !== "fleetmanagementdb_integrationtest" ||
-  (connection.server.toLowerCase() === development.server &&
-    String(connection.port) === development.port &&
-    connection.database.toLowerCase() === development.name)
-) {
-  throw new Error(
-    "Location integration tests require the isolated IntegrationTest database.",
-  );
-}
+const connection = loadTestDatabaseConfig("TEST_DATABASE");
 
 const client = new PrismaClient({
   adapter: new PrismaMssql({
