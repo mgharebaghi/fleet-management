@@ -8,7 +8,7 @@ import { ConfirmDialog } from "../../../../../components/ui/confirm-dialog/confi
 import { FormActions } from "../../../../../components/ui/form-field/form-field";
 import { InlineNotice } from "../../../../../components/ui/inline-notice/inline-notice";
 import { TechnicalValue } from "../../../../../components/ui/technical-value/technical-value";
-import { VehiclePlate } from "../list-vehicles/vehicle-plate";
+import { VehiclePlate } from "../../../../../components/ui/vehicle-plate/vehicle-plate";
 import { deleteVehicleAction } from "./delete-vehicle.action";
 import { initialDeleteVehicleActionState } from "./delete-vehicle.action-state";
 import { getDeleteVehicleStatusMessage } from "./delete-vehicle.messages";

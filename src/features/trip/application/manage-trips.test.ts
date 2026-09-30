@@ -1,17 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ManageTrips } from "./manage-trips";
-import type {
-  TripRepository,
-  TripWriteSession,
-} from "./trip-repository";
-import type {
-  CreateCompleteTripRequestCommand,
-  CreateTripRequestCommand,
-  NewTripRoute,
-  SaveTripExecutionInput,
-  TripPassengerRecord,
-} from "./trip-records";
+import type { TripRepository, TripWriteSession } from "./trip-repository";
+import type { CreateTripRequestCommand, NewTripRoute, SaveTripExecutionInput, TripPassengerRecord } from "./trip-records";
 
 const requestType = {
   tripRequestTypeId: 1,
@@ -129,6 +120,45 @@ const repository = {
 } satisfies TripRepository;
 
 const manage = new ManageTrips(repository);
+
+describe("execution capacity regressions", () => {
+  it("does not write an execution through another request's page", async () => {
+    expect(await manage.saveExecution(plannedExecutionInput, 99)).toEqual({ success: false, error: "TRIP_NOT_FOUND" });
+    expect(session.createExecution).not.toHaveBeenCalled();
+  });
+  it("does not write a route through another request's page", async () => {
+    expect(await manage.saveRoute(routeInput, 99)).toEqual({ success: false, error: "TRIP_NOT_FOUND" });
+    expect(session.createRoute).not.toHaveBeenCalled();
+  });
+  it("does not write a survey through another request's page", async () => {
+    session.execution.mockResolvedValue({ tripExecutionId: 2, tripId: 1, status: "Completed", requestId: 1, requestStatus: "Completed" });
+    expect(await manage.saveSurvey({ tripExecutionId: 2, passengerRating: null, passengerComment: "Comment" }, 99)).toEqual({ success: false, error: "EXECUTION_NOT_FOUND" });
+    expect(session.updateSurvey).not.toHaveBeenCalled();
+  });
+  it("rejects new planning when the physical vehicle already has three active passengers", async () => {
+    session.activePassengerCountsByVehicle.mockResolvedValue({ 1: 3 });
+    expect(await manage.saveExecution(plannedExecutionInput)).toEqual({ success: false, error: "VEHICLE_PASSENGER_CAPACITY_EXCEEDED" });
+    expect(session.createExecution).not.toHaveBeenCalled();
+  });
+  it("rejects a planned reassignment to a full vehicle", async () => {
+    session.activePassengerCountsByVehicle.mockResolvedValue({ 1: 3 });
+    expect(await manage.saveExecution({ ...plannedExecutionInput, tripExecutionId: 2 })).toEqual({ success: false, error: "VEHICLE_PASSENGER_CAPACITY_EXCEEDED" });
+    expect(session.updateExecution).not.toHaveBeenCalled();
+  });
+  it("excludes the execution being edited from persisted occupancy", async () => {
+    session.activePassengerCountsByVehicle.mockResolvedValue({ 1: 2 });
+    expect((await manage.saveExecution({ ...plannedExecutionInput, tripExecutionId: 2 })).success).toBe(true);
+    expect(session.activePassengerCountsByVehicle).toHaveBeenCalledWith([1], 2);
+  });
+});
+
+describe("initial assignment passenger identity regressions", () => {
+  it("rejects duplicate passengers instead of silently omitting another passenger", async () => {
+    session.request.mockResolvedValue({ tripRequestId: 1, status: "New", tripRequestTypeId: 1, passengers: [{ tripId: 1 }, { tripId: 2 }] });
+    expect(await manage.assignInitialRequest({ tripRequestId: 1, passengers: [1, 1].map(tripId => ({ tripId, vehicleDriverAssignmentId: 1, routes: [] })) })).toEqual({ success: false, error: "INVALID_ASSIGNMENT_PASSENGERS" });
+    expect(session.createExecution).not.toHaveBeenCalled();
+  });
+});
 
 const createInput: CreateTripRequestCommand = {
   tripRequestTypeId: 1,
@@ -269,7 +299,7 @@ describe("create Trip request", () => {
     });
   });
 
-  it("persists the request travel datetime even when a passenger pickup override is supplied", async () => {
+  it("persists a passenger pickup override supplied by the existing form", async () => {
     const requestedPickupDateTime = new Date("2026-02-01T08:30:00Z");
 
     await manage.createRequest({
@@ -286,7 +316,7 @@ describe("create Trip request", () => {
       expect.objectContaining({
         passengers: [
           expect.objectContaining({
-            requestedPickupDateTime: createInput.requestedTravelDateTime,
+            requestedPickupDateTime,
           }),
         ],
       }),
@@ -427,125 +457,6 @@ describe("create Trip request", () => {
       error: "LOCATION_NOT_FOUND",
       failedLocation: { passengerIndex: 1, locationRole: "destination" },
     });
-  });
-});
-
-describe("create complete Trip request", () => {
-  const completeInput: CreateCompleteTripRequestCommand = {
-    ...createInput,
-    passengers: [
-      {
-        ...createInput.passengers[0],
-        vehicleDriverAssignmentId: 11,
-        routes: [
-          {
-            routeName: "مسیر اصلی",
-            alternativeNo: null,
-            distanceKm: "12.50",
-            estimatedDurationMinute: 30,
-            isSelected: true,
-            description: null,
-            points: [
-              {
-                locationId: 3,
-                trafficZone: null,
-                sequenceNo: 1,
-                distanceFromStartKm: "5.00",
-                description: null,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        ...createInput.passengers[0],
-        passengerPersonId: 2,
-        destinationLocationId: 4,
-        pickupOrder: 2,
-        dropoffOrder: 2,
-        vehicleDriverAssignmentId: 22,
-        routes: [
-          {
-            routeName: "مسیر دوم",
-            alternativeNo: 2,
-            distanceKm: null,
-            estimatedDurationMinute: null,
-            isSelected: false,
-            description: "مسیر مسافر دوم",
-            points: [],
-          },
-        ],
-      },
-    ],
-  };
-
-  it("maps generated Trip ids to each passenger's assignment and optional routes in one atomic callback", async () => {
-    session.createRequest.mockResolvedValueOnce({
-      tripRequestId: 77,
-      tripIds: [701, 702],
-    });
-
-    expect(await manage.createCompleteRequest(completeInput)).toEqual({
-      success: true,
-      id: 77,
-    });
-
-    expect(session.lockRequestNumberYear).toHaveBeenCalledWith(1404);
-    expect(session.createRequest).toHaveBeenCalledTimes(1);
-    expect(session.createRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        requestDateTime: new Date("2026-01-01T08:00:00Z"),
-        requestNo: "TR-1404-0001",
-        status: "New",
-        passengers: [
-          expect.objectContaining({ passengerPersonId: 1 }),
-          expect.objectContaining({ passengerPersonId: 2 }),
-        ],
-      }),
-    );
-    expect(session.createExecution).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ tripId: 701, vehicleDriverAssignmentId: 11, status: "Planned" }),
-    );
-    expect(session.createExecution).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ tripId: 702, vehicleDriverAssignmentId: 22, status: "Planned" }),
-    );
-    expect(session.createRoute).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ tripId: 701, routeName: "مسیر اصلی", points: [expect.objectContaining({ locationId: 3 })] }),
-    );
-    expect(session.createRoute).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ tripId: 702, routeName: "مسیر دوم", points: [] }),
-    );
-    expect(session.updateRequestStatus).toHaveBeenCalledWith(77, "Assigned");
-  });
-
-  it("validates the complete command before creating any request rows", async () => {
-    const result = await manage.createCompleteRequest({
-      ...completeInput,
-      passengers: [
-        {
-          ...completeInput.passengers[0],
-          vehicleDriverAssignmentId: Number.NaN,
-        },
-      ],
-    });
-
-    expect(result).toMatchObject({ success: false, error: "INVALID_ID" });
-    expect(session.createRequest).not.toHaveBeenCalled();
-  });
-
-  it("does not attempt to persist blank route points", async () => {
-    session.createRequest.mockResolvedValueOnce({ tripRequestId: 88, tripIds: [801] });
-    await manage.createCompleteRequest({
-      ...completeInput,
-      passengers: [{ ...completeInput.passengers[1], passengerPersonId: 1 }],
-    });
-    expect(session.createRoute).toHaveBeenCalledWith(
-      expect.objectContaining({ points: [] }),
-    );
   });
 });
 

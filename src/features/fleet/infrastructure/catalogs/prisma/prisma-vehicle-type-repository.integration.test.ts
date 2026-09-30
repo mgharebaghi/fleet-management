@@ -1,30 +1,18 @@
 import { randomUUID } from "node:crypto";
-import { resolve } from "node:path";
 
 import { PrismaMssql } from "@prisma/adapter-mssql";
-import { config } from "dotenv";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaClient } from "../../../../../generated/prisma/client";
-import { createMssqlConfigFromEnvironment } from "../../../../../infrastructure/database/prisma/mssql-config";
+import { loadTestDatabaseConfig } from "../../../../../test-support/database/test-database-config";
 import {
   CatalogEntryInUseError,
   CatalogEntryNotFoundError,
 } from "../../../application/catalogs/ports/catalog-entry-writer";
 import { PrismaVehicleTypeRepository } from "./prisma-vehicle-type-repository";
 
-config({
-  path: resolve(process.cwd(), ".env.test.local"),
-  override: false,
-  quiet: true,
-});
-
-const testMssqlConfig = createMssqlConfigFromEnvironment("TEST_DATABASE");
+const testMssqlConfig = loadTestDatabaseConfig("TEST_DATABASE");
 const configuredTestDatabaseName = testMssqlConfig.database;
-
-if (!configuredTestDatabaseName.toLowerCase().includes("integrationtest")) {
-  throw new Error("TEST_DATABASE_NAME must contain IntegrationTest.");
-}
 
 const testPrismaClient = new PrismaClient({
   adapter: new PrismaMssql(testMssqlConfig),

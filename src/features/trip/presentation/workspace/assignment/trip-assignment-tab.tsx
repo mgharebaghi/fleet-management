@@ -122,11 +122,11 @@ function AssignmentRecord({
 
 export function DriverVehicleTab({
   details,
-  assignments,
+  assignmentsByPassenger,
   isPlanningFrozen,
 }: {
   details: TripRequestDetails;
-  assignments: TripAssignmentReference[];
+  assignmentsByPassenger: Record<number, TripAssignmentReference[]>;
   isPlanningFrozen: boolean;
 }) {
   const hasAnyAssignment = details.passengers.some(
@@ -172,8 +172,8 @@ export function DriverVehicleTab({
                 <TripAssignmentPlanner
                   tripRequestId={details.tripRequestId}
                   trip={trip}
-                  assignments={assignments}
-                  scheduledDateTime={details.requestedTravelDateTime}
+                  assignments={assignmentsByPassenger[trip.tripId] ?? []}
+                  scheduledDateTime={trip.requestedPickupDateTime ?? details.requestedTravelDateTime}
                   execution={null}
                   requestIsTerminal={isPlanningFrozen}
                 />

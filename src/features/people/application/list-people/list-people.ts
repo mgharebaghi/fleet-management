@@ -1,3 +1,4 @@
+import { normalizePersianSearchText } from "../../../../shared/text/persian-text";
 import type { PersonSearchRepository } from "./ports/person-search-repository";
 import type {
   ListPeopleInput,
@@ -27,15 +28,7 @@ const normalizeSearch = (search: string | null | undefined): string | null => {
     return null;
   }
 
-  return trimmedSearch
-    .replace(/ي/g, "ی")
-    .replace(/ك/g, "ک")
-    .replace(/[۰-۹]/g, (digit) =>
-      String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)),
-    )
-    .replace(/[٠-٩]/g, (digit) =>
-      String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)),
-    );
+  return normalizePersianSearchText(trimmedSearch);
 };
 
 export class ListPeople {

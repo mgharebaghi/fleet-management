@@ -9,6 +9,10 @@ and `/drivers/[driverId]` (licenses, current assignment, close, history).
 `ManageDrivers` owns reference eligibility, validation, license uniqueness,
 overlap decisions and close rules. `ReadDrivers` owns list input normalization.
 The Application contracts contain no Prisma, SQL Server or Next.js types.
+`ManageDrivers` delegates to `Application/profile`, `licenses` and `assignment`;
+Presentation uses the same slice names for pages, action parsing and record
+sections. Shared form composition remains feature-owned. Driver search uses
+the existing Persian/Arabic numeral and letter normalization before querying.
 The repository maps person and vehicle references rather than copying them.
 Only Driver, DriverLicense and VehicleDriverAssignment are written by the feature.
 
@@ -48,7 +52,12 @@ to avoid adapter Number precision loss. Optional values remain nullable.
 The UI reuses the shared shell, header, forms, searchable select, Jalali picker,
 tables/mobile cards, notices, badges, pagination and URL-driven live search.
 The driver is selected by opening their case before assigning a vehicle.
-Licenses can be added active or inactive; general editing/deletion is out of scope.
+Licenses can be added active or inactive, edited or deleted from the driver record. Those actions
+verify the license belongs to the selected driver. Past assignments remain
+immutable and cannot be deleted. For a current/future assignment referenced by
+any TripExecution, normal editing cannot change its vehicle or time window;
+valid note/odometer updates remain available. The separate close operation is
+retained and checks the assignment belongs to the selected driver.
 Assignments use the same content at desktop and mobile widths because the period,
 odometer and close form are easier to read together than in a wide table.
 

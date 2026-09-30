@@ -18,11 +18,8 @@ import type {
 import { tripMessages, type TripActionState } from "../trip-form-data";
 import { LocationPicker } from "../location/location-picker";
 import { CreateWizardNavigation } from "./create-wizard-navigation";
-import styles from "./create-trip.module.css";
-import {
-  CREATE_REQUEST_PURPOSE_SUGGESTIONS,
-  typeExplanation,
-} from "./create-wizard";
+import styles from "../trip-wizard.module.css";
+import { CREATE_REQUEST_PURPOSE_SUGGESTIONS, typeExplanation } from "./create-wizard";
 
 export function RequestStep({
   hidden,

@@ -1,3 +1,4 @@
+import { captureResponsiveThemes } from "./support/visual-evidence";
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
@@ -135,6 +136,7 @@ test.describe.serial("Vehicles", () => {
     await expect(searchInput).toBeFocused();
     await expect(page.locator("tbody tr")).toHaveCount(1);
 
+    await captureResponsiveThemes(page, "vehicle-list");
     await searchInput.fill("");
     await expect(page).toHaveURL(/\/fleet\/vehicles$/);
   });

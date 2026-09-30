@@ -275,29 +275,12 @@
 
 /* Badges and codes sit under the driver's name inside the page heading, so
    the page never repeats the identity in a second block. */
-.identityMeta {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  line-height: 1.6;
-}
 
 .identityBadges {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-}
-
-.identityCodes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-4);
-  font-size: var(--font-size-xs);
-}
-
-.section {
-  margin-block-start: var(--space-8);
 }
 
 .sectionHeader {
@@ -314,31 +297,11 @@
   font-size: var(--font-size-lg);
 }
 
-.sectionCount {
-  color: var(--app-text-muted);
-  font-size: var(--font-size-xs);
-}
-
 .sectionHeaderActions {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
   gap: var(--space-3);
-}
-
-.sectionHint {
-  margin-bottom: var(--space-3);
-  color: var(--app-text-muted);
-  font-size: var(--font-size-xs);
-  line-height: 1.6;
-}
-
-.subsection {
-  margin-top: var(--space-6);
-}
-
-.subsection:first-child {
-  margin-top: 0;
 }
 
 .assignment {

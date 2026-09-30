@@ -17,7 +17,7 @@ export function assignmentCoversInstant(
 }
 
 export function assignmentIneligibilityReasons(
-  assignment: TripAssignmentReference,
+  assignment: Pick<TripAssignmentReference, "driverIsActive" | "vehicle" | "fromDateTime" | "toDateTime" | "hasEligibleLicense">,
   activeAt: Date,
 ): AssignmentIneligibilityReason[] {
   const reasons: AssignmentIneligibilityReason[] = [];

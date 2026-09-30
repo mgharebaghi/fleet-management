@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { makeCreateVehicle } from "../../../composition/vehicles/vehicle.factory";
-import { parseVehicleFormData } from "./create-vehicle.form-data";
+import { parseVehicleFormData } from "../components/vehicle-form-data";
 import type { CreateVehicleActionState } from "./create-vehicle.action-state";
 export async function createVehicleAction(previous: CreateVehicleActionState, data: FormData): Promise<CreateVehicleActionState> {
   void previous;

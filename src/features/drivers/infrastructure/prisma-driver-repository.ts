@@ -67,6 +67,9 @@ class PrismaDriverSession implements DriverSession {
     }, select: { AssignmentId: true } }) !== null;
   }
   async assignment(id: number) { return (await readAssignments(this.client, { AssignmentId: id }))[0] ?? null; }
+  async assignmentHasTripExecutions(id: number) {
+    return await this.client.tripExecution.findFirst({ where: { VehicleDriverAssignmentId: id }, select: { TripExecutionId: true } }) !== null;
+  }
   async createDriver(personId: number) { return (await this.client.driver.create({ data: { PersonId: personId } })).DriverId; }
   async createLicense(input: NewLicense) {
     return (await this.client.driverLicense.create({ data: { DriverId: input.driverId, LicenseType: input.licenseType, LicenseNo: input.licenseNo, IssueDate: input.issueDate, ExpireDate: input.expireDate, IsActive: input.isActive } })).DriverLicenseId;

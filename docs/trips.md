@@ -30,8 +30,11 @@ FleetManagement.
   Locations and are not copies of those endpoints.
 - Passenger rating, comment and survey time are stored on the related
   TripExecution. The schema represents one current survey payload per
-  execution, not survey history. No 1–5 scale is confirmed in the database
-  contract, so the UI does not invent a star selector.
+  execution, not survey history. The current UI offers scores 1–5; Application
+  preserves the existing SQL integer contract, including legacy scores outside
+  that range. Editing a comment retains such a score unless the user explicitly
+  changes or clears it. A comment or survey timestamp also counts as recorded
+  when no rating exists.
 - `trip.VehicleTrip` has no foreign keys to the Trip request/execution graph
   and is unused.
 - `driver.Accident` and `driver.VehicleViolation` may link to a TripRequest
@@ -182,9 +185,14 @@ FleetManagement separates **Trip Registration** (Requester role) from **Initial 
 ### 1. Requester flow (`/trips/create`)
 Requesters register trip requests through a clean **3-step wizard**:
 1. **اطلاعات درخواست** — request type, travel date and time, shared origin/destination (if applicable), purpose, and general description.
-2. **مسافران** — passenger selection, per-passenger origin and destination, optional pickup time override, pickup/drop-off orders, and notes.
+2. **مسافران** — passenger selection, per-passenger origin and destination, pickup/drop-off orders, and notes. The current requester screen inherits the request time.
 3. **مرور و تأیید** — review of the requested trip and passengers.
 Submitting persists the `TripRequest` and passenger `Trip` records with `Status = "New"` in an atomic transaction, then redirects to the Trip landing page (`/trips`). Requesters do not assign drivers, vehicles, or execution plans.
+The creation transport also supports a passenger pickup override; when enabled,
+it must contain a valid date and Tehran time and is persisted instead of the
+inherited request time. The existing passenger edit dialog exposes that control;
+this cleanup does not add it to the requester screen. Assignment
+eligibility is evaluated at each passenger's actual requested pickup instant.
 
 ### 2. Trip home and pending badges (`/trips`)
 The Trip home page provides two clear paths:
@@ -208,6 +216,8 @@ Opening a `New` request loads the **4-step handling wizard**:
 
 Submitting the handling wizard calls `assignInitialTripRequestAction`, which atomically:
 - Verifies the request is still `New`.
+- Requires exactly the request's full passenger set, each TripId once. Duplicate,
+  incomplete and foreign-request passenger lists are rejected before writes.
 - Validates active driver and vehicle assignment eligibility.
 - Rejects the assignment when any physical vehicle would have more than 3 active passengers, including passengers already planned or in progress on other requests.
 - Creates `TripExecution` records with status `Planned`.
@@ -217,7 +227,35 @@ Submitting the handling wizard calls `assignInitialTripRequestAction`, which ato
 
 One physical vehicle may carry at most 3 active passengers across all trip requests. An active passenger is a `TripExecution` in `Planned` or `InProgress`. `Completed` and `Cancelled` executions free that capacity. Capacity is the physical vehicle (`vehicleId`): different driver/vehicle assignment records for the same vehicle share that limit. This is not a seat-count or vehicle-type capacity, and it does not use planned end time, route duration, or `VehicleTrip`. On the assignment step, persisted active occupancy is combined with the other passengers selected in the current wizard. A full vehicle stays visible and searchable, but its assignment options are disabled with «ظرفیت خودرو تکمیل شده». The passenger currently being edited is excluded from the unsaved wizard count, so their own selection stays available. `assignInitialRequest` reads that occupancy inside its transaction and enforces the same limit before creating executions, routes, or changing request status. It returns `VEHICLE_PASSENGER_CAPACITY_EXCEEDED` when the limit would be exceeded. A `New` request has no executions yet, so its own passengers are counted only from the assignment being submitted.
 
-`createCompleteRequest` is not part of this dispatcher flow. Requesters submit a `New` request without assignments; only handling calls `assignInitialRequest`.
+The unused combined-create path has been removed. Requesters submit a `New`
+request without assignments; handling calls `assignInitialRequest`. All allowed
+execution creation/reassignment writes enforce the physical-vehicle capacity
+inside the same Serializable transaction, excluding the execution currently
+being edited from its existing occupancy. Terminal executions free capacity.
+Route, execution and survey actions pass the bound request ID to Application;
+the target record must belong to that request before persistence.
+
+## Responsibility boundaries and reads
+
+`ManageTrips` is the stable entry point delegating to `Application/requests`,
+`passengers`, `assignment`, `routes`, `executions` and `surveys`. Shared write
+rules and repository contracts stay inside Trip. Corresponding Presentation
+action files own form parsing and server transport. Request creation contains
+only its three requester steps; operational assignment/route steps live under
+`Presentation/handling`. Shared planning contracts and assisted route controls
+are feature-owned. Workspace route grouping, assignment projection and lifecycle
+display are separate modules. The intentionally inactive Incident UI remains.
+
+The request page passes its already-read details to the workspace. Pending-menu
+counts use React `cache` only within one server render/request. Assignment
+lookups share one promise for passengers with the same requested instant, within
+that read call. There is no cross-request cache or TTL. Query-count regression
+tests cover repeated instants; remote SQL/browser durations are not a controlled
+performance benchmark. Location duplicate/search rules remain unchanged.
+
+Unexpected action failures log only an allowlisted operation, error category and
+recognized Prisma code, without form data, exception messages, connection strings
+or personal information. User-facing action states retain their existing values.
 
 ### 4. Staff detail workspace (`/trips/{id}`)
 Subsequent visits to an assigned or active request directly load the **5-tab administrative workspace** (`TripWorkspacePage`):

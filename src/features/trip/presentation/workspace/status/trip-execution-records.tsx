@@ -1,5 +1,8 @@
 "use client";
 
+import { surveyIsRecorded } from "../../survey/survey-recorded";
+
+
 import { useState } from "react";
 
 import { StatusBadge } from "@/components/ui/status-badge/status-badge";
@@ -98,7 +101,7 @@ function PassengerExecutionRow({
   open: boolean;
   onToggle: () => void;
 }) {
-  const surveyRecorded = execution?.passengerRating !== null && execution !== null;
+  const surveyRecorded = execution !== null && surveyIsRecorded(execution);
   const canSurvey = allowSurvey && execution?.status === "Completed";
   const panelId = `execution-row-${passenger.tripId}`;
 

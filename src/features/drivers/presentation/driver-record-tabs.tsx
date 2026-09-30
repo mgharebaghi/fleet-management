@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTransition, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 
 import { LoadingIndicator } from "../../../components/ui/loading-indicator/loading-indicator";
+import { isPlainNavigationClick, rtlTabIndex } from "../../../shared/presentation/navigation-interaction";
 import styles from "./driver-pages.module.css";
 
 export const DRIVER_RECORD_TABS = [
@@ -42,20 +43,18 @@ export function DriverRecordTabs({
   }
 
   function onTabClick(event: MouseEvent<HTMLAnchorElement>, tab: DriverRecordTab) {
-    if (tab === active) return;
+    if (tab === active || !isPlainNavigationClick(event)) return;
     event.preventDefault();
     openTab(tab);
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
-    const index = ids.indexOf(active);
-    let next = index;
-    if (event.key === "ArrowLeft") next = (index + 1) % ids.length;
-    else if (event.key === "ArrowRight") next = (index - 1 + ids.length) % ids.length;
-    else if (event.key === "Home") next = 0;
-    else if (event.key === "End") next = ids.length - 1;
-    else return;
+    const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLAnchorElement>('[role="tab"]'));
+    const index = tabs.indexOf(event.target as HTMLAnchorElement);
+    const next = rtlTabIndex(event.key, index < 0 ? ids.indexOf(active) : index, ids.length);
+    if (next === null) return;
     event.preventDefault();
+    tabs[next]?.focus();
     const tab = ids[next];
     if (tab) openTab(tab);
   }

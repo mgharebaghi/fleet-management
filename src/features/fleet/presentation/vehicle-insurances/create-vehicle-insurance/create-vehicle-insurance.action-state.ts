@@ -1,5 +1,5 @@
 import type { CreateVehicleInsuranceError } from "../../../application/vehicle-insurances/create-vehicle-insurance/create-vehicle-insurance.contract";
-import type { InsuranceFormValues } from "./create-vehicle-insurance.form-data";
+import type { InsuranceFormValues } from "../components/insurance-form-data";
 
 export type CreateVehicleInsuranceActionState = {
   error?: CreateVehicleInsuranceError;

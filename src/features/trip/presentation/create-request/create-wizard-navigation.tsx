@@ -1,5 +1,5 @@
 import { ActionButton } from "../../../../components/ui/action-button/action-button";
-import styles from "./create-trip.module.css";
+import styles from "../trip-wizard.module.css";
 
 export function CreateWizardNavigation({
   onBack,

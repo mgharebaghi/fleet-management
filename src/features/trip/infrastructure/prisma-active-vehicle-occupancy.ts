@@ -12,6 +12,7 @@ type OccupancyClient = PrismaClient | TripPrismaClient;
 export async function readActivePassengerCountsByVehicle(
   client: OccupancyClient,
   vehicleIds: readonly number[],
+  excludingExecutionId?: number,
 ): Promise<Record<number, number>> {
   const ids = [...new Set(vehicleIds)];
   if (ids.length === 0) return {};
@@ -19,6 +20,7 @@ export async function readActivePassengerCountsByVehicle(
   const grouped = await client.tripExecution.groupBy({
     by: ["VehicleDriverAssignmentId"],
     where: {
+      ...(excludingExecutionId === undefined ? {} : { TripExecutionId: { not: excludingExecutionId } }),
       Status: { in: [...NON_TERMINAL_TRIP_EXECUTION_STATUSES] },
       VehicleDriverAssignment: { VehicleId: { in: ids } },
     },

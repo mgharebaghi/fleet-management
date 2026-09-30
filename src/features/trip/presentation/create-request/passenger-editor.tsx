@@ -16,7 +16,7 @@ import type {
   TripPersonReference,
 } from "../../application/trip-records";
 import { LocationPicker } from "../location/location-picker";
-import styles from "./create-trip.module.css";
+import styles from "../trip-wizard.module.css";
 import { tripPersonSelectOptions } from "./trip-person-select-options";
 
 export function PassengerEditor({

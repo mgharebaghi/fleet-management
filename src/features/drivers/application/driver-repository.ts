@@ -12,6 +12,7 @@ export interface DriverSession {
   /** Driver holding a current assignment of this vehicle, if one exists. Current means the period has started and has not ended, matching assignmentState. */
   currentAssignmentHolder(vehicleId: number, now: Date, excludingAssignmentId?: number): Promise<number | null>;
   assignment(id: number): Promise<Assignment | null>;
+  assignmentHasTripExecutions(id: number): Promise<boolean>;
   createDriver(personId: number): Promise<number>;
   createLicense(input: NewLicense): Promise<number>;
   updateLicense(input: UpdatedLicense): Promise<void>;

@@ -54,6 +54,12 @@ introspection only and is not a production runtime requirement.
 
 ## Getting started
 
+Use Node.js **24** (also specified in `.nvmrc` and `package.json`), matching CI
+and Docker. In particular, Node 26 rejects the current SQL Server driver's TLS
+SNI handling of IP addresses. Keep the existing IP connection and configured
+encryption settings on Node 24; changing certificate validation is not a runtime
+upgrade workaround.
+
 ```bash
 npm install
 cp .env.example .env        # then fill in real development credentials
@@ -138,6 +144,21 @@ development.
 Automated tests never run against production, and tests never provision or
 change database structure — they verify database identity before writing and
 clean up only their own fixtures.
+
+`src/test-support/database/test-database-config.ts` is the shared configuration
+guard for Integration, Playwright and browser fixtures. Missing settings, a wrong
+test database name, or a connection matching Development/the other test database
+stops the run before fixture writes. Tests additionally query `DB_NAME()` on the
+live connection. Provision both test databases from the approved SQL Server
+contract outside the test runner; tests never migrate or clear a database.
+
+Playwright uses the production build. SQL-backed navigation assertions allow
+15 seconds for the isolated remote database response; their expected behavior
+is unchanged. Server startup has a separate five-minute budget that includes
+the production build on the self-hosted runner, with build output in CI logs.
+For a verification run without retries, use
+`npm run test:e2e -- --retries=0`. Synthetic responsive, light/dark and voucher
+print screenshots are written under ignored `test-results/` directories.
 
 ## Commands
 

@@ -1,3 +1,4 @@
+import { surveyIsRecorded } from "../../survey/survey-recorded";
 import { StatusBadge } from "@/components/ui/status-badge/status-badge";
 import type { TripRequestDetails } from "../../../application/trip-records";
 import { formatTripDateTime } from "../../trip-format";
@@ -42,7 +43,7 @@ export function PassengerSurveySection({
         return (
           <div className={styles.stack}>
             {completedItems.map(({ trip, execution }) => {
-              const isRecorded = execution.passengerRating !== null;
+              const isRecorded = surveyIsRecorded(execution);
               return (
                 <article
                   className={styles.surveyPassengerCard}
@@ -56,7 +57,7 @@ export function PassengerSurveySection({
                       {isRecorded ? (
                         <p className={styles.surveyRatingLine}>
                           <span className={styles.surveyRatingScore}>
-                            امتیاز: {execution.passengerRating} از ۵
+                            {execution.passengerRating === null ? "امتیاز ثبت نشده" : execution.passengerRating >= 1 && execution.passengerRating <= 5 ? `امتیاز: ${execution.passengerRating} از ۵` : `امتیاز ثبت‌شده: ${execution.passengerRating}`}
                           </span>
                           {execution.surveyDateTime && (
                             <span className={styles.muted}>

@@ -1,8 +1,6 @@
 import { randomInt, randomUUID } from "node:crypto";
-import { resolve } from "node:path";
 
 import { PrismaMssql } from "@prisma/adapter-mssql";
-import { config } from "dotenv";
 import {
   afterAll,
   afterEach,
@@ -13,34 +11,13 @@ import {
 } from "vitest";
 
 import { PrismaClient } from "../../../../generated/prisma/client";
-import { createMssqlConfigFromEnvironment } from "../../../../infrastructure/database/prisma/mssql-config";
+import { loadTestDatabaseConfig } from "../../../../test-support/database/test-database-config";
 
 import type { PersonSearchCriteria } from "../../application/list-people/person-search";
 import { PrismaPersonSearchRepository } from "./prisma-person-search-repository";
 
-config({
-  path: resolve(process.cwd(), ".env.test.local"),
-  override: false,
-  quiet: true,
-});
-
-const testMssqlConfig = createMssqlConfigFromEnvironment("TEST_DATABASE");
+const testMssqlConfig = loadTestDatabaseConfig("TEST_DATABASE");
 const configuredTestDatabaseName = testMssqlConfig.database;
-
-if (!configuredTestDatabaseName.toLowerCase().includes("integrationtest")) {
-  throw new Error("TEST_DATABASE_NAME must contain IntegrationTest.");
-}
-
-if (
-  process.env.DATABASE_SERVER?.toLowerCase() ===
-    testMssqlConfig.server.toLowerCase() &&
-  (process.env.DATABASE_PORT?.trim() || "1433") ===
-    String(testMssqlConfig.port) &&
-  process.env.DATABASE_NAME?.toLowerCase() ===
-    configuredTestDatabaseName.toLowerCase()
-) {
-  throw new Error("Test and development databases must be different.");
-}
 
 const testPrismaClient = new PrismaClient({
   adapter: new PrismaMssql(testMssqlConfig),

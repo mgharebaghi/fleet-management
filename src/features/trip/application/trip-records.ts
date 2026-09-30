@@ -65,18 +65,6 @@ export type NewTripRouteDetails = {
   points: NewTripRoutePoint[];
 };
 
-export type CreateCompleteTripPassengerInput = TripPassengerInput & {
-  vehicleDriverAssignmentId: number;
-  routes: NewTripRouteDetails[];
-};
-
-export type CreateCompleteTripRequestCommand = Omit<
-  CreateTripRequestCommand,
-  "passengers"
-> & {
-  passengers: CreateCompleteTripPassengerInput[];
-};
-
 export type AssignInitialPassengerInput = {
   tripId: number;
   vehicleDriverAssignmentId: number;
@@ -249,6 +237,7 @@ export type TripFailure =
   | "INVALID_DATE"
   | "PURPOSE_TOO_LONG"
   | "PASSENGER_REQUIRED"
+  | "INVALID_ASSIGNMENT_PASSENGERS"
   | "PERSON_NOT_FOUND"
   | "PERSON_INACTIVE"
   | "LOCATION_NOT_FOUND"

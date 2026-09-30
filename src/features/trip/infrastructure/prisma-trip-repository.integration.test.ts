@@ -1,35 +1,19 @@
 import { randomUUID } from "node:crypto";
-import { config } from "dotenv";
 
 import { PrismaMssql } from "@prisma/adapter-mssql";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaClient } from "../../../generated/prisma/client";
-import { createMssqlConfigFromEnvironment } from "../../../infrastructure/database/prisma/mssql-config";
+import { loadTestDatabaseConfig } from "../../../test-support/database/test-database-config";
 import { ManageIncidents } from "../application/incident/manage-incidents";
 import { jalaliYearOf } from "../application/trip-lifecycle";
 import { ManageTrips } from "../application/manage-trips";
 import { PrismaIncidentRepository } from "./incident/prisma-incident-repository";
 import { PrismaTripRepository } from "./prisma-trip-repository";
+import { ManageDrivers } from "../../drivers/application/manage-drivers";
+import { PrismaDriverRepository } from "../../drivers/infrastructure/prisma-driver-repository";
 
-config({ path: ".env", quiet: true });
-const development = {
-  server: process.env.DATABASE_SERVER?.toLowerCase(),
-  port: process.env.DATABASE_PORT?.trim() || "1433",
-  name: process.env.DATABASE_NAME?.toLowerCase(),
-};
-config({ path: ".env.test.local", quiet: true });
-const connection = createMssqlConfigFromEnvironment("TEST_DATABASE");
-if (
-  connection.database.toLowerCase() !== "fleetmanagementdb_integrationtest" ||
-  (connection.server.toLowerCase() === development.server &&
-    String(connection.port) === development.port &&
-    connection.database.toLowerCase() === development.name)
-) {
-  throw new Error(
-    "Trip integration tests require an isolated IntegrationTest database.",
-  );
-}
+const connection = loadTestDatabaseConfig("TEST_DATABASE");
 
 const client = new PrismaClient({
   adapter: new PrismaMssql({
@@ -61,7 +45,7 @@ function successfulId(
   return result.id;
 }
 
-async function createCoreFixture() {
+async function createCoreFixture(requestedPickupDateTime?: Date) {
   if (!verified) throw new Error("Trip database identity was not verified.");
   const token = randomUUID();
   const person = await client.people.create({
@@ -103,7 +87,7 @@ async function createCoreFixture() {
           passengerPersonId: person.PersonId,
           originLocationId: origin.LocationId,
           destinationLocationId: destination.LocationId,
-          requestedPickupDateTime: requestedTravelDateTime,
+          requestedPickupDateTime: requestedPickupDateTime ?? requestedTravelDateTime,
           pickupOrder: 1,
           dropoffOrder: 1,
           status: null,
@@ -185,88 +169,49 @@ async function createAssignmentFixture(
   return assignment;
 }
 
-async function removeLeftoverTripIntegrationFixtures() {
-  const people = await client.people.findMany({
-    where: { FirstName: "TripIntegration" },
-    select: { PersonId: true },
-  });
-  const leftoverPersonIds = people.map((person) => person.PersonId);
-  if (leftoverPersonIds.length === 0) return;
-
-  const trips = await client.trip.findMany({
-    where: { PassengerPersonId: { in: leftoverPersonIds } },
-    select: { TripId: true, TripRequestId: true },
-  });
-  const tripIds = trips.map((trip) => trip.TripId);
-  const leftoverRequestIds = [
-    ...new Set(trips.map((trip) => trip.TripRequestId)),
-  ];
-  const executions =
-    tripIds.length === 0
-      ? []
-      : await client.tripExecution.findMany({
-          where: { TripId: { in: tripIds } },
-          select: { TripExecutionId: true },
-        });
-  const executionIds = executions.map((execution) => execution.TripExecutionId);
-  if (leftoverRequestIds.length > 0) {
-    await client.accident.deleteMany({
-      where: { TripRequestId: { in: leftoverRequestIds } },
-    });
-    await client.vehicleViolation.deleteMany({
-      where: { TripRequestId: { in: leftoverRequestIds } },
-    });
-  }
-  const routeOwners = [
-    ...(tripIds.length > 0 ? [{ TripId: { in: tripIds } }] : []),
-    ...(executionIds.length > 0
-      ? [{ TripExecutionId: { in: executionIds } }]
-      : []),
-  ];
-  if (routeOwners.length > 0) {
-    await client.routePoint.deleteMany({
-      where: { Route: { OR: routeOwners } },
-    });
-    await client.route.deleteMany({
-      where: { OR: routeOwners },
-    });
-  }
-  if (executionIds.length > 0) {
-    await client.tripExecution.deleteMany({
-      where: { TripExecutionId: { in: executionIds } },
-    });
-  }
-  if (tripIds.length > 0) {
-    await client.trip.deleteMany({ where: { TripId: { in: tripIds } } });
-  }
-  if (leftoverRequestIds.length > 0) {
-    await client.tripRequest.deleteMany({
-      where: { TripRequestId: { in: leftoverRequestIds } },
-    });
-  }
-
-  const drivers = await client.driver.findMany({
-    where: { PersonId: { in: leftoverPersonIds } },
-    select: { DriverId: true },
-  });
-  const leftoverDriverIds = drivers.map((driver) => driver.DriverId);
-  if (leftoverDriverIds.length > 0) {
-    await client.vehicleDriverAssignment.deleteMany({
-      where: { DriverId: { in: leftoverDriverIds } },
-    });
-    await client.driverLicense.deleteMany({
-      where: { DriverId: { in: leftoverDriverIds } },
-    });
-    await client.driver.deleteMany({
-      where: { DriverId: { in: leftoverDriverIds } },
-    });
-  }
-  await client.people.deleteMany({
-    where: { PersonId: { in: leftoverPersonIds } },
-  });
-}
-
 describe.sequential("Trip SQL Server integration", () => {
+  it("persists a passenger's requested pickup override when creating the request", async () => {
+    const pickup = new Date("2026-02-01T09:00:00Z");
+    const fixture = await createCoreFixture(pickup);
+    const persisted = await repository.details(fixture.requestId);
+    expect(persisted?.requestedTravelDateTime).toEqual(fixture.requestedTravelDateTime);
+    expect(persisted?.passengers[0].requestedPickupDateTime).toEqual(pickup);
+  }, 60_000);
+
+  it("protects referenced assignment history while retaining notes and physical-vehicle capacity", async () => {
+    const fixture = await createCoreFixture();
+    const assignment = await createAssignmentFixture(fixture.token, fixture.person.PersonId, fixture.requestedTravelDateTime);
+    const executionId = successfulId(await manage.saveExecution({ tripId: fixture.tripId, tripExecutionId: null, vehicleDriverAssignmentId: assignment.AssignmentId, actualPickupDateTime: null, actualDropoffDateTime: null, startOdometer: null, endOdometer: null, status: "Planned", description: null }, fixture.requestId));
+    const drivers = new ManageDrivers(new PrismaDriverRepository(client), () => fixture.requestedTravelDateTime);
+    const input = { assignmentId: assignment.AssignmentId, driverId: assignment.DriverId, vehicleId: assignment.VehicleId, fromDateTime: assignment.FromDateTime, toDateTime: assignment.ToDateTime, startOdometer: null, endOdometer: null, description: null };
+    expect(await drivers.updateAssignment({ ...input, fromDateTime: new Date(assignment.FromDateTime.getTime() - 60_000) })).toEqual({ success: false, error: "ASSIGNMENT_IN_USE" });
+    expect((await drivers.updateAssignment({ ...input, description: "Retained history" })).success).toBe(true);
+    expect((await repository.details(fixture.requestId))?.passengers[0].executions[0].assignment.vehicle.vehicleId).toBe(assignment.VehicleId);
+    await repository.atomic(async session => {
+      expect(await session.activePassengerCountsByVehicle([assignment.VehicleId], executionId)).toEqual({});
+    });
+  }, 180_000);
+
+  it("never commits a fourth passenger under concurrent planning attempts", async () => {
+    const fixture = await createCoreFixture();
+    const assignment = await createAssignmentFixture(fixture.token, fixture.person.PersonId, fixture.requestedTravelDateTime);
+    const passenger = { passengerPersonId: fixture.person.PersonId, originLocationId: fixture.origin.LocationId, destinationLocationId: fixture.destination.LocationId, requestedPickupDateTime: fixture.requestedTravelDateTime, pickupOrder: null, dropoffOrder: null, status: null, description: null };
+    const createExecution = (tripId: number) => manage.saveExecution({ tripId, tripExecutionId: null, vehicleDriverAssignmentId: assignment.AssignmentId, actualPickupDateTime: null, actualDropoffDateTime: null, startOdometer: null, endOdometer: null, status: "Planned", description: null }, fixture.requestId);
+    successfulId(await createExecution(fixture.tripId));
+    const added = [];
+    for (let index = 0; index < 3; index++) added.push(successfulId(await manage.addPassenger({ tripRequestId: fixture.requestId, passenger })));
+    successfulId(await createExecution(added[0]));
+    const outcomes = await Promise.allSettled([createExecution(added[1]), createExecution(added[2])]);
+    const successes = outcomes.filter(result => result.status === "fulfilled" && result.value.success);
+    expect(successes.length).toBeLessThanOrEqual(1);
+    const counts = await repository.activePassengerCountsByVehicle([assignment.VehicleId]);
+    expect(counts[assignment.VehicleId]).toBe(2 + successes.length);
+    expect(counts[assignment.VehicleId]).toBeLessThanOrEqual(3);
+    if (successes.length === 0) successfulId(await createExecution(added[1]));
+    const pendingTripId = outcomes[0].status === "fulfilled" && outcomes[0].value.success || successes.length === 0 ? added[2] : added[1];
+    expect(await createExecution(pendingTripId)).toEqual({ success: false, error: "VEHICLE_PASSENGER_CAPACITY_EXCEEDED" });
+    expect(await repository.activePassengerCountsByVehicle([assignment.VehicleId])).toEqual({ [assignment.VehicleId]: 3 });
+  }, 240_000);
   beforeAll(async () => {
     const [identity] = await client.$queryRaw<
       Array<{
@@ -301,7 +246,6 @@ describe.sequential("Trip SQL Server integration", () => {
       throw new Error("Trip IntegrationTest baseline is invalid.");
     }
     verified = true;
-    await removeLeftoverTripIntegrationFixtures();
   }, 180_000);
 
   afterEach(async () => {
@@ -569,7 +513,7 @@ describe.sequential("Trip SQL Server integration", () => {
   );
 
   it(
-    "atomically creates a complete planned request with execution, route, and points",
+    "atomically assigns a request with execution, route, and points",
     async () => {
       const fixture = await createCoreFixture();
       const assignment = await createAssignmentFixture(
@@ -577,25 +521,11 @@ describe.sequential("Trip SQL Server integration", () => {
         fixture.person.PersonId,
         fixture.requestedTravelDateTime,
       );
-      const requestType = await client.tripRequestType.findFirstOrThrow({
-        where: { TypeCode: "COMMON_ORIGIN_DESTINATION" },
-      });
-
-      const result = await manage.createCompleteRequest({
-        tripRequestTypeId: requestType.TripRequestTypeId,
-        requestedTravelDateTime: fixture.requestedTravelDateTime,
-        purpose: `Complete-${fixture.token}`,
-        description: "atomic complete request",
+      const result = await manage.assignInitialRequest({
+        tripRequestId: fixture.requestId,
         passengers: [
           {
-            passengerPersonId: fixture.person.PersonId,
-            originLocationId: fixture.origin.LocationId,
-            destinationLocationId: fixture.destination.LocationId,
-            requestedPickupDateTime: fixture.requestedTravelDateTime,
-            pickupOrder: 1,
-            dropoffOrder: 1,
-            status: null,
-            description: null,
+            tripId: fixture.tripId,
             vehicleDriverAssignmentId: assignment.AssignmentId,
             routes: [
               {
@@ -621,7 +551,6 @@ describe.sequential("Trip SQL Server integration", () => {
       });
       expect(result.success).toBe(true);
       if (!result.success) throw new Error(result.error);
-      requestIds.push(result.id);
 
       const details = await repository.details(result.id);
       expect(details).toMatchObject({

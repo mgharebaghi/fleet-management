@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { isPlainNavigationClick } from "../../../../shared/presentation/navigation-interaction";
 
 import { AdminNavIcon } from "../../../../components/admin-shell/admin-nav-icons";
 import {
@@ -20,14 +21,6 @@ import {
 } from "./trip-workspace-view";
 import styles from "./trip-workspace.module.css";
 
-function useSafeRouter() {
-  try {
-    return useRouter();
-  } catch {
-    return null;
-  }
-}
-
 export function TripWorkspaceTabs({
   tripRequestId,
   activeSection,
@@ -39,7 +32,7 @@ export function TripWorkspaceTabs({
   tripRequestStatus?: string;
   children?: React.ReactNode;
 }) {
-  const router = useSafeRouter();
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const handleTabClick = (
@@ -47,7 +40,7 @@ export function TripWorkspaceTabs({
     href: string,
     isActive: boolean,
   ) => {
-    if (isActive || !router) return;
+    if (isActive || !isPlainNavigationClick(e)) return;
     e.preventDefault();
     startTransition(() => {
       router.push(href, { scroll: false });

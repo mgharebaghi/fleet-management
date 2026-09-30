@@ -1,13 +1,13 @@
 import { PrismaMssql } from "@prisma/adapter-mssql";
 
-import { createMssqlConfigFromEnvironment } from "../../src/infrastructure/database/prisma/mssql-config";
+import { loadTestDatabaseConfig } from "../../src/test-support/database/test-database-config";
 
 export type E2EDatabaseAdapter = Awaited<ReturnType<PrismaMssql["connect"]>>;
 
 const EXPECTED_E2E_DATABASE_NAME = "FleetManagementDB_E2ETest";
 
 export async function connectToE2EDatabase(): Promise<E2EDatabaseAdapter> {
-  const e2eMssqlConfig = createMssqlConfigFromEnvironment("E2E_DATABASE");
+  const e2eMssqlConfig = loadTestDatabaseConfig("E2E_DATABASE");
   const adapter = await new PrismaMssql(e2eMssqlConfig).connect();
 
   const databaseIdentity = await adapter

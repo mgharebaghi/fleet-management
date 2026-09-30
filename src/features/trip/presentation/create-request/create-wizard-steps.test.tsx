@@ -1,14 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { AssignmentStep } from "./assignment-step";
+import { AssignmentStep } from "../handling/assignment-step";
 import { CreateRequestSummary } from "./create-request-summary";
 import { PassengersStep } from "./passengers-step";
-import { PlanningStep } from "./planning-step";
+
 import { RequestStep } from "./request-step";
 import { ReviewStep } from "./review-step";
-import { RouteStep } from "./route-step";
-import { TripRequestReviewDialog } from "./trip-request-review-dialog";
+import { RouteStep } from "../handling/route-step";
 
 vi.mock("@/components/ui/action-button/action-button", () =>
   import("../../../../components/ui/action-button/action-button"),
@@ -59,7 +58,7 @@ vi.mock("../location/location.actions", () => ({
   createLocationAction: vi.fn(),
 }));
 vi.mock("../trip.actions", () => ({
-  createCompleteTripRequestAction: vi.fn(),
+  createTripRequestAction: vi.fn(),
   addTripRouteAction: vi.fn(),
 }));
 
@@ -137,90 +136,6 @@ const mockReview = {
     description: null,
   }],
 };
-
-const mockPayload = {
-  values: {
-    tripRequestTypeId: "1",
-    requestedTravelDay: "2026-03-21",
-    requestedTravelTime: "11:30",
-    "passenger.0.personId": "1",
-  },
-  assignments: { 0: 501 },
-  routes: [],
-};
-
-describe("Trip create review dialog", () => {
-  it("reviews human-readable names and submits only from confirmation", () => {
-    const markup = renderToStaticMarkup(
-      <TripRequestReviewDialog
-        open
-        titleId="review-title"
-        formId="create-form"
-        pending={false}
-        review={{
-          requestTypeName: "مبدأ و مقصد مشترک",
-          purpose: "جلسه ستاد",
-          travelAt: "۱۴۰۴/۰۱/۰۲، 08:00",
-          commonOriginName: "تهران",
-          commonDestinationName: "قم",
-          description: null,
-          passengers: [
-            {
-              personName: "علی رضایی",
-              originName: "تهران",
-              destinationName: "قم",
-              pickupOrder: null,
-              dropoffOrder: null,
-              description: null,
-            },
-          ],
-        }}
-        onClose={noop}
-      />,
-    );
-
-    expect(markup).toContain("مرور و تأیید درخواست سفر");
-    expect(markup).toContain("<table");
-    expect(markup).toContain("علی رضایی");
-    expect(markup).toContain("تهران");
-    expect(markup).toContain("قم");
-    expect(markup).toContain("جلسه ستاد");
-    expect(markup).toContain("زمان درخواست سفر");
-    expect(markup).not.toContain("زمان ثبت");
-    expect(markup).toContain('data-label="مسیر">تهران ← قم');
-    expect(markup).not.toContain('data-label="تاریخ و ساعت سوارشدن"');
-    expect(markup).not.toContain("personId");
-    expect(markup).not.toContain("locationId");
-    expect(markup).toContain('type="submit"');
-    expect(markup).toContain('form="create-form"');
-    expect(markup).toContain("تأیید و ثبت درخواست");
-    expect(markup).toContain("بازگشت و ویرایش");
-  });
-
-  it("disables duplicate confirmation while the existing action is pending", () => {
-    const markup = renderToStaticMarkup(
-      <TripRequestReviewDialog
-        open
-        titleId="review-title"
-        formId="create-form"
-        pending
-        review={{
-          requestTypeName: "مبدأ و مقصد مشترک",
-          purpose: null,
-          travelAt: "",
-          commonOriginName: null,
-          commonDestinationName: null,
-          description: null,
-          passengers: [],
-        }}
-        onClose={noop}
-      />,
-    );
-
-    expect(markup).toContain("در حال ثبت…");
-    expect(markup).toContain("disabled");
-  });
-});
 
 describe("Trip create compact summary", () => {
   it("renders only available high-level request facts", () => {
@@ -350,61 +265,7 @@ describe("Wizard Step 4: RouteStep", () => {
   });
 });
 
-describe("Wizard Step 5: PlanningStep", () => {
-  it("renders pending planning and withholds voucher links until final save", () => {
-    const markup = renderToStaticMarkup(
-      <PlanningStep
-        hidden={false}
-        passengers={[mockPendingPassenger]}
-        assignmentsByPassenger={{ 0: [mockAssignment] }}
-        selectedAssignments={{ 0: 501 }}
-        routes={[]}
-        onBack={noop}
-        onNext={noop}
-      />,
-    );
-
-    expect(markup).toContain("برنامه‌ریزی و برگه مأموریت");
-    expect(markup).toContain("برنامه‌ریزی کامل");
-    expect(markup).toContain("هنوز هیچ رکوردی در پایگاه داده ایجاد نشده است");
-    expect(markup).toContain("رضا کریمی");
-    expect(markup).toContain("دفتر مرکزی ← کارخانه");
-    expect(markup).toContain("محمد راننده");
-    expect(markup).toContain("ایران خودرو دنا پلاس");
-    expect(markup).toContain("plateWrapper");
-    expect(markup).not.toContain('href="/trips/');
-    expect(markup).toContain("پس از ثبت نهایی درخواست");
-  });
-});
-
 describe("Wizard Step 6: ReviewStep", () => {
-  it("renders comprehensive review and confirm action when all assigned", () => {
-    const markup = renderToStaticMarkup(
-      <ReviewStep
-        hidden={false}
-        review={mockReview}
-        passengers={[mockPendingPassenger]}
-        assignmentsByPassenger={{ 0: [mockAssignment] }}
-        payload={mockPayload}
-        onBack={noop}
-      />,
-    );
-
-    expect(markup).toContain("مرور و تأیید نهایی");
-    expect(markup).toContain("آماده ثبت نهایی");
-    expect(markup).toContain("مبدأ و مقصد مشترک");
-    expect(markup).toContain("جلسه ستاد");
-    expect(markup).toContain("توضیحات تکمیلی");
-    expect(markup).not.toContain("زمان ثبت درخواست");
-    expect(markup).toContain("زمان درخواست سفر");
-    expect(markup).toContain("رضا کریمی");
-    expect(markup).toContain("محمد راننده");
-    expect(markup).toContain("ایران خودرو دنا پلاس");
-    expect(markup).toContain("plateWrapper");
-    expect(markup).toContain('data-label="خودرو و پلاک"');
-    expect(markup).toContain("با تأیید نهایی، درخواست و اطلاعات برنامه‌ریزی ثبت می‌شوند.");
-    expect(markup).toContain("ثبت نهایی درخواست");
-  });
 
   it("renders requester review mode with passenger list and submit button", () => {
     const markup = renderToStaticMarkup(

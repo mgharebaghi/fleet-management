@@ -1,11 +1,5 @@
-const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
-const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+import { normalizePersianSearchText } from "../../../shared/text/persian-text";
 
 export function normalizeTripSearchText(value: string): string {
-  return value
-    .trim()
-    .replace(/[۰-۹]/g, (digit) => String(PERSIAN_DIGITS.indexOf(digit)))
-    .replace(/[٠-٩]/g, (digit) => String(ARABIC_DIGITS.indexOf(digit)))
-    .replace(/ي/g, "ی")
-    .replace(/ك/g, "ک");
+  return normalizePersianSearchText(value.trim());
 }

@@ -2,34 +2,9 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  CREATE_WIZARD_STEPS,
-  DEFAULT_CREATE_REQUEST_PURPOSE,
-  HANDLING_WIZARD_STEPS,
-  createRequestReview,
-  createRequestSummaryPreview,
-  createWizardHasDiscardableInput,
-  defaultTripRequestTypeId,
-  dropPassengerSnapshot,
-  extractPassengerSnapshot,
-  gapNotice,
-  hasPassengerPickupOverride,
-  mergePassengerSnapshots,
-  mergePreservedLocationValues,
-  passengerIndexFromField,
-  passengerStepGaps,
-  preservedLocationValue,
-  prunePassengerValues,
-  requestStepGaps,
-  routePointLocationError,
-  reviewContainsRawId,
-  shouldSubmitCreateForm,
-  typeExplanation,
-  wizardErrorNavigation,
-  wizardFieldForLocationFailure,
-  wizardLocationErrorFocus,
-  wizardStepForField,
-} from "./create-wizard";
+import { CREATE_WIZARD_STEPS, DEFAULT_CREATE_REQUEST_PURPOSE, createRequestReview, createRequestSummaryPreview, createWizardHasDiscardableInput, defaultTripRequestTypeId, dropPassengerSnapshot, extractPassengerSnapshot, gapNotice, hasPassengerPickupOverride, mergePassengerSnapshots, mergePreservedLocationValues, passengerIndexFromField, passengerStepGaps, preservedLocationValue, prunePassengerValues, requestStepGaps, reviewContainsRawId, shouldSubmitCreateForm, typeExplanation, wizardErrorNavigation, wizardFieldForLocationFailure, wizardLocationErrorFocus, wizardStepForField } from "./create-wizard";
+import { HANDLING_WIZARD_STEPS } from "../handling/handling-wizard-steps";
+import { routePointLocationError } from "../planning/trip-planning-contracts";
 
 const requestTypes = [
   {
@@ -507,9 +482,8 @@ describe("Trip create wizard presentation", () => {
   it("keeps every pre-confirmation wizard step free of database mutation actions", () => {
     const files = [
       "create-trip-request-form.tsx",
-      "assignment-step.tsx",
-      "route-step.tsx",
-      "planning-step.tsx",
+      "../handling/assignment-step.tsx",
+      "../handling/route-step.tsx",
     ];
     const preConfirmationSource = files
       .map((file) => readFileSync(new URL(file, import.meta.url), "utf8"))
@@ -529,8 +503,8 @@ describe("Trip create wizard presentation", () => {
       new URL("review-step.tsx", import.meta.url),
       "utf8",
     );
-    expect(reviewSource).toContain("createCompleteTripRequestAction");
-    expect(reviewSource).toContain("ثبت نهایی درخواست");
+    expect(reviewSource).toContain("createTripRequestAction");
+    expect(reviewSource).toContain("ثبت درخواست سفر");
   });
 
   it("treats an equal persisted pickup time as inherited and a different time as an override", () => {

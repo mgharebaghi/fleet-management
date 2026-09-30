@@ -1,3 +1,4 @@
+vi.mock("next/navigation", async importOriginal => ({ ...await importOriginal<typeof import("next/navigation")>(), useRouter: () => ({ push: vi.fn() }) }));
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -70,6 +71,7 @@ vi.mock("@/components/ui/icon-action-button/icon-action-button", () =>
 const reader = vi.hoisted(() => ({
   details: vi.fn(),
   assignmentsActiveAt: vi.fn(),
+  assignmentsByPassenger: vi.fn(),
   availableLocations: vi.fn(),
   availablePeople: vi.fn(),
 }));
@@ -204,6 +206,8 @@ function details(
 
 
 beforeEach(() => {
+  vi.clearAllMocks();
+  reader.assignmentsByPassenger.mockResolvedValue({});
   reader.details.mockResolvedValue(details());
   reader.assignmentsActiveAt.mockResolvedValue([assignment]);
   reader.availableLocations.mockResolvedValue([location]);
@@ -963,5 +967,12 @@ describe("Trip workspace presentation", () => {
     expect(markup).toContain("<dt>هدف سفر</dt>");
     expect(markup).toContain("<dd>مأموریت اداری ویژه</dd>");
     expect(markup).not.toContain("purposeLine");
+  });
+
+  it("uses details already read by the request page without another repository read", async () => {
+    const supplied = details({ purpose: "اطلاعات از قبل خوانده‌شده" });
+    const markup = renderToStaticMarkup(await TripWorkspacePage({ tripRequestId: supplied.tripRequestId, details: supplied, requestedTab: "details" }));
+    expect(markup).toContain("اطلاعات از قبل خوانده‌شده");
+    expect(reader.details).not.toHaveBeenCalled();
   });
 });

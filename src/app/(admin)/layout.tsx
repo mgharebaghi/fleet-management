@@ -3,13 +3,13 @@ import { connection } from "next/server";
 
 import { AdminShell } from "@/components/admin-shell/admin-shell";
 import styles from "@/components/admin-shell/admin-shell.module.css";
-import { makeReadTrips } from "@/features/trip/composition/trip.factory";
+import { readPendingTripRequestCount } from "@/features/trip/composition/trip-read-cache";
 
 const numberFormatter = new Intl.NumberFormat("fa-IR");
 
 async function PendingTripRequestsBadge() {
   await connection();
-  const count = await makeReadTrips().countPendingRequests();
+  const count = await readPendingTripRequestCount();
   if (count <= 0) {
     return null;
   }

@@ -1,6 +1,7 @@
 import type { TripRepository } from "./trip-repository";
 import { normalizeTripSearchText } from "./trip-search";
 import { isValidTripDate, isValidTripId } from "./trip-validation";
+import type { TripAssignmentReference, TripPassengerRecord } from "./trip-records";
 
 export class ReadTrips {
   constructor(private readonly repository: TripRepository) {}
@@ -39,6 +40,21 @@ export class ReadTrips {
     return isValidTripDate(dateTime)
       ? this.repository.assignmentsActiveAt(dateTime)
       : Promise.resolve([]);
+  }
+
+  async assignmentsByPassenger(passengers: readonly Pick<TripPassengerRecord, "tripId" | "requestedPickupDateTime">[], requestedTravelDateTime: Date): Promise<Record<number, TripAssignmentReference[]>> {
+    const readsByInstant = new Map<number, Promise<TripAssignmentReference[]>>();
+    const entries = await Promise.all(passengers.map(async passenger => {
+      const pickup = passenger.requestedPickupDateTime ?? requestedTravelDateTime;
+      const instant = pickup.getTime();
+      let read = readsByInstant.get(instant);
+      if (!read) {
+        read = this.assignmentsActiveAt(pickup);
+        readsByInstant.set(instant, read);
+      }
+      return [passenger.tripId, await read] as const;
+    }));
+    return Object.fromEntries(entries);
   }
 
   activePassengerCountsByVehicle(vehicleIds: readonly number[]) {

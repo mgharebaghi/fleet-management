@@ -1,3 +1,4 @@
+import { captureResponsiveThemes } from "./support/visual-evidence";
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { connectToE2EDatabase, createPerson, type E2EDatabaseAdapter } from "./support/e2e-database";
@@ -88,6 +89,7 @@ test.describe.serial("Drivers management", () => {
     const assignmentId = stored.recordset[0].id;
     expect(stored.recordset[0]).toMatchObject({ start: "1234567890123456.78", from: "2025-03-21T04:30:00", end: null });
     await page.screenshot({ path: "test-results/drivers-current-desktop.png", fullPage: true });
+    await captureResponsiveThemes(page, "driver-assignment");
     await current.getByRole("button", { name: "پایان تخصیص", exact: true }).click();
     const close = current.getByRole("form", { name: "ثبت پایان تخصیص", exact: true });
     await close.getByRole("button", { name: "تاریخ پایان (شمسی)", exact: true }).click();
@@ -202,6 +204,25 @@ test.describe.serial("Drivers management", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator("main li").filter({ hasText: token })).toBeVisible();
     expect(await page.locator("main").evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  });
+  test("moves tab focus with the keyboard and retains modified-link navigation", async ({ page, context }) => {
+    await page.goto(`/drivers/${driverId}`);
+    const licenses = page.locator("#driver-tab-licenses"), assignments = page.locator("#driver-tab-assignments"), history = page.locator("#driver-tab-history");
+    await licenses.focus();
+    await page.keyboard.press("ArrowLeft");
+    await expect(page).toHaveURL(/tab=assignments/);
+    await expect(assignments).toBeFocused();
+    await page.keyboard.press("End");
+    await expect(page).toHaveURL(/tab=history/);
+    await expect(history).toBeFocused();
+    await page.keyboard.press("Home");
+    await expect(page).toHaveURL(/tab=licenses/);
+    await expect(licenses).toBeFocused();
+    const popupPromise = context.waitForEvent("page");
+    await history.click({ modifiers: ["ControlOrMeta"] });
+    const popup = await popupPromise;
+    try { await expect(popup).toHaveURL(/tab=history/); } finally { await popup.close(); }
+    await expect(page).toHaveURL(/tab=licenses/);
   });
   test("confirms a license by human-readable identity and deletes it", async ({ page }) => {
     await page.goto(`/drivers/${driverId}`);

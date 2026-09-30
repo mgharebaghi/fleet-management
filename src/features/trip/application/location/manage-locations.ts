@@ -1,4 +1,5 @@
 import type { LocationRepository } from "./location-repository";
+import { normalizePersianLetters, normalizePersianNumerals } from "../../../../shared/text/persian-text";
 import type { TripLocationReference } from "../trip-records";
 import type {
   CreateLocationCommand,
@@ -7,13 +8,8 @@ import type {
   LocationFailure,
 } from "./location-records";
 
-const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
-const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
-
 export function normalizeLocationText(value: string): string {
-  return value
-    .replace(/ي/g, "ی")
-    .replace(/ك/g, "ک")
+  return normalizePersianLetters(value)
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -28,11 +24,7 @@ export function normalizeLocationCode(value: string | null): string | null {
 }
 
 function normalizeCoordinate(value: string | null): string | null {
-  const normalized = value
-    ?.trim()
-    .replace(/[۰-۹]/g, (digit) => String(PERSIAN_DIGITS.indexOf(digit)))
-    .replace(/[٠-٩]/g, (digit) => String(ARABIC_DIGITS.indexOf(digit)))
-    .replace("٫", ".");
+  const normalized = value === null ? null : normalizePersianNumerals(value.trim()).replace("٫", ".");
   return normalized || null;
 }
 
