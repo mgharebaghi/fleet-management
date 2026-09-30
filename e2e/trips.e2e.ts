@@ -1,3 +1,4 @@
+import { captureResponsiveThemes } from "./support/visual-evidence";
 import { randomUUID } from "node:crypto";
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
@@ -393,6 +394,7 @@ test.describe.serial("Trip management", () => {
         page.getByRole("navigation", { name: "مراحل ثبت درخواست سفر" }),
       ).toBeVisible();
       await eventually(requestStepNext()).toBeVisible();
+      await captureResponsiveThemes(page, "trip-request");
       await eventually(
         requestStep.getByLabel("نوع درخواست سفر", { exact: true }),
       ).toBeVisible();
@@ -517,6 +519,14 @@ test.describe.serial("Trip management", () => {
       await expect(
         passengersStep.getByRole("article", { name: "اطلاعات مسافر 2" }),
       ).toBeVisible();
+      const passengerTabs = passengersStep.getByRole("tab");
+      await passengerTabs.nth(1).focus();
+      await page.keyboard.press("Home");
+      await expect(passengerTabs.nth(0)).toBeFocused();
+      await expect(passengerTabs.nth(0)).toHaveAttribute("aria-selected", "true");
+      await page.keyboard.press("ArrowLeft");
+      await expect(passengerTabs.nth(1)).toBeFocused();
+      await expect(passengerTabs.nth(1)).toHaveAttribute("aria-selected", "true");
       await passengersStep.getByRole("button", { name: "حذف مسافر", exact: true }).click();
       await expect(
         passengersStep.getByRole("article", { name: "اطلاعات مسافر 2" }),
@@ -566,7 +576,6 @@ test.describe.serial("Trip management", () => {
       // Redirects back to /trips
       await eventually(page).toHaveURL(/\/trips$/);
       expect(await tripRequestCountForFixturePerson()).toBe(1);
-
       // Dispatcher flow: navigate to /trips/requests
       await page.getByRole("link", { name: /رسیدگی به درخواست‌ها|مشاهده و رسیدگی/ }).click();
       await eventually(page).toHaveURL(/\/trips\/requests/);
@@ -655,6 +664,19 @@ test.describe.serial("Trip management", () => {
         page.getByText(inlineDestinationName, { exact: true }).first(),
       ).toBeVisible();
 
+      await page.getByRole("button", { name: "ویرایش", exact: true }).first().click();
+      const passengerEdit = page.getByRole("dialog", { name: "ویرایش اطلاعات مسافر" });
+      await passengerEdit.getByLabel("زمان سوارشدن متفاوت از زمان درخواست").check();
+      await passengerEdit.getByRole("button", { name: "تاریخ (شمسی)", exact: true }).click();
+      await selectJalaliDate(page.getByRole("dialog", { name: "انتخاب تاریخ (شمسی)" }), currentJalaliYear, "فروردین", "۱");
+      await setTime(passengerEdit, "ساعت", "09:00");
+      await passengerEdit.getByRole("button", { name: "ذخیره تغییرات", exact: true }).click();
+      await expect(passengerEdit).toBeHidden();
+      const pickup = await request().input("person", personId).query<{ minutes: number }>(
+        "SELECT DATEDIFF(minute, r.RequestedTravelDateTime, t.RequestedPickupDateTime) AS minutes FROM trip.Trip t JOIN trip.TripRequest r ON r.TripRequestId=t.TripRequestId WHERE t.PassengerPersonId=@person",
+      );
+      expect(pickup.recordset).toEqual([{ minutes: 60 }]);
+
       await page.goto(`/trips/${requestId}?tab=route`);
       await eventually(
         page.getByRole("button", { name: "ثبت مسیر برنامه‌ریزی‌شده" }),
@@ -712,6 +734,7 @@ test.describe.serial("Trip management", () => {
       await page.emulateMedia({ media: "print" });
       await expect(page.locator("[data-admin-chrome]").first()).toBeHidden();
       await expect(page.getByRole("button", { name: "چاپ قبض سفر" })).toBeHidden();
+      await page.screenshot({ path: test.info().outputPath("trip-voucher-print.png"), fullPage: true, animations: "disabled" });
       await page.emulateMedia({ media: "screen" });
       await page
         .getByRole("link", { name: "بازگشت به پرونده سفر" })
@@ -828,4 +851,31 @@ test.describe.serial("Trip management", () => {
       ).toBe(true);
     },
   );
+  test("edits comment-only surveys and preserves an existing legacy rating", async ({ page }) => {
+    test.setTimeout(90_000);
+    if (requestId === undefined) throw new Error("The completed fixture request is missing.");
+    const ownExecution = await request().input("id", requestId).query<{ id: number }>(
+      "SELECT e.TripExecutionId AS id FROM trip.TripExecution e JOIN trip.Trip t ON t.TripId=e.TripId WHERE t.TripRequestId=@id",
+    );
+    expect(ownExecution.recordset).toHaveLength(1);
+    const executionId = ownExecution.recordset[0].id;
+    for (const rating of [null, 10]) {
+      await request().input("id", executionId).input("rating", rating).input("comment", "Comment-only fixture").query(
+        "UPDATE trip.TripExecution SET PassengerRating=@rating, PassengerComment=@comment, SurveyDateTime=NULL WHERE TripExecutionId=@id",
+      );
+      await page.goto(`/trips/${requestId}?tab=completion`);
+      await page.getByRole("button", { name: "مشاهده / ویرایش نظرسنجی", exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: "مشاهده و ویرایش نظرسنجی" });
+      await expect(dialog).toContainText("نظرسنجی ثبت‌شده");
+      await dialog.getByLabel("نظر یا بازخورد مسافر").fill(`Edited ${rating ?? "unrated"}`);
+      await dialog.getByRole("button", { name: "ذخیره تغییرات", exact: true }).click();
+      await expect(dialog).toBeHidden();
+      const persisted = await request().input("id", executionId).query<{ rating: number | null; comment: string; surveyedAt: Date | null }>(
+        "SELECT PassengerRating AS rating, PassengerComment AS comment, SurveyDateTime AS surveyedAt FROM trip.TripExecution WHERE TripExecutionId=@id",
+      );
+      expect(persisted.recordset[0]).toMatchObject({ rating, comment: `Edited ${rating ?? "unrated"}` });
+      expect(persisted.recordset[0].surveyedAt).not.toBeNull();
+    }
+  });
+
 });

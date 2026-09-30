@@ -12,6 +12,9 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   workers: 1,
+  // SQL-backed RSC navigation completes after the remote test database responds.
+  // Keep polling the same behavior assertions across slower isolated DB runs.
+  expect: { timeout: 15_000 },
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: "http://127.0.0.1:3100",

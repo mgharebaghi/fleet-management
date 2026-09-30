@@ -1,4 +1,4 @@
-import type { TripFailure, TripLocationInputFailure, TripLocationInputRole, TripResult } from "./trip-records";
+import type { TripAssignmentReference, TripFailure, TripLocationInputFailure, TripLocationInputRole, TripResult } from "./trip-records";
 import { assignmentIneligibilityReasons } from "./trip-assignment-eligibility";
 
 export const failure = (error: TripFailure, field?: string): TripResult => ({
@@ -20,11 +20,7 @@ export function locationInputFailure(
 }
 
 export function assignmentFailure(
-  assignment: {
-    driverIsActive: boolean;
-    vehicle: import("./trip-records").TripAssignmentReference["vehicle"];
-    hasEligibleLicense: boolean;
-  },
+  assignment: Pick<TripAssignmentReference, "driverIsActive" | "vehicle" | "hasEligibleLicense">,
   activeAt: Date,
   fromDateTime: Date,
   toDateTime: Date | null,

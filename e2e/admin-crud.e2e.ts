@@ -170,9 +170,7 @@ test.describe.serial("Person detail, update and delete", () => {
       .getByRole("button", { name: "تأیید و ذخیره", exact: true })
       .click();
 
-    await expect(page).toHaveURL(new RegExp(`/people/${personId}$`), {
-      timeout: 10_000,
-    });
+    await expect(page).toHaveURL(new RegExp(`/people/${personId}$`));
     await expect(page.getByRole("heading", { name: `بعد ${token}` })).toBeVisible();
   });
 

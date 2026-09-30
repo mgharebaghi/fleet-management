@@ -41,6 +41,11 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Validate Prisma contract
+        run: npm run prisma:validate
+        env:
+          DATABASE_URL: "sqlserver://localhost:1433;database=ci;schema=dbo;user=ci;password=ci;encrypt=true;trustServerCertificate=true;"
+
       - name: Lint
         run: npm run lint
 
@@ -70,6 +75,9 @@ jobs:
   # main does not make the runner compete with Coolify's automatic deployment.
   integration:
     needs: quality
+    concurrency:
+      group: ${{ github.repository }}-integration-database
+      cancel-in-progress: false
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, Linux, X64]
     steps:
@@ -107,6 +115,9 @@ jobs:
   # requests so the runner is idle while Coolify deploys a merge to main.
   e2e:
     needs: quality
+    concurrency:
+      group: ${{ github.repository }}-e2e-database
+      cancel-in-progress: false
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, Linux, X64]
     steps:
@@ -129,7 +140,7 @@ jobs:
       # detects CI and drives the runner's pre-installed Google Chrome via
       # Playwright's `channel: "chrome"` instead, which needs no download.
       - name: E2E tests
-        run: npm run test:e2e
+        run: npm run test:e2e -- --retries=0
         env:
           E2E_DATABASE_SERVER: ${{ secrets.E2E_DATABASE_SERVER }}
           E2E_DATABASE_PORT: ${{ secrets.E2E_DATABASE_PORT }}
