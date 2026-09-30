@@ -6,7 +6,7 @@ import type {
   TripPersonReference,
 } from "../../application/trip-records";
 import { TripPassengerSwitcher } from "../passenger/trip-passenger-switcher";
-import styles from "./create-trip.module.css";
+import styles from "../trip-wizard.module.css";
 import { PassengerEditor } from "./passenger-editor";
 
 export function PassengersStep({

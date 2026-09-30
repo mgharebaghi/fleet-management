@@ -3,7 +3,7 @@ import { normalizeVehicleNumerals } from "../../../application/vehicles/vehicle-
 import {
   vehicleTextFields,
   type VehicleFormValues,
-} from "../create-vehicle/create-vehicle.form-data";
+} from "../components/vehicle-form-data";
 
 export function parseUpdateVehicleFormData(
   data: FormData,

@@ -11,7 +11,7 @@ import { TechnicalValue } from "../../../components/ui/technical-value/technical
 import { TimeSelect } from "../../../components/ui/time-select/time-select";
 import { normalizeVehicleSearchText } from "../../fleet/application/vehicles/vehicle-text";
 import type { PersonReference, VehicleReference } from "../application/driver-records";
-import { buildAssignmentVehicleOptions } from "./assignment-vehicle-options";
+import { buildAssignmentVehicleOptions } from "./assignment/assignment-vehicle-options";
 import { addLicenseAction, assignVehicleAction, closeAssignmentAction, defineDriverAction, updateAssignmentAction, updateLicenseAction } from "./driver.actions";
 import { driverMessages } from "./driver-form-data";
 import styles from "./driver-form.module.css";

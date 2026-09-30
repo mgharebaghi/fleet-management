@@ -3,7 +3,7 @@ import { normalizeVehicleNumerals } from "../../../application/vehicles/vehicle-
 import {
   insuranceFormFields,
   type InsuranceFormValues,
-} from "../create-vehicle-insurance/create-vehicle-insurance.form-data";
+} from "../components/insurance-form-data";
 
 function parseDate(value: string): Date {
   const iso = value.trim();

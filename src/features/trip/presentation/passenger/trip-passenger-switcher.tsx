@@ -2,7 +2,7 @@
 
 import { ActionButton } from "../../../../components/ui/action-button/action-button";
 import { rtlTabIndex } from "../../../../shared/presentation/navigation-interaction";
-import styles from "../create-request/create-trip.module.css";
+import styles from "../trip-wizard.module.css";
 
 export type TripPassengerSwitcherProps = {
   passengerCount: number;

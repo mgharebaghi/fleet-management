@@ -1,12 +1,5 @@
 import { formatGregorianDateAsJalali } from "../../../../components/ui/date-picker/jalali-date";
-import type {
-  NewTripRouteDetails,
-  TripAssignmentReference,
-  TripLocationInputFailure,
-  TripLocationReference,
-  TripPersonReference,
-  TripRequestTypeReference,
-} from "../../application/trip-records";
+import type { TripLocationInputFailure, TripLocationReference, TripPersonReference, TripRequestTypeReference } from "../../application/trip-records";
 import { consecutiveFormIndexes } from "../trip-form-data";
 
 export const DEFAULT_CREATE_REQUEST_PURPOSE = "ماموریت اداری";
@@ -33,60 +26,10 @@ export function defaultTripRequestTypeId(
 
 export type CreateWizardStep = 1 | 2 | 3;
 
-export type HandlingWizardStep = 1 | 2 | 3 | 4;
-
-export type CreateWizardPassenger = {
-  key: number;
-  personId: number;
-  personName: string;
-  personnelNo: string | null;
-  nationalCode?: string | null;
-  originName: string;
-  destinationName: string;
-  /** Trip origin. Map context only; it is not submitted as a RoutePoint. */
-  originLocation?: TripLocationReference | null;
-  /** Trip destination. Map context only; it is not submitted as a RoutePoint. */
-  destinationLocation?: TripLocationReference | null;
-  requestedPickupAt: string;
-  requestedPickupLabel: string;
-};
-
-export type CreateWizardRoute = NewTripRouteDetails & {
-  key: string;
-  passengerKey: number;
-};
-
-export type CreateWizardPayload = {
-  values: Record<string, string>;
-  assignments: Record<number, number>;
-  routes: CreateWizardRoute[];
-};
-
-export type CreateWizardAssignments = Record<
-  number,
-  TripAssignmentReference[]
->;
-
-export function routePointLocationError(
-  points: readonly { locationId: number | null }[],
-): string | null {
-  const missingIndex = points.findIndex((point) => !point.locationId);
-  return missingIndex < 0
-    ? null
-    : `لطفاً مکان را برای نقطه ${missingIndex + 1} انتخاب کنید.`;
-}
-
 export const CREATE_WIZARD_STEPS = [
   { id: "request", label: "اطلاعات درخواست" },
   { id: "passengers", label: "مسافران" },
   { id: "review", label: "مرور و تأیید" },
-] as const;
-
-export const HANDLING_WIZARD_STEPS = [
-  { id: "review", label: "بررسی درخواست" },
-  { id: "assignment", label: "راننده و خودرو" },
-  { id: "route", label: "مسیر" },
-  { id: "planning", label: "تأیید و تخصیص" },
 ] as const;
 
 export const requestStepFieldLabels: Record<string, string> = {

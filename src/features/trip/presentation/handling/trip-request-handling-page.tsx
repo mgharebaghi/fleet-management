@@ -18,27 +18,22 @@ import type {
 } from "../../application/trip-records";
 import { formatTripDateTime } from "../trip-format";
 import { tripMessages } from "../trip-form-data";
-import {
-  HANDLING_WIZARD_STEPS,
-  type CreateWizardAssignments,
-  type CreateWizardPassenger,
-  type CreateWizardRoute,
-  type HandlingWizardStep,
-} from "../create-request/create-wizard";
-import { AssignmentStep } from "../create-request/assignment-step";
-import { RouteStep } from "../create-request/route-step";
+import { HANDLING_WIZARD_STEPS, type HandlingWizardStep } from "./handling-wizard-steps";
+import { type TripPlanningAssignments, type TripPlanningPassenger, type TripPlanningRoute } from "../planning/trip-planning-contracts";
+import { AssignmentStep } from "./assignment-step";
+import { RouteStep } from "./route-step";
 import { CancelTripRequestAction } from "../workspace/cancel-trip-request-action";
 import { projectTripWorkspace } from "../workspace/trip-workspace-view";
 import {
   assignInitialTripRequestAction,
   type AssignInitialTripRequestPayload,
 } from "../trip.actions";
-import styles from "../create-request/create-trip.module.css";
+import styles from "../trip-wizard.module.css";
 
 export type TripRequestHandlingPageProps = {
   details: TripRequestDetails;
   locations: TripLocationReference[];
-  assignmentsByPassenger: CreateWizardAssignments;
+  assignmentsByPassenger: TripPlanningAssignments;
   activePassengerCountsByVehicle: Readonly<Record<number, number>>;
 };
 
@@ -52,11 +47,11 @@ export function TripRequestHandlingPage({
   const [selectedAssignments, setSelectedAssignments] = useState<
     Record<number, number>
   >({});
-  const [routes, setRoutes] = useState<CreateWizardRoute[]>([]);
+  const [routes, setRoutes] = useState<TripPlanningRoute[]>([]);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const wizardPassengers: CreateWizardPassenger[] = useMemo(() => {
+  const wizardPassengers: TripPlanningPassenger[] = useMemo(() => {
     return details.passengers.map((passenger) => {
       const pickupDate =
         passenger.requestedPickupDateTime ?? details.requestedTravelDateTime;

@@ -7,7 +7,7 @@ import { PageShell } from "../../../../../components/ui/page-shell/page-shell";
 import { StatusBadge } from "../../../../../components/ui/status-badge/status-badge";
 import { TechnicalValue } from "../../../../../components/ui/technical-value/technical-value";
 import { makeGetVehicle } from "../../../composition/vehicles/vehicle.factory";
-import { VehiclePlate } from "../list-vehicles/vehicle-plate";
+import { VehiclePlate } from "../../../../../components/ui/vehicle-plate/vehicle-plate";
 import { DeleteVehicleButton } from "../delete-vehicle/delete-vehicle-button";
 import styles from "./vehicle-details-page.module.css";
 

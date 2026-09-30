@@ -76,13 +76,6 @@
   color: #ffffff !important;
 }
 
-.recordLink {
-  color: var(--app-primary);
-  font-weight: 800;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
 .listTable :global(td) {
   overflow-wrap: break-word;
 }
@@ -90,15 +83,6 @@
 .stack {
   display: grid;
   gap: var(--space-5);
-}
-
-.entityCard {
-  display: grid;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--app-border);
-  border-radius: var(--radius-md);
-  background: var(--app-surface-subtle);
 }
 
 .entityHeader,
@@ -118,10 +102,6 @@
 
 .entityActions {
   justify-content: flex-start;
-}
-
-.muted {
-  color: var(--app-text-muted);
 }
 
 .assignmentMeta {

@@ -16,34 +16,12 @@ import type {
 import { tripFormValues, tripMessages, type TripActionState } from "../trip-form-data";
 import { LOCATION_CREATED_EVENT } from "../location/location-picker";
 import { CreateRequestSummary } from "./create-request-summary";
-import {
-  DEFAULT_CREATE_REQUEST_PURPOSE,
-  createRequestReview,
-  createWizardHasDiscardableInput,
-  createRequestSummaryPreview,
-  defaultTripRequestTypeId,
-  dropPassengerSnapshot,
-  gapNotice,
-  isLocationField,
-  mergePassengerSnapshots,
-  mergePreservedLocationValues,
-  passengerIndexFromField,
-  passengerStepGaps,
-  preservedLocationValue,
-  prunePassengerValues,
-  requestStepGaps,
-  sharesDestination,
-  sharesOrigin,
-  wizardErrorNavigation,
-  type CreateWizardStep,
-  type TripRequestReview,
-  type TripRequestSummaryPreview,
-} from "./create-wizard";
+import { DEFAULT_CREATE_REQUEST_PURPOSE, createRequestReview, createWizardHasDiscardableInput, createRequestSummaryPreview, defaultTripRequestTypeId, dropPassengerSnapshot, gapNotice, isLocationField, mergePassengerSnapshots, mergePreservedLocationValues, passengerIndexFromField, passengerStepGaps, preservedLocationValue, prunePassengerValues, requestStepGaps, sharesDestination, sharesOrigin, wizardErrorNavigation, type CreateWizardStep, type TripRequestReview, type TripRequestSummaryPreview } from "./create-wizard";
 import { PassengersStep } from "./passengers-step";
 import { RequestStep } from "./request-step";
 import { ReviewStep } from "./review-step";
 import { TripCreateProgress } from "./trip-create-progress";
-import styles from "./create-trip.module.css";
+import styles from "../trip-wizard.module.css";
 
 type CreateTripRequestFormProps = {
   requestTypes: TripRequestTypeReference[];

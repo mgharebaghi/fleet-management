@@ -17,7 +17,7 @@ import type { VehicleSummary } from "../../../application/vehicles/vehicle";
 import { makeListVehicleStatuses } from "../../../composition/catalogs/vehicle-status.factory";
 import { makeListVehicles } from "../../../composition/vehicles/vehicle.factory";
 import { ListVehiclesFilters } from "./list-vehicles-filters";
-import { VehiclePlate } from "./vehicle-plate";
+import { VehiclePlate } from "../../../../../components/ui/vehicle-plate/vehicle-plate";
 import { VehicleRowActions } from "./vehicle-row-actions";
 import styles from "./list-vehicles-page.module.css";
 

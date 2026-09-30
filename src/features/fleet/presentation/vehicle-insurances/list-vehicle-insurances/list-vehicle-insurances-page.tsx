@@ -14,7 +14,7 @@ import { INSURANCE_PAGE_SIZE, MAX_INSURANCE_PAGE } from "../../../application/ve
 import type { InsuranceVehicle, VehicleInsuranceSummary } from "../../../application/vehicle-insurances/vehicle-insurance";
 import { makeListVehicleInsurances } from "../../../composition/vehicle-insurances/vehicle-insurance.factory";
 import { getInsuranceExpiryStatus } from "../insurance-status";
-import { VehiclePlate } from "../../vehicles/list-vehicles/vehicle-plate";
+import { VehiclePlate } from "../../../../../components/ui/vehicle-plate/vehicle-plate";
 import { ListVehicleInsurancesFilters } from "./list-vehicle-insurances-filters";
 import styles from "./list-vehicle-insurances-page.module.css";
 

@@ -206,6 +206,7 @@ function details(
 
 
 beforeEach(() => {
+  vi.clearAllMocks();
   reader.assignmentsByPassenger.mockResolvedValue({});
   reader.details.mockResolvedValue(details());
   reader.assignmentsActiveAt.mockResolvedValue([assignment]);
@@ -966,5 +967,12 @@ describe("Trip workspace presentation", () => {
     expect(markup).toContain("<dt>هدف سفر</dt>");
     expect(markup).toContain("<dd>مأموریت اداری ویژه</dd>");
     expect(markup).not.toContain("purposeLine");
+  });
+
+  it("uses details already read by the request page without another repository read", async () => {
+    const supplied = details({ purpose: "اطلاعات از قبل خوانده‌شده" });
+    const markup = renderToStaticMarkup(await TripWorkspacePage({ tripRequestId: supplied.tripRequestId, details: supplied, requestedTab: "details" }));
+    expect(markup).toContain("اطلاعات از قبل خوانده‌شده");
+    expect(reader.details).not.toHaveBeenCalled();
   });
 });

@@ -4,27 +4,6 @@
   gap: var(--space-6);
 }
 
-.formHeader {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-5);
-}
-
-.formHeader h2 {
-  color: var(--app-heading);
-  font-size: var(--font-size-lg);
-  font-weight: 700;
-  line-height: 1.6;
-}
-
-.formHeader p {
-  margin-top: var(--space-1);
-  color: var(--app-text-muted);
-  font-size: var(--font-size-xs);
-  line-height: 1.8;
-}
-
 .formHeader .requiredHint {
   flex: 0 0 auto;
   margin: 0;
@@ -50,12 +29,4 @@
   width: 18px;
   height: 18px;
   accent-color: var(--app-primary);
-}
-
-@media (max-width: 680px) {
-  .formHeader {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
 }

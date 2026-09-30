@@ -1,5 +1,5 @@
 import type { TripRequestSummaryPreview } from "./create-wizard";
-import styles from "./create-trip.module.css";
+import styles from "../trip-wizard.module.css";
 
 export function CreateRequestSummary({
   preview,

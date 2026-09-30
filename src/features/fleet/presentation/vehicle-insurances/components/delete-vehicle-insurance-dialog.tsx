@@ -9,7 +9,7 @@ import { FormActions } from "../../../../../components/ui/form-field/form-field"
 import { InlineNotice } from "../../../../../components/ui/inline-notice/inline-notice";
 import { TechnicalValue } from "../../../../../components/ui/technical-value/technical-value";
 import type { VehicleInsuranceSummary } from "../../../application/vehicle-insurances/vehicle-insurance";
-import { VehiclePlate } from "../../vehicles/list-vehicles/vehicle-plate";
+import { VehiclePlate } from "../../../../../components/ui/vehicle-plate/vehicle-plate";
 import { deleteVehicleInsuranceAction } from "./delete-vehicle-insurance.action";
 import { initialDeleteVehicleInsuranceActionState } from "./delete-vehicle-insurance.action-state";
 import { getDeleteVehicleInsuranceStatusMessage } from "./delete-vehicle-insurance.messages";

@@ -65,18 +65,6 @@ export type NewTripRouteDetails = {
   points: NewTripRoutePoint[];
 };
 
-export type CreateCompleteTripPassengerInput = TripPassengerInput & {
-  vehicleDriverAssignmentId: number;
-  routes: NewTripRouteDetails[];
-};
-
-export type CreateCompleteTripRequestCommand = Omit<
-  CreateTripRequestCommand,
-  "passengers"
-> & {
-  passengers: CreateCompleteTripPassengerInput[];
-};
-
 export type AssignInitialPassengerInput = {
   tripId: number;
   vehicleDriverAssignmentId: number;

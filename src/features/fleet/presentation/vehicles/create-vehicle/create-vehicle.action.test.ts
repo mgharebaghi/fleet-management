@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createVehicleAction } from "./create-vehicle.action";
-import { vehicleTextFields } from "./create-vehicle.form-data";
+import { vehicleTextFields } from "../components/vehicle-form-data";
 const { execute, revalidate, redirect } = vi.hoisted(() => ({ execute: vi.fn(), revalidate: vi.fn(), redirect: vi.fn() }));
 vi.mock("../../../composition/vehicles/vehicle.factory", () => ({ makeCreateVehicle: () => ({ execute }) }));
 vi.mock("next/cache", () => ({ revalidatePath: revalidate }));

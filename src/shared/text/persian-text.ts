@@ -7,5 +7,9 @@ export function normalizePersianNumerals(value: string): string {
 }
 
 export function normalizePersianSearchText(value: string): string {
-  return normalizePersianNumerals(value).replace(/ي/g, "ی").replace(/ك/g, "ک");
+  return normalizePersianLetters(normalizePersianNumerals(value));
+}
+
+export function normalizePersianLetters(value: string): string {
+  return value.replace(/ي/g, "ی").replace(/ك/g, "ک");
 }

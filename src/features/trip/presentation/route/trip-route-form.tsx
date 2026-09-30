@@ -1,36 +1,22 @@
 "use client";
 
+import { RouteAssistedField } from "./route-assisted-field";
+
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
 import { IconActionButton, IconActionGroup } from "@/components/ui/icon-action-button/icon-action-button";
 import { DeleteIcon, MoveDownIcon, MoveUpIcon } from "@/components/ui/icon/icons";
-import {
-  FieldLabel,
-  FormField,
-  formControlClassName,
-} from "@/components/ui/form-field/form-field";
+import { FieldLabel, FormField, formControlClassName } from "@/components/ui/form-field/form-field";
 import { FormGrid } from "@/components/ui/form-grid/form-grid";
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
 import { SearchableSelect } from "@/components/ui/searchable-select/searchable-select";
-import type {
-  TripLocationReference,
-  TripPassengerRecord,
-  TripRoute,
-} from "../../application/trip-records";
+import type { TripLocationReference, TripPassengerRecord, TripRoute } from "../../application/trip-records";
 import type { MapRoute } from "../../../../maps/map-route";
 import { addTripRouteAction } from "../trip.actions";
 import { tripMessages, type TripActionState } from "../trip-form-data";
 import { LocationPicker, LOCATION_CREATED_EVENT } from "../location/location-picker";
-import {
-  acceptAssistedSuggestion,
-  assistedFieldFromSaved,
-  editAssistedValue,
-  emptyAssistedField,
-  proposeAssistedValue,
-  suggestPointDistances,
-  type AssistedField,
-} from "./route-plan-assist";
+import { acceptAssistedSuggestion, assistedFieldFromSaved, editAssistedValue, emptyAssistedField, proposeAssistedValue, suggestPointDistances, type AssistedField } from "./route-plan-assist";
 import editorStyles from "./route-plan-editor.module.css";
 import { RoutePlanMap } from "./route-plan-map";
 import styles from "../trip-forms.module.css";
@@ -542,34 +528,15 @@ export function TripRouteForm({
                     />
                     <div hidden={detailsIndex !== index} className={editorStyles.details}>
                       <FormGrid columns={2}>
-                        <FormField>
-                          <FieldLabel htmlFor={`${prefix}-point-distance-${id}`}>
-                            فاصله از شروع (کیلومتر)
-                          </FieldLabel>
-                          <input
-                            id={`${prefix}-point-distance-${id}`}
-                            name={`point.${index}.distanceFromStartKm`}
-                            className={formControlClassName}
-                            inputMode="decimal"
-                            dir="ltr"
-                            value={distance.value}
-                            disabled={pending}
-                            onChange={(event) =>
+                        <RouteAssistedField id={`${prefix}-point-distance-${id}`} name={`point.${index}.distanceFromStartKm`} label="فاصله از شروع (کیلومتر)" inputMode="decimal" field={distance} disabled={pending} onChange={(nextValue) =>
                               setPointDistances((fields) =>
                                 fields.map((field, fieldIndex) =>
                                   fieldIndex === index
-                                    ? editAssistedValue(field, event.target.value)
+                                    ? editAssistedValue(field, nextValue)
                                     : field,
                                 ),
                               )
-                            }
-                          />
-                          {distance.suggestion && (
-                            <p className={editorStyles.suggestion}>
-                              <button
-                                type="button"
-                                className={editorStyles.textButton}
-                                onClick={() =>
+                            } onAccept={() =>
                                   setPointDistances((fields) =>
                                     fields.map((field, fieldIndex) =>
                                       fieldIndex === index
@@ -577,13 +544,7 @@ export function TripRouteForm({
                                         : field,
                                     ),
                                   )
-                                }
-                              >
-                                استفاده از مقدار پیشنهادی ({distance.suggestion})
-                              </button>
-                            </p>
-                          )}
-                        </FormField>
+                                } />
                         <FormField>
                           <FieldLabel htmlFor={`${prefix}-zone-${id}`}>
                             محدوده ترافیکی
@@ -649,66 +610,20 @@ export function TripRouteForm({
         </div>
 
         <div className={editorStyles.estimates}>
-          <FormField>
-            <FieldLabel htmlFor={`${prefix}-distance`}>مسافت (کیلومتر)</FieldLabel>
-            <input
-              id={`${prefix}-distance`}
-              name="distanceKm"
-              className={formControlClassName}
-              inputMode="decimal"
-              dir="ltr"
-              value={distanceField.value}
-              disabled={pending}
-              onChange={(event) =>
+          <RouteAssistedField id={`${prefix}-distance`} name="distanceKm" label="مسافت (کیلومتر)" inputMode="decimal" field={distanceField} disabled={pending} onChange={(nextValue) =>
                 setDistanceField((current) =>
-                  editAssistedValue(current, event.target.value),
+                  editAssistedValue(current, nextValue),
                 )
-              }
-            />
-            {distanceField.suggestion && (
-              <p className={editorStyles.suggestion}>
-                <button
-                  type="button"
-                  className={editorStyles.textButton}
-                  onClick={() =>
+              } onAccept={() =>
                     setDistanceField((current) => acceptAssistedSuggestion(current))
-                  }
-                >
-                  استفاده از مقدار پیشنهادی ({distanceField.suggestion})
-                </button>
-              </p>
-            )}
-          </FormField>
-          <FormField>
-            <FieldLabel htmlFor={`${prefix}-duration`}>مدت تخمینی (دقیقه)</FieldLabel>
-            <input
-              id={`${prefix}-duration`}
-              name="estimatedDurationMinute"
-              className={formControlClassName}
-              inputMode="numeric"
-              dir="ltr"
-              value={durationField.value}
-              disabled={pending}
-              onChange={(event) =>
+                  } />
+          <RouteAssistedField id={`${prefix}-duration`} name="estimatedDurationMinute" label="مدت تخمینی (دقیقه)" inputMode="numeric" field={durationField} disabled={pending} onChange={(nextValue) =>
                 setDurationField((current) =>
-                  editAssistedValue(current, event.target.value),
+                  editAssistedValue(current, nextValue),
                 )
-              }
-            />
-            {durationField.suggestion && (
-              <p className={editorStyles.suggestion}>
-                <button
-                  type="button"
-                  className={editorStyles.textButton}
-                  onClick={() =>
+              } onAccept={() =>
                     setDurationField((current) => acceptAssistedSuggestion(current))
-                  }
-                >
-                  استفاده از مقدار پیشنهادی ({durationField.suggestion})
-                </button>
-              </p>
-            )}
-          </FormField>
+                  } />
         </div>
 
         <div>

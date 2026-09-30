@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { makeCreateVehicleInsurance } from "../../../composition/vehicle-insurances/vehicle-insurance.factory";
 import type { CreateVehicleInsuranceActionState } from "./create-vehicle-insurance.action-state";
-import { parseInsuranceFormData } from "./create-vehicle-insurance.form-data";
+import { parseInsuranceFormData } from "../components/insurance-form-data";
 
 export async function createVehicleInsuranceAction(_previous: CreateVehicleInsuranceActionState, data: FormData): Promise<CreateVehicleInsuranceActionState> {
   const parsed = parseInsuranceFormData(data);

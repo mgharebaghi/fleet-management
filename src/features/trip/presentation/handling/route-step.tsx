@@ -1,0 +1,538 @@
+"use client";
+
+import { RouteAssistedField } from "../route/route-assisted-field";
+
+import { useEffect, useId, useState, type ReactNode } from "react";
+
+import { ActionButton } from "@/components/ui/action-button/action-button";
+import { IconActionButton, IconActionGroup } from "@/components/ui/icon-action-button/icon-action-button";
+import { DeleteIcon, MoveDownIcon, MoveUpIcon } from "@/components/ui/icon/icons";
+import { Dialog } from "@/components/ui/dialog/dialog";
+import { FieldLabel, FormActions, FormField, formControlClassName } from "@/components/ui/form-field/form-field";
+import { FormGrid } from "@/components/ui/form-grid/form-grid";
+import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
+import { SearchableSelect } from "@/components/ui/searchable-select/searchable-select";
+import { StatusBadge } from "@/components/ui/status-badge/status-badge";
+import type { TripLocationReference } from "../../application/trip-records";
+import { LOCATION_CREATED_EVENT, LocationPicker } from "../location/location-picker";
+import type { MapRoute } from "../../../../maps/map-route";
+import { acceptAssistedSuggestion, editAssistedValue, emptyAssistedField, proposeAssistedValue, suggestPointDistances, type AssistedField } from "../route/route-plan-assist";
+import editorStyles from "../route/route-plan-editor.module.css";
+import { RoutePlanMap } from "../route/route-plan-map";
+import { routePointLocationError, type TripPlanningPassenger, type TripPlanningRoute } from "../planning/trip-planning-contracts";
+import styles from "../trip-wizard.module.css";
+
+function optionalInteger(value: FormDataEntryValue | null) {
+  const text = typeof value === "string" ? value.trim() : "";
+  if (!text) return null;
+  return /^-?\d+$/.test(text) ? Number(text) : Number.NaN;
+}
+
+function optionalText(value: FormDataEntryValue | null) {
+  const text = typeof value === "string" ? value.trim() : "";
+  return text || null;
+}
+
+type RouteStepProps = {
+  hidden: boolean;
+  passengers: TripPlanningPassenger[];
+  locations: TripLocationReference[];
+  routes: TripPlanningRoute[];
+  onRoutesChange: (routes: TripPlanningRoute[]) => void;
+  onBack: () => void;
+  onNext: () => void;
+  nextLabel?: string;
+  footerAction?: ReactNode;
+};
+
+export function RouteStep({
+  hidden,
+  passengers,
+  locations,
+  routes,
+  onRoutesChange,
+  onBack,
+  onNext,
+  nextLabel = "بعدی: برنامه‌ریزی",
+  footerAction,
+}: RouteStepProps) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [passengerKey, setPassengerKey] = useState(passengers[0]?.key ?? 0);
+  const [pointKeys, setPointKeys] = useState<number[]>([]);
+  const [pointLocationIds, setPointLocationIds] = useState<Record<number, string>>(
+    {},
+  );
+  const [catalog, setCatalog] = useState(locations);
+  const [nextPointKey, setNextPointKey] = useState(1);
+  const [error, setError] = useState<string | null>(null);
+  const [detailsKey, setDetailsKey] = useState<number | null>(null);
+  const [editingPointKey, setEditingPointKey] = useState<number | null>(null);
+  const [routeDetailsOpen, setRouteDetailsOpen] = useState(false);
+  const [distanceField, setDistanceField] = useState<AssistedField>(emptyAssistedField);
+  const [durationField, setDurationField] = useState<AssistedField>(emptyAssistedField);
+  const [pointDistances, setPointDistances] = useState<Record<number, AssistedField>>({});
+  const dialogTitleId = useId();
+
+  useEffect(() => {
+    function rememberLocation(event: Event) {
+      const location = (
+        event as CustomEvent<{ location?: TripLocationReference }>
+      ).detail?.location;
+      if (!location) return;
+      setCatalog((current) =>
+        current.some((item) => item.locationId === location.locationId)
+          ? current
+          : [...current, location],
+      );
+    }
+    window.addEventListener(LOCATION_CREATED_EVENT, rememberLocation);
+    return () =>
+      window.removeEventListener(LOCATION_CREATED_EVENT, rememberLocation);
+  }, []);
+
+  if (hidden) return null;
+
+  function resetEditor() {
+    setPassengerKey(passengers[0]?.key ?? 0);
+    setPointKeys([]);
+    setPointLocationIds({});
+    setNextPointKey(1);
+    setDetailsKey(null);
+    setEditingPointKey(null);
+    setRouteDetailsOpen(false);
+    setDistanceField(emptyAssistedField());
+    setDurationField(emptyAssistedField());
+    setPointDistances({});
+    setError(null);
+  }
+
+  function handleRoute(route: MapRoute | null) {
+    if (!route) return;
+    setDistanceField((current) => proposeAssistedValue(current, route.distanceKm));
+    setDurationField((current) =>
+      proposeAssistedValue(current, String(route.durationMinute)),
+    );
+    setPointDistances((current) => {
+      const fields = pointKeys.map(
+        (key) => current[key] ?? emptyAssistedField(),
+      );
+      const next = suggestPointDistances(fields, route);
+      if (!next) return current;
+      return Object.fromEntries(pointKeys.map((key, index) => [key, next[index]]));
+    });
+  }
+
+  function removePoint(pointKey: number) {
+    setPointKeys((current) => current.filter((key) => key !== pointKey));
+    setPointLocationIds((current) => {
+      const next = { ...current };
+      delete next[pointKey];
+      return next;
+    });
+    setPointDistances((current) => {
+      const next = { ...current };
+      delete next[pointKey];
+      return next;
+    });
+    setEditingPointKey((current) => current === pointKey ? null : current);
+  }
+
+  function movePoint(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    setPointKeys((current) => {
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      const [item] = next.splice(index, 1);
+      next.splice(target, 0, item);
+      return next;
+    });
+  }
+
+  function saveRoute(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const routeName = String(data.get("routeName") ?? "").trim();
+    if (!routeName) {
+      setError("نام مسیر را وارد کنید.");
+      return;
+    }
+    const points = pointKeys.map((_, index) => ({
+      locationId: Number(data.get(`point.${index}.locationId`)),
+      trafficZone: optionalText(data.get(`point.${index}.trafficZone`)),
+      sequenceNo: optionalInteger(data.get(`point.${index}.sequenceNo`)),
+      distanceFromStartKm: optionalText(data.get(`point.${index}.distanceFromStartKm`)),
+      description: optionalText(data.get(`point.${index}.description`)),
+    }));
+    const pointError = routePointLocationError(points);
+    if (pointError) {
+      setError(pointError);
+      return;
+    }
+
+    onRoutesChange([
+      ...routes,
+      {
+        key: `route-${Date.now()}-${routes.length}`,
+        passengerKey,
+        routeName,
+        alternativeNo: optionalInteger(data.get("alternativeNo")),
+        distanceKm: optionalText(data.get("distanceKm")),
+        estimatedDurationMinute: optionalInteger(data.get("estimatedDurationMinute")),
+        isSelected: data.get("isSelected") === "true",
+        description: optionalText(data.get("routeDescription")),
+        points,
+      },
+    ]);
+    setDialogOpen(false);
+    resetEditor();
+  }
+
+  return (
+    <div className={styles.stepContainer}>
+      <div className={styles.stepHeader}>
+        <div>
+          <h2>مسیر سفر (اختیاری)</h2>
+          <p className={styles.stepDescription}>
+            می‌توانید این مرحله را رد کنید، یا یک مسیر با صفر یا چند نقطه برای هر مسافر تعریف کنید.
+          </p>
+        </div>
+        <ActionButton type="button" onClick={() => setDialogOpen(true)}>
+          {routes.length ? "افزودن مسیر دیگر" : "افزودن مسیر"}
+        </ActionButton>
+      </div>
+
+      {routes.length === 0 ? (
+        <InlineNotice tone="info" role="status">
+          هنوز مسیری به برنامه اضافه نشده است. ثبت مسیر برای ادامه الزامی نیست.
+        </InlineNotice>
+      ) : (
+        <div className={styles.routeList}>
+          {routes.map((route) => {
+            const passenger = passengers.find((item) => item.key === route.passengerKey);
+            return (
+              <article key={route.key} className={styles.groupCard}>
+                <div className={styles.summaryHeader}>
+                  <div>
+                    <h3>{route.routeName}</h3>
+                    <p className={styles.muted}>مسافر: {passenger?.personName ?? "—"}</p>
+                  </div>
+                  <StatusBadge
+                    label={route.isSelected ? "مسیر اصلی" : "مسیر جایگزین"}
+                    tone={route.isSelected ? "positive" : "info"}
+                  />
+                </div>
+                <p className={styles.muted}>
+                  {route.distanceKm ? `${route.distanceKm} کیلومتر` : "مسافت ثبت نشده"}
+                  {" · "}
+                  {route.estimatedDurationMinute
+                    ? `${route.estimatedDurationMinute} دقیقه`
+                    : "مدت ثبت نشده"}
+                  {" · "}
+                  {route.points.length ? `${route.points.length} نقطه میانی` : "بدون نقطه میانی"}
+                </p>
+                <ActionButton
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onRoutesChange(routes.filter((item) => item.key !== route.key))}
+                >
+                  حذف مسیر
+                </ActionButton>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      <Dialog
+        open={dialogOpen}
+        onClose={() => {
+          setDialogOpen(false);
+          resetEditor();
+        }}
+        titleId={dialogTitleId}
+        title="افزودن مسیر برنامه‌ریزی‌شده"
+        description="مسیر و نقاط اختیاری آن تا ثبت نهایی فقط در فرم نگه‌داری می‌شوند."
+        size="wide"
+      >
+        <form onSubmit={saveRoute} className={styles.routeDraftForm}>
+          {error && <InlineNotice tone="danger" role="alert">{error}</InlineNotice>}
+
+          <section className={styles.routeBasics}>
+            <div className={styles.routeSectionHeading}>
+              <h3>مشخصات مسیر</h3>
+              <p>مسافر، نام و نوع مسیر را مشخص کنید.</p>
+            </div>
+            <div className={styles.routeBasicsGrid}>
+              <SearchableSelect
+                name="passengerKey"
+                label="مسافر"
+                options={passengers.map((passenger) => ({
+                  value: String(passenger.key),
+                  label: passenger.nationalCode ? passenger.personName + " — کد ملی " + passenger.nationalCode : passenger.personName,
+                  searchText: [passenger.personName, passenger.nationalCode].filter(Boolean).join(" "),
+                  content: <span>{passenger.personName}{passenger.nationalCode ? " — کد ملی " + passenger.nationalCode : ""}</span>,
+                }))}
+                defaultValue={String(passengerKey)}
+                required
+                onValueChange={(value) => setPassengerKey(Number(value))}
+              />
+              <FormField>
+                <FieldLabel htmlFor={`${dialogTitleId}-route-name`} required>
+                  عنوان مسیر
+                  <span className={styles.routeLabelHint}>
+                    (برای تشخیص از مسیرهای جایگزین)
+                  </span>
+                </FieldLabel>
+                <input
+                  id={`${dialogTitleId}-route-name`}
+                  name="routeName"
+                  className={formControlClassName}
+                  placeholder="مثلاً: مسیر اصلی یا جایگزین"
+                />
+              </FormField>
+              <FormField>
+                          <FieldLabel htmlFor={`${dialogTitleId}-selected`}>نوع مسیر</FieldLabel>
+                          <select id={`${dialogTitleId}-selected`} name="isSelected" className={formControlClassName} defaultValue="true">
+                            <option value="true">مسیر اصلی</option>
+                            <option value="false">مسیر جایگزین</option>
+                          </select>
+                        </FormField>
+            </div>
+          </section>
+
+          <div className={styles.routeLayout}>
+          {(() => {
+            const passenger = passengers.find((item) => item.key === passengerKey);
+            return (
+              <>
+                <section className={styles.routeStops} aria-label="مسیر حرکت">
+                  <div className={styles.routeSectionHeading}>
+                    <h3>مسیر حرکت</h3>
+                    <p>مبدأ و مقصد از درخواست مسافر گرفته شده‌اند.</p>
+                  </div>
+                  <div className={styles.routeEndpoint}>
+                    <span className={styles.routeEndpointLabel}>مبدأ</span>
+                    <strong>{passenger?.originName ?? "—"}</strong>
+                  </div>
+                  <div className={styles.routeMiddle}>
+                    <div className={styles.routeMiddleHeading}>
+                      <span>نقاط میانی</span>
+                      <span>{pointKeys.length ? pointKeys.length.toLocaleString("fa-IR") + " نقطه" : "اختیاری"}</span>
+                    </div>
+                  {pointKeys.length === 0 ? (
+                    <p className={styles.muted}>نقطه میانی الزامی نیست.</p>
+                  ) : (
+                    <ol className={editorStyles.points}>
+                      {pointKeys.map((pointKey, index) => {
+                        const distance = pointDistances[pointKey] ?? emptyAssistedField();
+                        const selectedPoint = catalog.find(
+                          (item) => String(item.locationId) === pointLocationIds[pointKey],
+                        );
+                        const isEditing = !selectedPoint || editingPointKey === pointKey;
+                        return (
+                          <li key={pointKey} className={styles.routePointCard}>
+                            <div className={styles.routePointHeader}>
+                              <p className={styles.routePointHeading}>
+                                <span className={styles.routePointIndex}>{(index + 1).toLocaleString("fa-IR")}</span>
+                                نقطه میانی
+                              </p>
+                              {selectedPoint && <strong className={styles.routePointName}>{selectedPoint.locationName}</strong>}
+                            </div>
+                            {isEditing ? (
+                              <LocationPicker
+                              name={`point.${index}.locationId`}
+                              label="مکان"
+                              locations={catalog}
+                              defaultValue={pointLocationIds[pointKey] ?? ""}
+                              required
+                              layout="stop"
+                              onValueChange={(locationId) => {
+                                setPointLocationIds((current) => ({
+                                  ...current,
+                                  [pointKey]: locationId,
+                                }));
+                                setEditingPointKey(null);
+                              }}
+                              actions={
+                                <>
+                                  <button
+                                    type="button"
+                                    className={editorStyles.textButton}
+                                    aria-expanded={detailsKey === pointKey}
+                                    onClick={() =>
+                                      setDetailsKey((current) =>
+                                        current === pointKey ? null : pointKey,
+                                      )
+                                    }
+                                  >
+                                    جزئیات بیشتر
+                                  </button>
+                                  <IconActionGroup>
+                                    <IconActionButton
+                                      label="انتقال به بالا"
+                                      icon={<MoveUpIcon />}
+                                      disabled={index === 0}
+                                      onClick={() => movePoint(index, -1)}
+                                    />
+                                    <IconActionButton
+                                      label="انتقال به پایین"
+                                      icon={<MoveDownIcon />}
+                                      disabled={index === pointKeys.length - 1}
+                                      onClick={() => movePoint(index, 1)}
+                                    />
+                                    <IconActionButton
+                                      label="حذف"
+                                      icon={<DeleteIcon />}
+                                      tone="danger"
+                                      onClick={() => removePoint(pointKey)}
+                                    />
+                                  </IconActionGroup>
+                                </>
+                              }
+                            />
+                            ) : (
+                              <div className={styles.routePointSummaryActions}>
+                                <input type="hidden" name={`point.${index}.locationId`} value={pointLocationIds[pointKey]} />
+                                <ActionButton type="button" variant="secondary" size="sm" onClick={() => setEditingPointKey(pointKey)}>
+                                  ویرایش
+                                </ActionButton>
+                                <IconActionButton label="حذف نقطه میانی" icon={<DeleteIcon />} tone="danger" onClick={() => removePoint(pointKey)} />
+                              </div>
+                            )}
+                            <input type="hidden" name={`point.${index}.sequenceNo`} value={String(index + 1)} />
+                            <div hidden={!isEditing || detailsKey !== pointKey} className={editorStyles.details}>
+                              <FormGrid columns={2}>
+                                <RouteAssistedField id={`${dialogTitleId}-point-distance-${pointKey}`} name={`point.${index}.distanceFromStartKm`} label="فاصله از شروع (کیلومتر)" inputMode="decimal" field={distance} onChange={(nextValue) =>
+                                      setPointDistances((current) => ({
+                                        ...current,
+                                        [pointKey]: editAssistedValue(distance, nextValue),
+                                      }))
+                                    } onAccept={() =>
+                                          setPointDistances((current) => ({
+                                            ...current,
+                                            [pointKey]: acceptAssistedSuggestion(distance),
+                                          }))
+                                        } />
+                                <FormField>
+                                  <FieldLabel htmlFor={`${dialogTitleId}-zone-${pointKey}`}>محدوده ترافیکی</FieldLabel>
+                                  <input id={`${dialogTitleId}-zone-${pointKey}`} name={`point.${index}.trafficZone`} className={formControlClassName} />
+                                </FormField>
+                                <div className={styles.spanFull}>
+                                  <FormField>
+                                    <FieldLabel htmlFor={`${dialogTitleId}-point-description-${pointKey}`}>توضیحات نقطه</FieldLabel>
+                                    <input id={`${dialogTitleId}-point-description-${pointKey}`} name={`point.${index}.description`} maxLength={1000} className={formControlClassName} />
+                                  </FormField>
+                                </div>
+                              </FormGrid>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  )}
+                  <ActionButton
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setPointKeys((current) => [...current, nextPointKey]);
+                      setEditingPointKey(nextPointKey);
+                      setPointDistances((current) => ({
+                        ...current,
+                        [nextPointKey]: emptyAssistedField(),
+                      }));
+                      setNextPointKey((current) => current + 1);
+                    }}
+                  >
+                    + افزودن نقطه میانی
+                  </ActionButton>
+                </div>
+                  <div className={styles.routeEndpoint}>
+                    <span className={styles.routeEndpointLabel}>مقصد</span>
+                    <strong>{passenger?.destinationName ?? "—"}</strong>
+                  </div>
+                </section>
+                <aside className={styles.routeMap} aria-label="پیش‌نمایش مسیر">
+                  <div className={styles.routeSectionHeading}>
+                    <h3>پیش‌نمایش مسیر</h3>
+                    <p>نمایش نقشه در صورت دسترسی؛ ثبت مسیر به آن وابسته نیست.</p>
+                  </div>
+                  {dialogOpen && (
+                    <div className={styles.routeMapCanvas}>
+                    <RoutePlanMap
+                      origin={passenger?.originLocation ?? null}
+                      destination={passenger?.destinationLocation ?? null}
+                      intermediates={pointKeys.map((pointKey) => ({
+                        location:
+                          catalog.find(
+                            (item) => String(item.locationId) === pointLocationIds[pointKey],
+                          ) ?? null,
+                      }))}
+                      onRoute={handleRoute}
+                    />
+                    </div>
+                  )}
+                </aside>
+              </>
+            );
+          })()}
+          </div>
+
+          <section className={styles.routeEstimateSection}>
+            <div className={styles.routeSectionHeading}>
+              <h3>برآورد سفر</h3>
+              <p>مسافت و زمان را در صورت نیاز وارد کنید.</p>
+            </div>
+          <div className={editorStyles.estimates}>
+            <RouteAssistedField id={`${dialogTitleId}-distance`} name="distanceKm" label="مسافت (کیلومتر)" inputMode="decimal" field={distanceField} onChange={(nextValue) =>
+                  setDistanceField((current) => editAssistedValue(current, nextValue))
+                } onAccept={() => setDistanceField((current) => acceptAssistedSuggestion(current))} />
+            <RouteAssistedField id={`${dialogTitleId}-duration`} name="estimatedDurationMinute" label="مدت تخمینی (دقیقه)" inputMode="numeric" field={durationField} onChange={(nextValue) =>
+                  setDurationField((current) => editAssistedValue(current, nextValue))
+                } onAccept={() => setDurationField((current) => acceptAssistedSuggestion(current))} />
+          </div>
+
+          <div>
+            <button
+              type="button"
+              className={editorStyles.textButton}
+              aria-expanded={routeDetailsOpen}
+              onClick={() => setRouteDetailsOpen((open) => !open)}
+            >
+              جزئیات بیشتر
+            </button>
+            <div hidden={!routeDetailsOpen} className={editorStyles.details}>
+              <FormGrid columns={2}>
+                <FormField>
+                  <FieldLabel htmlFor={`${dialogTitleId}-alternative`}>شمارهٔ مسیر جایگزین</FieldLabel>
+                  <input id={`${dialogTitleId}-alternative`} name="alternativeNo" inputMode="numeric" dir="ltr" className={formControlClassName} />
+                </FormField>
+                <FormField className={styles.spanFull}>
+                  <FieldLabel htmlFor={`${dialogTitleId}-description`}>توضیحات مسیر</FieldLabel>
+                  <input id={`${dialogTitleId}-description`} name="routeDescription" maxLength={1000} className={formControlClassName} />
+                </FormField>
+              </FormGrid>
+            </div>
+          </div>
+          </section>
+
+          <div className={styles.routeDialogActions}>
+            <FormActions>
+              <ActionButton type="button" variant="secondary" onClick={() => { setDialogOpen(false); resetEditor(); }}>انصراف</ActionButton>
+              <ActionButton type="submit">افزودن به برنامه سفر</ActionButton>
+            </FormActions>
+          </div>
+        </form>
+      </Dialog>
+
+      <div className={styles.stepActions}>
+        <FormActions>
+          <ActionButton type="button" variant="secondary" onClick={onBack}>قبلی: راننده و خودرو</ActionButton>
+          <ActionButton type="button" onClick={onNext}>{nextLabel}</ActionButton>
+        </FormActions>
+        {footerAction}
+      </div>
+    </div>
+  );
+}

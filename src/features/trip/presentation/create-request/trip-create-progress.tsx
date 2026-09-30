@@ -1,5 +1,5 @@
 import { WizardProgress } from "../../../../components/ui/wizard-progress/wizard-progress";
-import styles from "./create-trip.module.css";
+import styles from "../trip-wizard.module.css";
 import { CREATE_WIZARD_STEPS } from "./create-wizard";
 
 export function TripCreateProgress({

@@ -1,17 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ManageTrips } from "./manage-trips";
-import type {
-  TripRepository,
-  TripWriteSession,
-} from "./trip-repository";
-import type {
-  CreateCompleteTripRequestCommand,
-  CreateTripRequestCommand,
-  NewTripRoute,
-  SaveTripExecutionInput,
-  TripPassengerRecord,
-} from "./trip-records";
+import type { TripRepository, TripWriteSession } from "./trip-repository";
+import type { CreateTripRequestCommand, NewTripRoute, SaveTripExecutionInput, TripPassengerRecord } from "./trip-records";
 
 const requestType = {
   tripRequestTypeId: 1,
@@ -466,125 +457,6 @@ describe("create Trip request", () => {
       error: "LOCATION_NOT_FOUND",
       failedLocation: { passengerIndex: 1, locationRole: "destination" },
     });
-  });
-});
-
-describe("create complete Trip request", () => {
-  const completeInput: CreateCompleteTripRequestCommand = {
-    ...createInput,
-    passengers: [
-      {
-        ...createInput.passengers[0],
-        vehicleDriverAssignmentId: 11,
-        routes: [
-          {
-            routeName: "مسیر اصلی",
-            alternativeNo: null,
-            distanceKm: "12.50",
-            estimatedDurationMinute: 30,
-            isSelected: true,
-            description: null,
-            points: [
-              {
-                locationId: 3,
-                trafficZone: null,
-                sequenceNo: 1,
-                distanceFromStartKm: "5.00",
-                description: null,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        ...createInput.passengers[0],
-        passengerPersonId: 2,
-        destinationLocationId: 4,
-        pickupOrder: 2,
-        dropoffOrder: 2,
-        vehicleDriverAssignmentId: 22,
-        routes: [
-          {
-            routeName: "مسیر دوم",
-            alternativeNo: 2,
-            distanceKm: null,
-            estimatedDurationMinute: null,
-            isSelected: false,
-            description: "مسیر مسافر دوم",
-            points: [],
-          },
-        ],
-      },
-    ],
-  };
-
-  it("maps generated Trip ids to each passenger's assignment and optional routes in one atomic callback", async () => {
-    session.createRequest.mockResolvedValueOnce({
-      tripRequestId: 77,
-      tripIds: [701, 702],
-    });
-
-    expect(await manage.createCompleteRequest(completeInput)).toEqual({
-      success: true,
-      id: 77,
-    });
-
-    expect(session.lockRequestNumberYear).toHaveBeenCalledWith(1404);
-    expect(session.createRequest).toHaveBeenCalledTimes(1);
-    expect(session.createRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        requestDateTime: new Date("2026-01-01T08:00:00Z"),
-        requestNo: "TR-1404-0001",
-        status: "New",
-        passengers: [
-          expect.objectContaining({ passengerPersonId: 1 }),
-          expect.objectContaining({ passengerPersonId: 2 }),
-        ],
-      }),
-    );
-    expect(session.createExecution).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ tripId: 701, vehicleDriverAssignmentId: 11, status: "Planned" }),
-    );
-    expect(session.createExecution).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ tripId: 702, vehicleDriverAssignmentId: 22, status: "Planned" }),
-    );
-    expect(session.createRoute).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ tripId: 701, routeName: "مسیر اصلی", points: [expect.objectContaining({ locationId: 3 })] }),
-    );
-    expect(session.createRoute).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ tripId: 702, routeName: "مسیر دوم", points: [] }),
-    );
-    expect(session.updateRequestStatus).toHaveBeenCalledWith(77, "Assigned");
-  });
-
-  it("validates the complete command before creating any request rows", async () => {
-    const result = await manage.createCompleteRequest({
-      ...completeInput,
-      passengers: [
-        {
-          ...completeInput.passengers[0],
-          vehicleDriverAssignmentId: Number.NaN,
-        },
-      ],
-    });
-
-    expect(result).toMatchObject({ success: false, error: "INVALID_ID" });
-    expect(session.createRequest).not.toHaveBeenCalled();
-  });
-
-  it("does not attempt to persist blank route points", async () => {
-    session.createRequest.mockResolvedValueOnce({ tripRequestId: 88, tripIds: [801] });
-    await manage.createCompleteRequest({
-      ...completeInput,
-      passengers: [{ ...completeInput.passengers[1], passengerPersonId: 1 }],
-    });
-    expect(session.createRoute).toHaveBeenCalledWith(
-      expect.objectContaining({ points: [] }),
-    );
   });
 });
 

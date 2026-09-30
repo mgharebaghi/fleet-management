@@ -45,7 +45,7 @@ function successfulId(
   return result.id;
 }
 
-async function createCoreFixture() {
+async function createCoreFixture(requestedPickupDateTime?: Date) {
   if (!verified) throw new Error("Trip database identity was not verified.");
   const token = randomUUID();
   const person = await client.people.create({
@@ -87,7 +87,7 @@ async function createCoreFixture() {
           passengerPersonId: person.PersonId,
           originLocationId: origin.LocationId,
           destinationLocationId: destination.LocationId,
-          requestedPickupDateTime: requestedTravelDateTime,
+          requestedPickupDateTime: requestedPickupDateTime ?? requestedTravelDateTime,
           pickupOrder: 1,
           dropoffOrder: 1,
           status: null,
@@ -170,6 +170,14 @@ async function createAssignmentFixture(
 }
 
 describe.sequential("Trip SQL Server integration", () => {
+  it("persists a passenger's requested pickup override when creating the request", async () => {
+    const pickup = new Date("2026-02-01T09:00:00Z");
+    const fixture = await createCoreFixture(pickup);
+    const persisted = await repository.details(fixture.requestId);
+    expect(persisted?.requestedTravelDateTime).toEqual(fixture.requestedTravelDateTime);
+    expect(persisted?.passengers[0].requestedPickupDateTime).toEqual(pickup);
+  }, 60_000);
+
   it("protects referenced assignment history while retaining notes and physical-vehicle capacity", async () => {
     const fixture = await createCoreFixture();
     const assignment = await createAssignmentFixture(fixture.token, fixture.person.PersonId, fixture.requestedTravelDateTime);
@@ -505,7 +513,7 @@ describe.sequential("Trip SQL Server integration", () => {
   );
 
   it(
-    "atomically creates a complete planned request with execution, route, and points",
+    "atomically assigns a request with execution, route, and points",
     async () => {
       const fixture = await createCoreFixture();
       const assignment = await createAssignmentFixture(
@@ -513,25 +521,11 @@ describe.sequential("Trip SQL Server integration", () => {
         fixture.person.PersonId,
         fixture.requestedTravelDateTime,
       );
-      const requestType = await client.tripRequestType.findFirstOrThrow({
-        where: { TypeCode: "COMMON_ORIGIN_DESTINATION" },
-      });
-
-      const result = await manage.createCompleteRequest({
-        tripRequestTypeId: requestType.TripRequestTypeId,
-        requestedTravelDateTime: fixture.requestedTravelDateTime,
-        purpose: `Complete-${fixture.token}`,
-        description: "atomic complete request",
+      const result = await manage.assignInitialRequest({
+        tripRequestId: fixture.requestId,
         passengers: [
           {
-            passengerPersonId: fixture.person.PersonId,
-            originLocationId: fixture.origin.LocationId,
-            destinationLocationId: fixture.destination.LocationId,
-            requestedPickupDateTime: fixture.requestedTravelDateTime,
-            pickupOrder: 1,
-            dropoffOrder: 1,
-            status: null,
-            description: null,
+            tripId: fixture.tripId,
             vehicleDriverAssignmentId: assignment.AssignmentId,
             routes: [
               {
@@ -557,7 +551,6 @@ describe.sequential("Trip SQL Server integration", () => {
       });
       expect(result.success).toBe(true);
       if (!result.success) throw new Error(result.error);
-      requestIds.push(result.id);
 
       const details = await repository.details(result.id);
       expect(details).toMatchObject({

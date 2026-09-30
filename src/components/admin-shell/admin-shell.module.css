@@ -111,39 +111,12 @@ button.navLink {
   white-space: nowrap;
 }
 
-.navGroupRow {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  min-width: 0;
-}
-
 .navGroupRow > .navLink {
   flex: 1;
   min-width: 0;
 }
 
 .navLink[data-section-active="true"]:not([aria-current="page"]) {
-  color: #fff;
-}
-
-.navDisclosure {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--app-sidebar-text);
-  cursor: pointer;
-}
-
-.navDisclosure:hover,
-.navDisclosure:focus-visible {
-  background: rgb(255 255 255 / 9%);
   color: #fff;
 }
 
