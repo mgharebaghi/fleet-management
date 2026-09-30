@@ -1,3 +1,4 @@
+vi.mock("next/navigation", async importOriginal => ({ ...await importOriginal<typeof import("next/navigation")>(), useRouter: () => ({ push: vi.fn() }) }));
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -70,6 +71,7 @@ vi.mock("@/components/ui/icon-action-button/icon-action-button", () =>
 const reader = vi.hoisted(() => ({
   details: vi.fn(),
   assignmentsActiveAt: vi.fn(),
+  assignmentsByPassenger: vi.fn(),
   availableLocations: vi.fn(),
   availablePeople: vi.fn(),
 }));
@@ -204,6 +206,7 @@ function details(
 
 
 beforeEach(() => {
+  reader.assignmentsByPassenger.mockResolvedValue({});
   reader.details.mockResolvedValue(details());
   reader.assignmentsActiveAt.mockResolvedValue([assignment]);
   reader.availableLocations.mockResolvedValue([location]);

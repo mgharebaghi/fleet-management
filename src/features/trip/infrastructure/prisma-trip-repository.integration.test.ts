@@ -10,6 +10,8 @@ import { jalaliYearOf } from "../application/trip-lifecycle";
 import { ManageTrips } from "../application/manage-trips";
 import { PrismaIncidentRepository } from "./incident/prisma-incident-repository";
 import { PrismaTripRepository } from "./prisma-trip-repository";
+import { ManageDrivers } from "../../drivers/application/manage-drivers";
+import { PrismaDriverRepository } from "../../drivers/infrastructure/prisma-driver-repository";
 
 const connection = loadTestDatabaseConfig("TEST_DATABASE");
 
@@ -168,6 +170,40 @@ async function createAssignmentFixture(
 }
 
 describe.sequential("Trip SQL Server integration", () => {
+  it("protects referenced assignment history while retaining notes and physical-vehicle capacity", async () => {
+    const fixture = await createCoreFixture();
+    const assignment = await createAssignmentFixture(fixture.token, fixture.person.PersonId, fixture.requestedTravelDateTime);
+    const executionId = successfulId(await manage.saveExecution({ tripId: fixture.tripId, tripExecutionId: null, vehicleDriverAssignmentId: assignment.AssignmentId, actualPickupDateTime: null, actualDropoffDateTime: null, startOdometer: null, endOdometer: null, status: "Planned", description: null }, fixture.requestId));
+    const drivers = new ManageDrivers(new PrismaDriverRepository(client), () => fixture.requestedTravelDateTime);
+    const input = { assignmentId: assignment.AssignmentId, driverId: assignment.DriverId, vehicleId: assignment.VehicleId, fromDateTime: assignment.FromDateTime, toDateTime: assignment.ToDateTime, startOdometer: null, endOdometer: null, description: null };
+    expect(await drivers.updateAssignment({ ...input, fromDateTime: new Date(assignment.FromDateTime.getTime() - 60_000) })).toEqual({ success: false, error: "ASSIGNMENT_IN_USE" });
+    expect((await drivers.updateAssignment({ ...input, description: "Retained history" })).success).toBe(true);
+    expect((await repository.details(fixture.requestId))?.passengers[0].executions[0].assignment.vehicle.vehicleId).toBe(assignment.VehicleId);
+    await repository.atomic(async session => {
+      expect(await session.activePassengerCountsByVehicle([assignment.VehicleId], executionId)).toEqual({});
+    });
+  }, 180_000);
+
+  it("never commits a fourth passenger under concurrent planning attempts", async () => {
+    const fixture = await createCoreFixture();
+    const assignment = await createAssignmentFixture(fixture.token, fixture.person.PersonId, fixture.requestedTravelDateTime);
+    const passenger = { passengerPersonId: fixture.person.PersonId, originLocationId: fixture.origin.LocationId, destinationLocationId: fixture.destination.LocationId, requestedPickupDateTime: fixture.requestedTravelDateTime, pickupOrder: null, dropoffOrder: null, status: null, description: null };
+    const createExecution = (tripId: number) => manage.saveExecution({ tripId, tripExecutionId: null, vehicleDriverAssignmentId: assignment.AssignmentId, actualPickupDateTime: null, actualDropoffDateTime: null, startOdometer: null, endOdometer: null, status: "Planned", description: null }, fixture.requestId);
+    successfulId(await createExecution(fixture.tripId));
+    const added = [];
+    for (let index = 0; index < 3; index++) added.push(successfulId(await manage.addPassenger({ tripRequestId: fixture.requestId, passenger })));
+    successfulId(await createExecution(added[0]));
+    const outcomes = await Promise.allSettled([createExecution(added[1]), createExecution(added[2])]);
+    const successes = outcomes.filter(result => result.status === "fulfilled" && result.value.success);
+    expect(successes.length).toBeLessThanOrEqual(1);
+    const counts = await repository.activePassengerCountsByVehicle([assignment.VehicleId]);
+    expect(counts[assignment.VehicleId]).toBe(2 + successes.length);
+    expect(counts[assignment.VehicleId]).toBeLessThanOrEqual(3);
+    if (successes.length === 0) successfulId(await createExecution(added[1]));
+    const pendingTripId = outcomes[0].status === "fulfilled" && outcomes[0].value.success || successes.length === 0 ? added[2] : added[1];
+    expect(await createExecution(pendingTripId)).toEqual({ success: false, error: "VEHICLE_PASSENGER_CAPACITY_EXCEEDED" });
+    expect(await repository.activePassengerCountsByVehicle([assignment.VehicleId])).toEqual({ [assignment.VehicleId]: 3 });
+  }, 240_000);
   beforeAll(async () => {
     const [identity] = await client.$queryRaw<
       Array<{

@@ -227,8 +227,8 @@ export class PrismaTripWriteSession implements TripWriteSession {
     return rows.length > 0;
   }
 
-  activePassengerCountsByVehicle(vehicleIds: readonly number[]) {
-    return readActivePassengerCountsByVehicle(this.client, vehicleIds);
+  activePassengerCountsByVehicle(vehicleIds: readonly number[], excludingExecutionId?: number) {
+    return readActivePassengerCountsByVehicle(this.client, vehicleIds, excludingExecutionId);
   }
 
   async assignment(id: number, activeAt: Date) {

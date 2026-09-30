@@ -130,6 +130,45 @@ const repository = {
 
 const manage = new ManageTrips(repository);
 
+describe("execution capacity regressions", () => {
+  it("does not write an execution through another request's page", async () => {
+    expect(await manage.saveExecution(plannedExecutionInput, 99)).toEqual({ success: false, error: "TRIP_NOT_FOUND" });
+    expect(session.createExecution).not.toHaveBeenCalled();
+  });
+  it("does not write a route through another request's page", async () => {
+    expect(await manage.saveRoute(routeInput, 99)).toEqual({ success: false, error: "TRIP_NOT_FOUND" });
+    expect(session.createRoute).not.toHaveBeenCalled();
+  });
+  it("does not write a survey through another request's page", async () => {
+    session.execution.mockResolvedValue({ tripExecutionId: 2, tripId: 1, status: "Completed", requestId: 1, requestStatus: "Completed" });
+    expect(await manage.saveSurvey({ tripExecutionId: 2, passengerRating: null, passengerComment: "Comment" }, 99)).toEqual({ success: false, error: "EXECUTION_NOT_FOUND" });
+    expect(session.updateSurvey).not.toHaveBeenCalled();
+  });
+  it("rejects new planning when the physical vehicle already has three active passengers", async () => {
+    session.activePassengerCountsByVehicle.mockResolvedValue({ 1: 3 });
+    expect(await manage.saveExecution(plannedExecutionInput)).toEqual({ success: false, error: "VEHICLE_PASSENGER_CAPACITY_EXCEEDED" });
+    expect(session.createExecution).not.toHaveBeenCalled();
+  });
+  it("rejects a planned reassignment to a full vehicle", async () => {
+    session.activePassengerCountsByVehicle.mockResolvedValue({ 1: 3 });
+    expect(await manage.saveExecution({ ...plannedExecutionInput, tripExecutionId: 2 })).toEqual({ success: false, error: "VEHICLE_PASSENGER_CAPACITY_EXCEEDED" });
+    expect(session.updateExecution).not.toHaveBeenCalled();
+  });
+  it("excludes the execution being edited from persisted occupancy", async () => {
+    session.activePassengerCountsByVehicle.mockResolvedValue({ 1: 2 });
+    expect((await manage.saveExecution({ ...plannedExecutionInput, tripExecutionId: 2 })).success).toBe(true);
+    expect(session.activePassengerCountsByVehicle).toHaveBeenCalledWith([1], 2);
+  });
+});
+
+describe("initial assignment passenger identity regressions", () => {
+  it("rejects duplicate passengers instead of silently omitting another passenger", async () => {
+    session.request.mockResolvedValue({ tripRequestId: 1, status: "New", tripRequestTypeId: 1, passengers: [{ tripId: 1 }, { tripId: 2 }] });
+    expect(await manage.assignInitialRequest({ tripRequestId: 1, passengers: [1, 1].map(tripId => ({ tripId, vehicleDriverAssignmentId: 1, routes: [] })) })).toEqual({ success: false, error: "INVALID_ASSIGNMENT_PASSENGERS" });
+    expect(session.createExecution).not.toHaveBeenCalled();
+  });
+});
+
 const createInput: CreateTripRequestCommand = {
   tripRequestTypeId: 1,
   requestedTravelDateTime: new Date("2026-02-01T08:00:00Z"),
@@ -269,7 +308,7 @@ describe("create Trip request", () => {
     });
   });
 
-  it("persists the request travel datetime even when a passenger pickup override is supplied", async () => {
+  it("persists a passenger pickup override supplied by the existing form", async () => {
     const requestedPickupDateTime = new Date("2026-02-01T08:30:00Z");
 
     await manage.createRequest({
@@ -286,7 +325,7 @@ describe("create Trip request", () => {
       expect.objectContaining({
         passengers: [
           expect.objectContaining({
-            requestedPickupDateTime: createInput.requestedTravelDateTime,
+            requestedPickupDateTime,
           }),
         ],
       }),

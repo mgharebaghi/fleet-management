@@ -21,6 +21,7 @@ import { formatTripDateTime } from "../trip-format";
 import { tripMessages, type TripActionState } from "../trip-form-data";
 import { savePassengerSurveyAction } from "../trip.actions";
 import styles from "../trip-forms.module.css";
+import { surveyIsRecorded } from "./survey-recorded";
 
 const RATING_OPTIONS = [
   { value: 1, label: "خیلی ضعیف", number: "۱" },
@@ -40,7 +41,7 @@ export function TripSurveyButton({
   execution: TripExecutionRecord;
 }) {
   const [open, setOpen] = useState(false);
-  const isRecorded = execution.passengerRating !== null;
+  const isRecorded = surveyIsRecorded(execution);
 
   return (
     <>
@@ -80,7 +81,7 @@ export function TripSurveyDialog({
 }) {
   const prefix = useId();
   const titleId = `${prefix}-survey-dialog-title`;
-  const isRecorded = execution.passengerRating !== null;
+  const isRecorded = surveyIsRecorded(execution);
 
   const [state, formAction, pending] = useActionState(
     async (prevState: TripActionState, formData: FormData) => {
@@ -153,6 +154,9 @@ export function TripSurveyDialog({
         </div>
 
         <div className={styles.surveyRatingSection}>
+          {selectedRating !== "" && !RATING_OPTIONS.some(option => String(option.value) === selectedRating) && (
+            <input type="hidden" name="passengerRating" value={selectedRating} />
+          )}
           <div className={styles.surveyRatingHeader}>
             <span id={`${prefix}-rating-label`} className={styles.ratingLegend}>
               امتیاز مسافر به کیفیت سفر (۱ تا ۵)

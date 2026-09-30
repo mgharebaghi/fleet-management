@@ -75,6 +75,7 @@ export interface TripWriteSession {
   ): Promise<TripAssignmentReference | null>;
   activePassengerCountsByVehicle(
     vehicleIds: readonly number[],
+    excludingExecutionId?: number,
   ): Promise<Readonly<Record<number, number>>>;
   createRequest(input: CreateTripRequestInput): Promise<{
     tripRequestId: number;

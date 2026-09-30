@@ -1,5 +1,6 @@
 "use server";
 
+import { reportServerFailure } from "../../../infrastructure/observability/report-server-failure";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -45,7 +46,8 @@ async function run(
   let result: TripResult;
   try {
     result = await work();
-  } catch {
+  } catch (error) {
+    reportServerFailure("trip.write", error);
     return { error: "UNEXPECTED", values };
   }
   return result.success
@@ -164,7 +166,7 @@ export async function addTripRouteAction(
           values[`point.${index}.distanceFromStartKm`]?.trim() || null,
         description: values[`point.${index}.description`] ?? null,
       })),
-    }),
+    }, tripRequestId),
   );
 
   if (!("id" in result)) return result;
@@ -312,7 +314,7 @@ export async function saveTripExecutionAction(
         values.executionStatus ??
         (tripExecutionId === null ? "Planned" : ""),
       description: values.executionDescription ?? null,
-    }),
+    }, tripRequestId),
   );
 
   if (!("id" in result)) return result;
@@ -362,7 +364,7 @@ export async function savePassengerExecutionsAction(
         endOdometer: item.values.endOdometer?.trim() || null,
         status: item.values.executionStatus ?? "",
         description: item.values.executionDescription ?? null,
-      }),
+      }, tripRequestId),
     );
 
     if (!("id" in result)) {
@@ -394,7 +396,7 @@ export async function savePassengerSurveyAction(
       tripExecutionId,
       passengerRating: parseOptionalInteger(values.passengerRating),
       passengerComment: values.passengerComment ?? null,
-    }),
+    }, tripRequestId),
   );
 
   if (!("id" in result)) return result;
@@ -464,6 +466,14 @@ export async function createTripRequestAction(
   const commonDestination = values.commonDestinationLocationId;
   const travelDateTime = requestedTravelDateTime(values);
 
+  for (const index of passengerIndexes) {
+    if (values[`passenger.${index}.pickupOverride`] !== "true") continue;
+    const pickup = passengerRequestedPickupDateTime(values, index, travelDateTime);
+    if (!Number.isFinite(pickup.getTime())) {
+      return { success: false, error: "INVALID_DATE", field: `passenger.${index}.pickupDay` };
+    }
+  }
+
   let result: TripResult;
   try {
     result = await makeManageTrips().createRequest({
@@ -480,7 +490,7 @@ export async function createTripRequestAction(
           commonDestination ||
             values[`passenger.${index}.destinationLocationId`],
         ),
-        requestedPickupDateTime: travelDateTime,
+        requestedPickupDateTime: passengerRequestedPickupDateTime(values, index, travelDateTime),
         pickupOrder: parseOptionalInteger(
           values[`passenger.${index}.pickupOrder`],
         ),
@@ -491,7 +501,8 @@ export async function createTripRequestAction(
         description: values[`passenger.${index}.description`] ?? null,
       })),
     });
-  } catch {
+  } catch (error) {
+    reportServerFailure("trip.write", error);
     return { success: false, error: "UNEXPECTED" };
   }
 
@@ -564,7 +575,8 @@ export async function assignInitialTripRequestAction(
       tripRequestId: payload.tripRequestId,
       passengers,
     });
-  } catch {
+  } catch (error) {
+    reportServerFailure("trip.write", error);
     return { success: false, error: "UNEXPECTED" };
   }
 
@@ -626,7 +638,8 @@ export async function createCompleteTripRequestAction(
           })),
       })),
     });
-  } catch {
+  } catch (error) {
+    reportServerFailure("trip.write", error);
     return { success: false, error: "UNEXPECTED" };
   }
 

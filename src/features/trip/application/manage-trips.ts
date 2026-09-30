@@ -96,9 +96,7 @@ export class ManageTrips {
       ...input,
       passengers: input.passengers.map((passenger) => ({
         ...passenger,
-        // Requesters do not choose a passenger pickup time. Any supplied
-        // value is discarded so every Trip inherits the request travel time.
-        requestedPickupDateTime: input.requestedTravelDateTime,
+        requestedPickupDateTime: passenger.requestedPickupDateTime ?? input.requestedTravelDateTime,
       })),
     });
     const validationError = tripRequestError(value);
@@ -383,11 +381,19 @@ export class ManageTrips {
         return failure("PASSENGER_REQUIRED");
       }
 
+      const passengerIds = new Set(input.passengers.map(passenger => passenger.tripId));
+      if (passengerIds.size !== input.passengers.length || request.passengers.some(passenger => !passengerIds.has(passenger.tripId))) {
+        return failure("INVALID_ASSIGNMENT_PASSENGERS");
+      }
+
       const resolvedVehicleIds: number[] = [];
       for (const [passengerIndex, passengerInput] of input.passengers.entries()) {
         const trip = await session.trip(passengerInput.tripId);
         if (!trip || trip.requestId !== input.tripRequestId) {
           return failure("TRIP_NOT_FOUND");
+        }
+        if (trip.executions.some(execution => isNonTerminalTripExecutionStatus(execution.status))) {
+          return failure("ACTIVE_EXECUTION_EXISTS");
         }
 
         const scheduledDateTime =
@@ -734,7 +740,7 @@ export class ManageTrips {
     return this.changeRequestStatus(tripRequestId, "InProgress");
   }
 
-  async saveRoute(input: SaveTripRouteInput): Promise<TripResult> {
+  async saveRoute(input: SaveTripRouteInput, expectedTripRequestId?: number): Promise<TripResult> {
     const { routeId, ...routeFields } = input;
     const value = normalizeTripRoute({
       ...routeFields,
@@ -752,7 +758,7 @@ export class ManageTrips {
 
     return this.repository.atomic(async (session) => {
       const trip = await session.trip(value.tripId);
-      if (!trip) return failure("TRIP_NOT_FOUND");
+      if (!trip || (expectedTripRequestId !== undefined && trip.requestId !== expectedTripRequestId)) return failure("TRIP_NOT_FOUND");
       if (
         value.tripExecutionId === null &&
         (trip.requestStatus === "InProgress" ||
@@ -853,7 +859,7 @@ export class ManageTrips {
     });
   }
 
-  async saveExecution(input: SaveTripExecutionInput): Promise<TripResult> {
+  async saveExecution(input: SaveTripExecutionInput, expectedTripRequestId?: number): Promise<TripResult> {
     const normalized = normalizeTripExecution(input);
     const value = {
       ...normalized,
@@ -871,7 +877,7 @@ export class ManageTrips {
 
     return this.repository.atomic(async (session) => {
       const trip = await session.trip(value.tripId);
-      if (!trip) return failure("TRIP_NOT_FOUND");
+      if (!trip || (expectedTripRequestId !== undefined && trip.requestId !== expectedTripRequestId)) return failure("TRIP_NOT_FOUND");
       if (isTerminalTripRequestStatus(trip.requestStatus)) {
         return failure("REQUEST_TERMINAL");
       }
@@ -941,6 +947,15 @@ export class ManageTrips {
         if (eligibilityError) return failure(eligibilityError);
       }
 
+      if (isNonTerminalTripExecutionStatus(targetStatus)) {
+        const persistedActiveCounts = await session.activePassengerCountsByVehicle(
+          [assignment.vehicle.vehicleId], value.tripExecutionId ?? undefined,
+        );
+        if (vehiclePassengerCapacityExceeded({ persistedActiveCounts, submittedVehicleIds: [assignment.vehicle.vehicleId] })) {
+          return failure("VEHICLE_PASSENGER_CAPACITY_EXCEEDED");
+        }
+      }
+
       if (value.tripExecutionId === null) {
         return {
           success: true,
@@ -956,7 +971,7 @@ export class ManageTrips {
     });
   }
 
-  async saveSurvey(input: SavePassengerSurveyInput): Promise<TripResult> {
+  async saveSurvey(input: SavePassengerSurveyInput, expectedTripRequestId?: number): Promise<TripResult> {
     const value: SavePassengerSurveyInput = {
       ...input,
       passengerComment: input.passengerComment?.trim() || null,
@@ -983,7 +998,7 @@ export class ManageTrips {
 
     return this.repository.atomic(async (session) => {
       const execution = await session.execution(value.tripExecutionId);
-      if (!execution) return failure("EXECUTION_NOT_FOUND");
+      if (!execution || (expectedTripRequestId !== undefined && execution.requestId !== expectedTripRequestId)) return failure("EXECUTION_NOT_FOUND");
       if (execution.status !== "Completed") {
         return failure("SURVEY_NOT_ALLOWED");
       }

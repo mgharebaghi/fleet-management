@@ -292,6 +292,10 @@ export function passengerStepGaps(
     ) {
       gaps.push(`passenger.${index}.destinationLocationId`);
     }
+    if (values[`passenger.${index}.pickupOverride`] === "true") {
+      if (!values[`passenger.${index}.pickupDay`]) gaps.push(`passenger.${index}.pickupDay`);
+      if (!values[`passenger.${index}.pickupTime`]) gaps.push(`passenger.${index}.pickupTime`);
+    }
   }
   return gaps;
 }

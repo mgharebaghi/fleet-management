@@ -81,7 +81,7 @@ describe("Route Actions - Persistence, Update and Safe Deletion", () => {
           description: "نقطه دوم جدید",
         },
       ],
-    });
+    }, 100);
 
     expect(revalidatePath).toHaveBeenCalledWith("/trips/100");
     expect(result).toEqual({ success: true });
@@ -112,6 +112,7 @@ describe("Route Actions - Persistence, Update and Safe Deletion", () => {
         tripId: 701,
         routeName: "مسیر جدید پیشنهادی",
       }),
+      100,
     );
 
     expect(revalidatePath).toHaveBeenCalledWith("/trips/100");

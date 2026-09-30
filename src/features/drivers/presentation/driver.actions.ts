@@ -1,5 +1,6 @@
 "use server";
 
+import { reportServerFailure } from "../../../infrastructure/observability/report-server-failure";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { makeManageDrivers } from "../composition/driver.factory";
@@ -10,7 +11,7 @@ async function submit(data: FormData, work: (values: Record<string, string>) => 
   const values = formValues(data);
   if (!values) return { error: "INVALID_FORM" };
   let result: DriverResult;
-  try { result = await work(values); } catch { return { error: "UNEXPECTED", values }; }
+  try { result = await work(values); } catch (error) { reportServerFailure("drivers.write", error); return { error: "UNEXPECTED", values }; }
   if (!result.success) return { error: result.error, values };
   revalidatePath("/drivers", "layout");
   redirect(href(result.id));
@@ -36,7 +37,7 @@ export async function updateAssignmentAction(driverId: number, assignmentId: num
   return submit(data, v => makeManageDrivers().updateAssignment({ assignmentId, driverId, vehicleId: Number(v.vehicleId), fromDateTime: parseDateTime(v.fromDay, v.fromTime) ?? new Date(NaN), toDateTime: parseDateTime(v.toDay, v.toTime), startOdometer: v.startOdometer?.trim() || null, endOdometer: v.endOdometer?.trim() || null, description: v.description ?? null }), () => `/drivers/${driverId}?tab=assignments`);
 }
 export async function closeAssignmentAction(driverId: number, assignmentId: number, _state: DriverActionState, data: FormData) {
-  return submit(data, v => makeManageDrivers().closeAssignment(assignmentId, parseDateTime(v.toDay, v.toTime) ?? new Date(NaN), v.endOdometer?.trim() || null), () => `/drivers/${driverId}?tab=assignments`);
+  return submit(data, v => makeManageDrivers().closeAssignment(assignmentId, parseDateTime(v.toDay, v.toTime) ?? new Date(NaN), v.endOdometer?.trim() || null, driverId), () => `/drivers/${driverId}?tab=assignments`);
 }
 export async function deleteAssignmentAction(driverId: number, assignmentId: number, _state: DriverActionState, data: FormData) {
   const values = formValues(data);

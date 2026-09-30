@@ -1,6 +1,7 @@
 "use client";
 
 import { ActionButton } from "../../../../components/ui/action-button/action-button";
+import { rtlTabIndex } from "../../../../shared/presentation/navigation-interaction";
 import styles from "../create-request/create-trip.module.css";
 
 export type TripPassengerSwitcherProps = {
@@ -33,7 +34,15 @@ export function TripPassengerSwitcher({
   if (passengerCount <= 0) return null;
 
   return (
-    <div className={styles.passengerSwitcher} role="tablist" aria-label={ariaLabel}>
+    <div className={styles.passengerSwitcher} role="tablist" aria-label={ariaLabel} onKeyDown={event => {
+      if (disabled || !(event.target instanceof HTMLElement) || event.target.getAttribute("role") !== "tab") return;
+      const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+      const next = rtlTabIndex(event.key, tabs.indexOf(event.target as HTMLButtonElement), tabs.length);
+      if (next === null) return;
+      event.preventDefault();
+      onSelect(next);
+      tabs[next]?.focus();
+    }}>
       <div className={styles.passengerTabs}>
         {Array.from({ length: passengerCount }, (_, index) => {
           const selected = index === activeIndex;

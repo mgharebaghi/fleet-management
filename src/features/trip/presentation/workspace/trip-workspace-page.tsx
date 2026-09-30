@@ -31,7 +31,7 @@ function ActiveTabPanel({
   view,
   people,
   locations,
-  assignments,
+  assignmentsByPassenger,
   isPlanningFrozen,
   requestIsTerminal,
 }: {
@@ -40,7 +40,7 @@ function ActiveTabPanel({
   view: TripWorkspaceView;
   people: TripPersonReference[];
   locations: TripLocationReference[];
-  assignments: TripAssignmentReference[];
+  assignmentsByPassenger: Record<number, TripAssignmentReference[]>;
   isPlanningFrozen: boolean;
   requestIsTerminal: boolean;
 }) {
@@ -59,7 +59,7 @@ function ActiveTabPanel({
       return (
         <DriverVehicleTab
           details={details}
-          assignments={assignments}
+          assignmentsByPassenger={assignmentsByPassenger}
           isPlanningFrozen={isPlanningFrozen}
         />
       );
@@ -87,12 +87,14 @@ function ActiveTabPanel({
 export async function TripWorkspacePage({
   tripRequestId,
   requestedTab,
+  details: suppliedDetails,
 }: {
   tripRequestId: number;
   requestedTab?: string;
+  details?: TripRequestDetails;
 }) {
   const reader = makeReadTrips();
-  const details = await reader.details(tripRequestId);
+  const details = suppliedDetails ?? await reader.details(tripRequestId);
   if (!details) notFound();
   const view = projectTripWorkspace(details);
   const section = workspaceSectionForTab(requestedTab);
@@ -108,9 +110,9 @@ export async function TripWorkspacePage({
     section === "route" || (section === "passengers" && !isPlanningFrozen)
       ? await reader.availableLocations()
       : [];
-  const assignments =
+  const assignmentsByPassenger =
     section === "assignment" && !isPlanningFrozen
-      ? await reader.assignmentsActiveAt(details.requestedTravelDateTime)
+      ? await reader.assignmentsByPassenger(details.passengers, details.requestedTravelDateTime)
       : [];
 
   return (
@@ -130,7 +132,7 @@ export async function TripWorkspacePage({
               view={view}
               people={people}
               locations={locations}
-              assignments={assignments}
+              assignmentsByPassenger={assignmentsByPassenger}
               isPlanningFrozen={isPlanningFrozen}
               requestIsTerminal={requestIsTerminal}
             />

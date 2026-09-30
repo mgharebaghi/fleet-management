@@ -16,6 +16,20 @@ const repository = {
 } as unknown as TripRepository;
 
 describe("ReadTrips", () => {
+  it("reads assignments once per distinct pickup instant and preserves each passenger's time", async () => {
+    const assignmentsActiveAt = vi.fn().mockResolvedValue([]);
+    const reader = new ReadTrips({ ...repository, assignmentsActiveAt });
+    const requested = new Date("2026-02-01T08:00:00Z");
+    const override = new Date("2026-02-01T09:30:00Z");
+    expect(await reader.assignmentsByPassenger([
+      { tripId: 1, requestedPickupDateTime: null },
+      { tripId: 2, requestedPickupDateTime: new Date(requested) },
+      { tripId: 3, requestedPickupDateTime: override },
+    ], requested)).toEqual({ 1: [], 2: [], 3: [] });
+    expect(assignmentsActiveAt).toHaveBeenCalledTimes(2);
+    expect(assignmentsActiveAt).toHaveBeenNthCalledWith(1, requested);
+    expect(assignmentsActiveAt).toHaveBeenNthCalledWith(2, override);
+  });
   it("normalizes list filters and unsafe page numbers", async () => {
     vi.mocked(repository.list).mockResolvedValue({
       requests: [],

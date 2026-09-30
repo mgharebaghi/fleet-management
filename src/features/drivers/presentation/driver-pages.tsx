@@ -1,3 +1,4 @@
+import { tehranDateTimeInputs as dateTimeInputs } from "../../../shared/presentation/tehran-date-time";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -13,7 +14,7 @@ import { StatusTimeline } from "../../../components/ui/status-timeline/status-ti
 import { TechnicalValue } from "../../../components/ui/technical-value/technical-value";
 import { IconActionGroup } from "../../../components/ui/icon-action-button/icon-action-button";
 import { BackLink } from "../../../components/ui/back-link/back-link";
-import { VehiclePlate } from "../../fleet/presentation/vehicles/list-vehicles/vehicle-plate";
+import { VehiclePlate } from "../../../components/ui/vehicle-plate/vehicle-plate";
 import { makeReadDrivers } from "../composition/driver.factory";
 import { assignmentState, licenseEligible, localDay } from "../application/assignment-rules";
 import type { Assignment, License, VehicleReference } from "../application/driver-records";
@@ -35,9 +36,8 @@ const day = (d: Date | null) => d ? dayFormatter.format(d) : "ثبت نشده";
 const timestamp = (d: Date | null) => d ? timeFormatter.format(d) : "باز";
 const inputDay = (d: Date | null) => d?.toISOString().slice(0, 10) ?? "";
 const tehranDateTimeInputs = (date: Date | null, prefix: "from" | "to") => {
-  if (!date) return { [`${prefix}Day`]: "", [`${prefix}Time`]: "" };
-  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(date).map(part => [part.type, part.value]));
-  return { [`${prefix}Day`]: `${parts.year}-${parts.month}-${parts.day}`, [`${prefix}Time`]: `${parts.hour}:${parts.minute}` };
+  const { day, time } = dateTimeInputs(date);
+  return { [`${prefix}Day`]: day, [`${prefix}Time`]: time };
 };
 const personBadge = (active: boolean) => <StatusBadge tone={active ? "positive" : "negative"} label={active ? "شخص فعال" : "شخص غیرفعال"} />;
 

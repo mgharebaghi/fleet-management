@@ -9,7 +9,7 @@ const license: NewLicense = { driverId: 1, licenseType: "Heavy", licenseNo: "LIC
 const assignment: NewAssignment = { driverId: 1, vehicleId: 2, fromDateTime: new Date("2026-01-01T08:00:00Z"), toDateTime: null, startOdometer: "100.10", endOdometer: null, description: null };
 const vehicle = { vehicleId: 2, vehicleCode: "V2", plate: "12", isActive: true };
 const session = {
-  person: vi.fn(), driverForPerson: vi.fn(), driver: vi.fn(), vehicle: vi.fn(), licenses: vi.fn(), license: vi.fn(), licenseNumberExists: vi.fn(), overlap: vi.fn(), currentAssignmentHolder: vi.fn(), assignment: vi.fn(), createDriver: vi.fn(), createLicense: vi.fn(), updateLicense: vi.fn(), deleteLicense: vi.fn(), createAssignment: vi.fn(), updateAssignment: vi.fn(), closeAssignment: vi.fn(), deleteAssignment: vi.fn(),
+  person: vi.fn(), driverForPerson: vi.fn(), driver: vi.fn(), vehicle: vi.fn(), licenses: vi.fn(), license: vi.fn(), licenseNumberExists: vi.fn(), overlap: vi.fn(), currentAssignmentHolder: vi.fn(), assignment: vi.fn(), assignmentHasTripExecutions: vi.fn(), createDriver: vi.fn(), createLicense: vi.fn(), updateLicense: vi.fn(), deleteLicense: vi.fn(), createAssignment: vi.fn(), updateAssignment: vi.fn(), closeAssignment: vi.fn(), deleteAssignment: vi.fn(),
 } satisfies DriverSession;
 const repository = { atomic: async <T>(work: (s: DriverSession) => Promise<T>) => work(session), list: vi.fn(), details: vi.fn(), availablePeople: vi.fn(), availableVehicles: vi.fn(), currentVehicleAssignments: vi.fn() } satisfies DriverRepository;
 const useCase = new ManageDrivers(repository, () => new Date("2026-06-01T08:00:00Z"));
@@ -23,6 +23,30 @@ beforeEach(() => {
   session.createDriver.mockResolvedValue(1); session.createLicense.mockResolvedValue(2); session.createAssignment.mockResolvedValue(3);
 });
 const fails = (error: string) => ({ success: false, error });
+
+describe("assignment history protection", () => {
+  it("does not close an assignment through another driver's page", async () => {
+    expect(await useCase.closeAssignment(3, new Date("2026-07-01T08:00:00Z"), "200", 99)).toEqual(fails("ASSIGNMENT_NOT_FOUND"));
+    expect(session.closeAssignment).not.toHaveBeenCalled();
+  });
+  it.each([
+    { vehicleId: 4 },
+    { fromDateTime: new Date("2026-01-02T08:00:00Z") },
+    { toDateTime: new Date("2026-12-01T08:00:00Z") },
+  ])("rejects vehicle or window changes after any execution references the assignment: %o", async change => {
+    session.assignmentHasTripExecutions.mockResolvedValue(true);
+    expect(await useCase.updateAssignment({ ...assignment, assignmentId: 3, ...change })).toEqual(fails("ASSIGNMENT_IN_USE"));
+    expect(session.updateAssignment).not.toHaveBeenCalled();
+  });
+  it("allows notes and odometer edits without changing the referenced assignment", async () => {
+    session.assignmentHasTripExecutions.mockResolvedValue(true);
+    expect((await useCase.updateAssignment({ ...assignment, assignmentId: 3, description: "Updated", startOdometer: "101" })).success).toBe(true);
+  });
+  it("keeps the explicit close operation available", async () => {
+    session.assignmentHasTripExecutions.mockResolvedValue(true);
+    expect((await useCase.closeAssignment(3, new Date("2026-07-01T08:00:00Z"), "200")).success).toBe(true);
+  });
+});
 
 describe("define driver", () => {
   it("creates only a reference to an existing active person", async () => { expect(await useCase.defineDriver(1)).toEqual({ success: true, id: 1 }); expect(session.createDriver).toHaveBeenCalledWith(1); });

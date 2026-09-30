@@ -80,6 +80,18 @@ const execution: TripExecutionRecord = {
 };
 
 describe("TripSurveyDialog", () => {
+  it.each([
+    { passengerComment: "Recorded comment", surveyDateTime: null },
+    { passengerComment: null, surveyDateTime: new Date("2026-03-22T08:00:00Z") },
+  ])("recognizes a recorded survey without a rating", change => {
+    const markup = renderToStaticMarkup(<TripSurveyDialog tripRequestId={1} passenger={passenger} execution={{ ...execution, passengerRating: null, ...change }} open={true} onClose={vi.fn()} />);
+    expect(markup).toContain("نظرسنجی ثبت‌شده");
+    expect(markup).toContain("ذخیره تغییرات");
+  });
+  it("posts a legacy rating when editing only the comment", () => {
+    const markup = renderToStaticMarkup(<TripSurveyDialog tripRequestId={1} passenger={passenger} execution={{ ...execution, passengerRating: 10 }} open={true} onClose={vi.fn()} />);
+    expect(markup).toMatch(/type="hidden" name="passengerRating" value="10"/);
+  });
   it("renders passenger identity, rating chips, and comment for recorded survey", () => {
     const markup = renderToStaticMarkup(
       <TripSurveyDialog

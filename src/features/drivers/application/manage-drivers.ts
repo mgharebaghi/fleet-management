@@ -96,12 +96,12 @@ export class ManageDrivers {
     });
   }
 
-  async closeAssignment(id: number, end: Date, odometer: string | null): Promise<DriverResult> {
+  async closeAssignment(id: number, end: Date, odometer: string | null, expectedDriverId?: number): Promise<DriverResult> {
     if (!validId(id)) return failure("INVALID_ID");
     if (!validDate(end)) return failure("INVALID_DATE");
     return this.repository.atomic(async session => {
       const assignment = await session.assignment(id);
-      if (!assignment) return failure("ASSIGNMENT_NOT_FOUND");
+      if (!assignment || (expectedDriverId !== undefined && assignment.driverId !== expectedDriverId)) return failure("ASSIGNMENT_NOT_FOUND");
       if (assignment.toDateTime !== null) return failure("ASSIGNMENT_CLOSED");
       if (end <= assignment.fromDateTime) return failure("INVALID_PERIOD");
       const error = odometerError(assignment.startOdometer, odometer);
@@ -120,6 +120,10 @@ export class ManageDrivers {
       const existing = await session.assignment(value.assignmentId);
       if (!existing || existing.driverId !== value.driverId) return failure("ASSIGNMENT_NOT_FOUND");
       if (assignmentState(existing, this.now()) === "past") return failure("ASSIGNMENT_IMMUTABLE");
+      const changesIdentityOrWindow = existing.vehicleId !== value.vehicleId ||
+        existing.fromDateTime.getTime() !== value.fromDateTime.getTime() ||
+        existing.toDateTime?.getTime() !== value.toDateTime?.getTime();
+      if (changesIdentityOrWindow && await session.assignmentHasTripExecutions(value.assignmentId)) return failure("ASSIGNMENT_IN_USE");
       const driver = await session.driver(value.driverId);
       if (!driver) return failure("DRIVER_NOT_FOUND");
       if (!driver.isActive) return failure("PERSON_INACTIVE");
