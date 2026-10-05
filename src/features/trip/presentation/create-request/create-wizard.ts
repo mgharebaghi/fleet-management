@@ -1,6 +1,33 @@
 import { formatGregorianDateAsJalali } from "../../../../components/ui/date-picker/jalali-date";
 import type { TripLocationInputFailure, TripLocationReference, TripPersonReference, TripRequestTypeReference } from "../../application/trip-records";
 import { consecutiveFormIndexes } from "../trip-form-data";
+import { tripPassengerConflict } from "../../application/trip-validation";
+
+export function createPassengerConflict(
+  values: Record<string, string>,
+  typeCode: string | undefined,
+) {
+  const indexes = consecutiveFormIndexes(values, (index) => `passenger.${index}.personId`);
+  const conflict = tripPassengerConflict(indexes.map((index) => ({
+    passengerPersonId: Number(values[`passenger.${index}.personId`]),
+    originLocationId: Number(sharesOrigin(typeCode)
+      ? values.commonOriginLocationId
+      : values[`passenger.${index}.originLocationId`]),
+    destinationLocationId: Number(sharesDestination(typeCode)
+      ? values.commonDestinationLocationId
+      : values[`passenger.${index}.destinationLocationId`]),
+  })));
+  if (!conflict) return null;
+  return {
+    error: conflict.error,
+    field: conflict.error === "DUPLICATE_PASSENGER"
+      ? `passenger.${conflict.passengerIndex}.personId`
+      : wizardFieldForLocationFailure(typeCode, {
+          passengerIndex: conflict.passengerIndex,
+          locationRole: "destination",
+        }),
+  };
+}
 
 export const DEFAULT_CREATE_REQUEST_PURPOSE = "ماموریت اداری";
 
@@ -130,7 +157,7 @@ export function wizardLocationErrorFocus(
   failedLocation: TripLocationInputFailure | undefined,
 ): WizardErrorFocus | null {
   if (
-    (error !== "LOCATION_NOT_FOUND" && error !== "LOCATION_INACTIVE") ||
+    (error !== "LOCATION_NOT_FOUND" && error !== "LOCATION_INACTIVE" && error !== "SAME_ORIGIN_DESTINATION") ||
     !failedLocation
   ) {
     return null;

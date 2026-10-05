@@ -278,6 +278,22 @@ afterEach(() => {
 });
 
 describe("create Trip request", () => {
+  it("rejects a repeated person before writing any request", async () => {
+    expect(await manage.createRequest({ ...createInput, passengers: [createInput.passengers[0], createInput.passengers[0]] }))
+      .toEqual({ success: false, error: "DUPLICATE_PASSENGER", failedPassengerIndex: 1 });
+    expect(session.createRequest).not.toHaveBeenCalled();
+  });
+
+  it("reports the passenger whose origin equals their destination", async () => {
+    expect(await manage.createRequest({ ...createInput, passengers: [createInput.passengers[0], { ...createInput.passengers[0], passengerPersonId: 2, destinationLocationId: 1 }] }))
+      .toEqual({ success: false, error: "SAME_ORIGIN_DESTINATION", failedLocation: { passengerIndex: 1, locationRole: "destination" } });
+    expect(session.createRequest).not.toHaveBeenCalled();
+  });
+
+  it("allows distinct people to share the same valid route", async () => {
+    expect(await manage.createRequest({ ...createInput, passengers: [createInput.passengers[0], { ...createInput.passengers[0], passengerPersonId: 2 }] }))
+      .toEqual({ success: true, id: 10 });
+  });
   it("normalizes and creates a request with its passenger Trips atomically", async () => {
     expect(await manage.createRequest(createInput)).toEqual({
       success: true,
@@ -1299,6 +1315,35 @@ describe("Trip execution and survey", () => {
           description: "همکار بخش فنی",
         }),
       });
+    });
+
+    it("rejects adding a person already in this request", async () => {
+      expect(await manage.addPassenger({ tripRequestId: 10, passenger: { ...validPassengerInput, passengerPersonId: 1 } }))
+        .toEqual({ success: false, error: "DUPLICATE_PASSENGER" });
+      expect(session.createPassenger).not.toHaveBeenCalled();
+    });
+
+    it("rejects changing another passenger to an existing person", async () => {
+      session.trip.mockResolvedValue({ ...trip, tripId: 102, requestId: 10, passengerPersonId: 2 });
+      expect(await manage.updatePassenger({ tripRequestId: 10, tripId: 102, passenger: { ...validPassengerInput, passengerPersonId: 1 } }))
+        .toEqual({ success: false, error: "DUPLICATE_PASSENGER" });
+      expect(session.updatePassenger).not.toHaveBeenCalled();
+    });
+
+    it("keeps the current person selectable when updating their own record", async () => {
+      session.trip.mockResolvedValue({ ...trip, tripId: 101, requestId: 10 });
+      expect(await manage.updatePassenger({ tripRequestId: 10, tripId: 101, passenger: { ...validPassengerInput, passengerPersonId: 1 } }))
+        .toEqual({ success: true, id: 101 });
+    });
+
+    it.each(["add", "update"])("rejects equal route endpoints when %sing a passenger", async (operation) => {
+      const passenger = { ...validPassengerInput, destinationLocationId: 1 };
+      const result = operation === "add"
+        ? await manage.addPassenger({ tripRequestId: 10, passenger })
+        : await manage.updatePassenger({ tripRequestId: 10, tripId: 101, passenger });
+      expect(result).toEqual({ success: false, error: "SAME_ORIGIN_DESTINATION" });
+      expect(session.createPassenger).not.toHaveBeenCalled();
+      expect(session.updatePassenger).not.toHaveBeenCalled();
     });
 
     it("rejects adding a passenger to a completed or cancelled request", async () => {

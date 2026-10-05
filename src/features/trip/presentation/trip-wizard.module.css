@@ -4,6 +4,12 @@
   gap: var(--space-4);
 }
 
+.createFormShell {
+  width: 100%;
+  max-width: 1080px;
+  margin-inline: auto;
+}
+
 .createProgress {
   min-width: 0;
 }
@@ -194,53 +200,6 @@
   margin-top: var(--space-2);
 }
 
-.wizardFooter {
-  display: flex;
-  justify-content: flex-end;
-  padding: 12px 14px;
-  border: 1px solid var(--app-border);
-  border-radius: 15px;
-  background: var(--app-surface);
-}
-
-.wizardNav {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.wizardAbandon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  padding: 8px var(--space-3);
-  border: 1px solid transparent;
-  border-radius: var(--app-radius-control);
-  background: transparent;
-  color: var(--app-danger-text);
-  font: inherit;
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.wizardAbandon:hover:not(:disabled) {
-  border-color: var(--app-danger-border);
-  background: var(--app-danger-background);
-}
-
-.wizardAbandon:focus-visible {
-  outline: 3px solid var(--app-focus-outline);
-  outline-offset: 2px;
-}
-
-.wizardAbandon:disabled {
-  cursor: not-allowed;
-  opacity: var(--app-disabled-opacity);
-}
-
 .requestDateTimeGroup {
   display: grid;
   min-width: 0;
@@ -336,17 +295,6 @@
   .requestDateTimeGroup,
   .passengerPickupControls {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-
-  .wizardFooter {
-    justify-content: stretch;
-  }
-
-  .wizardNav {
-    width: 100%;
-    flex-direction: column-reverse;
-    align-items: stretch;
   }
 }
 
@@ -889,6 +837,7 @@
 
 .reviewMetaList div {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-1);
@@ -904,6 +853,7 @@
   margin: 0;
   color: var(--app-text);
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .reviewWide {

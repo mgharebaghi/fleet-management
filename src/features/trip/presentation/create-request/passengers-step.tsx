@@ -129,6 +129,9 @@ export function PassengersStep({
         prefix={prefix}
         pending={isDisabled}
         people={people}
+        excludedPersonIds={Array.from({ length: passengerCount }, (_, index) => index)
+          .filter((index) => index !== activePassengerIndex)
+          .map((index) => Number(value(`passenger.${index}.personId`)))}
         locations={locations}
         passengerCount={passengerCount}
         shareOrigin={shareOrigin}

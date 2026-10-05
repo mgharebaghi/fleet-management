@@ -4,14 +4,17 @@ import type { TripPersonReference } from "../../application/trip-records";
 
 export function tripPersonSelectOptions(
   people: TripPersonReference[],
+  excludedPersonIds: readonly number[] = [],
 ): SearchableSelectOption[] {
   return people.map((person) => {
     const fullName = `${person.firstName} ${person.lastName}`.trim();
     const nationalCode = person.nationalCode?.trim() ?? "";
     const mobile = person.mobile?.trim() ?? "";
+    const alreadySelected = excludedPersonIds.includes(person.personId);
 
     return {
       value: String(person.personId),
+      disabled: alreadySelected,
       label: `${fullName} ${nationalCode}`.trim(),
       searchText: `${fullName} ${nationalCode} ${mobile}`,
       content: (
@@ -23,6 +26,7 @@ export function tripPersonSelectOptions(
               <TechnicalValue>{nationalCode}</TechnicalValue>
             </>
           ) : null}
+          {alreadySelected && " — قبلاً انتخاب شده"}
         </span>
       ),
     };

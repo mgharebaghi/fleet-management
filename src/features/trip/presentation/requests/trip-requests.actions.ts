@@ -166,7 +166,9 @@ export async function createTripRequestAction(
             values.requestTypeCode,
             result.failedLocation,
           )
-        : result.field ?? tripErrorFields[result.error],
+        : result.failedPassengerIndex !== undefined
+          ? `passenger.${result.failedPassengerIndex}.personId`
+          : result.field ?? tripErrorFields[result.error],
       failedLocation: result.failedLocation,
     };
   }

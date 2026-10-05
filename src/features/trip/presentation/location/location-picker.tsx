@@ -38,6 +38,7 @@ export function LocationPicker({
   onValueChange,
   layout = "field",
   actions,
+  excludedLocationIds = [],
 }: {
   name: string;
   label: string;
@@ -51,6 +52,7 @@ export function LocationPicker({
   /** Route stops keep the location full width and place actions on the next row. */
   layout?: "field" | "stop";
   actions?: ReactNode;
+  excludedLocationIds?: readonly number[];
 }) {
   const pickerId = useId();
   const [availableLocations, setAvailableLocations] = useState(locations);
@@ -105,12 +107,15 @@ export function LocationPicker({
     return () => window.removeEventListener(LOCATION_CREATED_EVENT, addLocation);
   }, [defaultValue, onValueChange, pickerId]);
 
+  const selectableLocations = availableLocations.filter(
+    (location) => !excludedLocationIds.includes(location.locationId),
+  );
   const locationSelect = (
     <SearchableSelect
       key={`${synchronizedSelection.value}-${synchronizedSelection.version}`}
       name={name}
       label={label}
-      options={locationOptions(availableLocations)}
+      options={locationOptions(selectableLocations)}
       defaultValue={synchronizedSelection.value}
       placeholder={`انتخاب ${label}`}
       searchPlaceholder="جستجوی نام، کد، نوع یا نشانی…"
@@ -183,7 +188,7 @@ export function LocationPicker({
       {mapOpen && (
         <LocationMapSelectDialog
           idPrefix={pickerId}
-          locations={availableLocations}
+          locations={selectableLocations}
           selectedLocationId={synchronizedSelection.value}
           onClose={() => setMapOpen(false)}
           onConfirm={(locationId) => {

@@ -16,11 +16,13 @@ import type {
 import { tripFormValues, tripMessages, type TripActionState } from "../trip-form-data";
 import { LOCATION_CREATED_EVENT } from "../location/location-picker";
 import { CreateRequestSummary } from "./create-request-summary";
-import { DEFAULT_CREATE_REQUEST_PURPOSE, createRequestReview, createWizardHasDiscardableInput, createRequestSummaryPreview, defaultTripRequestTypeId, dropPassengerSnapshot, gapNotice, isLocationField, mergePassengerSnapshots, mergePreservedLocationValues, passengerIndexFromField, passengerStepGaps, preservedLocationValue, prunePassengerValues, requestStepGaps, sharesDestination, sharesOrigin, wizardErrorNavigation, type CreateWizardStep, type TripRequestReview, type TripRequestSummaryPreview } from "./create-wizard";
+import { DEFAULT_CREATE_REQUEST_PURPOSE, createPassengerConflict, createRequestReview, createWizardHasDiscardableInput, createRequestSummaryPreview, defaultTripRequestTypeId, dropPassengerSnapshot, gapNotice, isLocationField, mergePassengerSnapshots, mergePreservedLocationValues, passengerIndexFromField, passengerStepGaps, preservedLocationValue, prunePassengerValues, requestStepGaps, sharesDestination, sharesOrigin, wizardErrorNavigation, type CreateWizardStep, type TripRequestReview, type TripRequestSummaryPreview } from "./create-wizard";
 import { PassengersStep } from "./passengers-step";
 import { RequestStep } from "./request-step";
 import { ReviewStep } from "./review-step";
 import { TripCreateProgress } from "./trip-create-progress";
+import { hasMatchingTripEndpoints } from "../../application/trip-validation";
+import type { CreateTripRequestResult } from "../trip.actions";
 import styles from "../trip-wizard.module.css";
 
 type CreateTripRequestFormProps = {
@@ -144,6 +146,13 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
 
   function goToPassengers() {
     const values = readValues();
+    if (shareOrigin && shareDestination && hasMatchingTripEndpoints(
+      Number(values.commonOriginLocationId),
+      Number(values.commonDestinationLocationId),
+    )) {
+      showFailure({ success: false, error: "SAME_ORIGIN_DESTINATION", field: "commonDestinationLocationId" });
+      return;
+    }
     if ((values.purpose?.length ?? 0) > 500) {
       setFormValuesState(values);
       setFormErrorState({
@@ -162,6 +171,7 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
       return;
     }
     setFormValuesState(values);
+    setKeptLocations((current) => mergePreservedLocationValues(current, values));
     refreshSummary(values);
     navigateStep(2);
   }
@@ -190,6 +200,11 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
 
   function goToReview() {
     const values = snapshotActivePassenger();
+    const conflict = createPassengerConflict(values, selectedType?.typeCode);
+    if (conflict) {
+      showFailure({ success: false, ...conflict });
+      return;
+    }
     const gaps = passengerStepGaps(values, selectedType?.typeCode);
     if (gaps.length) {
       setStepNotice(gapNotice(gaps));
@@ -199,12 +214,22 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
     }
     const nextReview = createRequestReview(values, { requestTypes, people, locations: catalogLocations });
     setReview(nextReview);
+    setFormErrorState({});
     setFormValuesState(values);
     setStepNotice(null);
     navigateStep(3);
   }
 
   const completeReview = review ?? createRequestReview(formValuesState, { requestTypes, people, locations: catalogLocations });
+
+  function showFailure(result: Extract<CreateTripRequestResult, { success: false }>) {
+    const focus = wizardErrorNavigation(result.error, result.field, selectedType?.typeCode, result.failedLocation);
+    const index = passengerIndexFromField(result.field ?? "");
+    if (index !== null) setActivePassengerIndex(index);
+    setFormErrorState({ ...result, error: result.error as TripActionState["error"] });
+    setStepNotice(tripMessages[result.error as keyof typeof tripMessages] ?? "ثبت انجام نشد. دوباره تلاش کنید.");
+    setStep(focus.step);
+  }
 
   return (
     <>
@@ -213,16 +238,16 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
       title="ثبت درخواست سفر"
       compactAction
       action={
-        <button
+        <ActionButton
           type="button"
-          className={styles.wizardAbandon}
+          variant="secondary"
           onClick={requestAbandon}
         >
           انصراف
-        </button>
+        </ActionButton>
       }
     />
-    <div className={styles.createShell}>
+    <div className={`${styles.createShell} ${styles.createFormShell}`}>
       <TripCreateProgress currentIndex={step - 1} />
       <form
         ref={formRef}
@@ -282,6 +307,7 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
         review={completeReview}
         formValues={formValuesState}
         onBack={() => navigateStep(2)}
+        onFailure={showFailure}
       />
     </div>
     <ConfirmDialog

@@ -77,12 +77,26 @@ test.describe.serial("Vehicles", () => {
     // Step forward past today; every day beyond it must be disabled.
     await calendar.getByRole("button", { name: "ماه بعد" }).click();
     await calendar.getByRole("button", { name: "ماه بعد" }).click();
+    const year = calendar.getByRole("textbox", { name: "سال تقویم" });
+    await year.fill("۱۵۰۰");
+    await year.press("Enter");
+    await expect(year).toHaveValue("1500");
+    await calendar.getByRole("combobox", { name: "ماه تقویم" }).selectOption("12");
+    await calendar.screenshot({ path: "test-results/jalali-year-month-picker.png" });
     const days = calendar.getByRole("group", { name: "روزهای ماه" }).getByRole("button");
     const dayCount = await days.count();
     expect(dayCount).toBeGreaterThan(0);
     for (let index = 0; index < dayCount; index += 1) {
       await expect(days.nth(index)).toBeDisabled();
     }
+
+    await year.fill("0");
+    await year.press("Enter");
+    await expect(year).toHaveValue("1500");
+    await year.fill("1300");
+    await year.press("Enter");
+    await calendar.getByRole("combobox", { name: "ماه تقویم" }).selectOption("1");
+    await expect(calendar.getByRole("button", { name: "۱", exact: true })).toBeEnabled();
 
     await page.keyboard.press("Escape");
     await expect(calendar).toBeHidden();

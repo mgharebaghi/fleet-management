@@ -28,7 +28,7 @@ export async function CreateTripRequestPage() {
         : null;
 
   return (
-    <PageShell>
+    <PageShell width="narrow">
       {blocked ? (
         <>
           <PageHeader

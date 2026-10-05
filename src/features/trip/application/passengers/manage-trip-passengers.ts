@@ -29,6 +29,11 @@ export async function addPassenger(repository: TripRepository, input: {
       return failure("REQUEST_TERMINAL");
     }
 
+    if (request.passengers.some(
+      (existing) => existing.passengerPersonId === passenger.passengerPersonId,
+    )) {
+      return failure("DUPLICATE_PASSENGER");
+    }
     const person = await session.person(passenger.passengerPersonId);
     if (!person) return failure("PERSON_NOT_FOUND");
     if (!person.isActive) return failure("PERSON_INACTIVE");
@@ -115,6 +120,12 @@ export async function updatePassenger(repository: TripRepository, input: {
 
     const request = await session.request(input.tripRequestId);
     if (request) {
+      if (request.passengers.some(
+        (existing) => existing.tripId !== input.tripId &&
+          existing.passengerPersonId === passenger.passengerPersonId,
+      )) {
+        return failure("DUPLICATE_PASSENGER");
+      }
       const requestType = await session.requestType(request.tripRequestTypeId);
       if (requestType) {
         const otherPassengers = request.passengers

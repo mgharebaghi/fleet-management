@@ -199,7 +199,21 @@ describe.sequential("Trip SQL Server integration", () => {
     const createExecution = (tripId: number) => manage.saveExecution({ tripId, tripExecutionId: null, vehicleDriverAssignmentId: assignment.AssignmentId, actualPickupDateTime: null, actualDropoffDateTime: null, startOdometer: null, endOdometer: null, status: "Planned", description: null }, fixture.requestId);
     successfulId(await createExecution(fixture.tripId));
     const added = [];
-    for (let index = 0; index < 3; index++) added.push(successfulId(await manage.addPassenger({ tripRequestId: fixture.requestId, passenger })));
+    for (let index = 0; index < 3; index++) {
+      const person = await client.people.create({
+        data: {
+          FirstName: "CapacityPassenger",
+          LastName: fixture.token,
+          PersonnelNo: `CAP-${index}-${fixture.token}`,
+          IsActive: true,
+        },
+      });
+      personIds.push(person.PersonId);
+      added.push(successfulId(await manage.addPassenger({
+        tripRequestId: fixture.requestId,
+        passenger: { ...passenger, passengerPersonId: person.PersonId },
+      })));
+    }
     successfulId(await createExecution(added[0]));
     const outcomes = await Promise.allSettled([createExecution(added[1]), createExecution(added[2])]);
     const successes = outcomes.filter(result => result.status === "fulfilled" && result.value.success);

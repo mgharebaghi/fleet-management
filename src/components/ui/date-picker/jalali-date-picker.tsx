@@ -3,7 +3,8 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { FieldLabel } from "../form-field/form-field";
+import { FieldLabel, formControlClassName } from "../form-field/form-field";
+import { normalizePersianNumerals } from "../../../shared/text/persian-text";
 import styles from "./jalali-date-picker.module.css";
 import {
   addJalaliMonths,
@@ -59,6 +60,33 @@ export function JalaliDatePicker({
     gregorianToJalali(defaultValue || getTodayGregorianDate()),
   );
   const containerRef = useRef<HTMLDivElement>(null);
+  const [yearDraft, setYearDraft] = useState(() => String(visibleMonth.year));
+  const lastMonth = gregorianToJalali("9999-12-31");
+
+  function changeMonth(next: JalaliDateParts) {
+    if (
+      next.year < 1 || next.year > lastMonth.year ||
+      (next.year === lastMonth.year && next.month > lastMonth.month)
+    ) return;
+    setVisibleMonth({ ...next, day: 1 });
+    setYearDraft(String(next.year));
+  }
+
+  function applyYear() {
+    const normalized = normalizePersianNumerals(yearDraft).trim();
+    const year = /^\d{1,4}$/.test(normalized) ? Number(normalized) : 0;
+    if (year >= 1 && year <= lastMonth.year) {
+      changeMonth({
+        year,
+        month: year === lastMonth.year
+          ? Math.min(visibleMonth.month, lastMonth.month)
+          : visibleMonth.month,
+        day: 1,
+      });
+    } else {
+      setYearDraft(String(visibleMonth.year));
+    }
+  }
   const hiddenDateRef = useRef<HTMLInputElement>(null);
   const skipInitialDateEvent = useRef(true);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -169,7 +197,7 @@ export function JalaliDatePicker({
   );
 
   function openPanel() {
-    setVisibleMonth(gregorianToJalali(selectedDate || today));
+    changeMonth(gregorianToJalali(selectedDate || today));
     setIsOpen(true);
   }
 
@@ -204,19 +232,51 @@ export function JalaliDatePicker({
         <button
           className={styles.monthButton}
           type="button"
-          onClick={() => setVisibleMonth(addJalaliMonths(visibleMonth, -1))}
+          onClick={() => changeMonth(addJalaliMonths(visibleMonth, -1))}
+          disabled={visibleMonth.year === 1 && visibleMonth.month === 1}
           aria-label="ماه قبل"
         >
           ›
         </button>
-        <span className={styles.monthLabel} aria-live="polite">
-          {jalaliMonthNames[visibleMonth.month - 1]}{" "}
-          {formatJalaliNumber(visibleMonth.year)}
-        </span>
+        <div className={styles.monthControls}>
+          <select
+            className={`${formControlClassName} ${styles.monthSelect}`}
+            aria-label="ماه تقویم"
+            value={visibleMonth.month}
+            onChange={(event) => changeMonth({ ...visibleMonth, month: Number(event.target.value) })}
+          >
+            {jalaliMonthNames.map((month, index) => (
+              <option
+                key={month}
+                value={index + 1}
+                disabled={visibleMonth.year === lastMonth.year && index + 1 > lastMonth.month}
+              >
+                {month}
+              </option>
+            ))}
+          </select>
+          <input
+            className={`${formControlClassName} ${styles.yearInput}`}
+            type="text"
+            inputMode="numeric"
+            aria-label="سال تقویم"
+            dir="ltr"
+            value={yearDraft}
+            onChange={(event) => setYearDraft(event.target.value)}
+            onBlur={applyYear}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                applyYear();
+              }
+            }}
+          />
+        </div>
         <button
           className={styles.monthButton}
           type="button"
-          onClick={() => setVisibleMonth(addJalaliMonths(visibleMonth, 1))}
+          onClick={() => changeMonth(addJalaliMonths(visibleMonth, 1))}
+          disabled={visibleMonth.year === lastMonth.year && visibleMonth.month === lastMonth.month}
           aria-label="ماه بعد"
         >
           ‹
@@ -246,6 +306,7 @@ export function JalaliDatePicker({
             const isSelected = gregorianDate === selectedDate;
             const isToday = gregorianDate === today;
             const isOutOfRange =
+              !/^\d{4}-\d{2}-\d{2}$/.test(gregorianDate) ||
               (maxDate !== undefined && gregorianDate > maxDate) ||
               (minDate !== undefined && gregorianDate < minDate);
 
