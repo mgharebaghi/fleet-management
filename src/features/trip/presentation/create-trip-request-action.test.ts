@@ -12,6 +12,17 @@ const values = {
 };
 
 describe("create request pickup transport", () => {
+  it("maps a repeated passenger to their own form field", async () => {
+    createRequest.mockResolvedValue({ success: false, error: "DUPLICATE_PASSENGER", failedPassengerIndex: 2 });
+    expect(await createTripRequestAction(values)).toMatchObject({ success: false, error: "DUPLICATE_PASSENGER", field: "passenger.2.personId" });
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("maps an equal shared route to the shared destination", async () => {
+    createRequest.mockResolvedValue({ success: false, error: "SAME_ORIGIN_DESTINATION", failedLocation: { passengerIndex: 1, locationRole: "destination" } });
+    expect(await createTripRequestAction({ ...values, requestTypeCode: "COMMON_ORIGIN_DESTINATION" }))
+      .toMatchObject({ success: false, error: "SAME_ORIGIN_DESTINATION", field: "commonDestinationLocationId" });
+  });
   beforeEach(() => { vi.clearAllMocks(); createRequest.mockResolvedValue({ success: false, error: "PURPOSE_TOO_LONG" }); });
   it("retains the passenger's explicit Tehran pickup time", async () => {
     await createTripRequestAction({ ...values, "passenger.0.pickupOverride": "true", "passenger.0.pickupDay": "2026-02-01", "passenger.0.pickupTime": "09:30" });

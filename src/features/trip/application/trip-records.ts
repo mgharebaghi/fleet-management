@@ -237,6 +237,8 @@ export type TripFailure =
   | "INVALID_DATE"
   | "PURPOSE_TOO_LONG"
   | "PASSENGER_REQUIRED"
+  | "DUPLICATE_PASSENGER"
+  | "SAME_ORIGIN_DESTINATION"
   | "INVALID_ASSIGNMENT_PASSENGERS"
   | "PERSON_NOT_FOUND"
   | "PERSON_INACTIVE"
@@ -300,5 +302,6 @@ export type TripResult =
       success: false;
       error: TripFailure;
       field?: string;
+      failedPassengerIndex?: number;
       failedLocation?: TripLocationInputFailure;
     };

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { CREATE_WIZARD_STEPS, DEFAULT_CREATE_REQUEST_PURPOSE, createRequestReview, createRequestSummaryPreview, createWizardHasDiscardableInput, defaultTripRequestTypeId, dropPassengerSnapshot, extractPassengerSnapshot, gapNotice, hasPassengerPickupOverride, mergePassengerSnapshots, mergePreservedLocationValues, passengerIndexFromField, passengerStepGaps, preservedLocationValue, prunePassengerValues, requestStepGaps, reviewContainsRawId, shouldSubmitCreateForm, typeExplanation, wizardErrorNavigation, wizardFieldForLocationFailure, wizardLocationErrorFocus, wizardStepForField } from "./create-wizard";
+import { CREATE_WIZARD_STEPS, DEFAULT_CREATE_REQUEST_PURPOSE, createPassengerConflict, createRequestReview, createRequestSummaryPreview, createWizardHasDiscardableInput, defaultTripRequestTypeId, dropPassengerSnapshot, extractPassengerSnapshot, gapNotice, hasPassengerPickupOverride, mergePassengerSnapshots, mergePreservedLocationValues, passengerIndexFromField, passengerStepGaps, preservedLocationValue, prunePassengerValues, requestStepGaps, reviewContainsRawId, shouldSubmitCreateForm, typeExplanation, wizardErrorNavigation, wizardFieldForLocationFailure, wizardLocationErrorFocus, wizardStepForField } from "./create-wizard";
 import { HANDLING_WIZARD_STEPS } from "../handling/handling-wizard-steps";
 import { routePointLocationError } from "../planning/trip-planning-contracts";
 
@@ -59,6 +59,25 @@ const locations = [
 ];
 
 describe("Trip create wizard presentation", () => {
+  it("returns repeated passengers to their own editor", () => {
+    expect(createPassengerConflict({ "passenger.0.personId": "44", "passenger.1.personId": "44", commonOriginLocationId: "80", commonDestinationLocationId: "81" }, "COMMON_ORIGIN_DESTINATION"))
+      .toEqual({ error: "DUPLICATE_PASSENGER", field: "passenger.1.personId" });
+  });
+
+  it.each([
+    ["COMMON_ORIGIN", { commonOriginLocationId: "80", "passenger.0.destinationLocationId": "80" }, "passenger.0.destinationLocationId"],
+    ["COMMON_DESTINATION", { "passenger.0.originLocationId": "80", commonDestinationLocationId: "80" }, "commonDestinationLocationId"],
+    ["COMMON_ORIGIN_DESTINATION", { commonOriginLocationId: "80", commonDestinationLocationId: "80" }, "commonDestinationLocationId"],
+    ["INDIVIDUAL", { "passenger.0.originLocationId": "80", "passenger.0.destinationLocationId": "80" }, "passenger.0.destinationLocationId"],
+  ])("rejects equal endpoints for %s", (typeCode, values, field) => {
+    expect(createPassengerConflict({ "passenger.0.personId": "44", ...values }, typeCode))
+      .toEqual({ error: "SAME_ORIGIN_DESTINATION", field });
+  });
+
+  it("allows different people to share a valid route and ignores unfilled controls", () => {
+    expect(createPassengerConflict({ "passenger.0.personId": "44", "passenger.1.personId": "45", commonOriginLocationId: "80", commonDestinationLocationId: "81" }, "COMMON_ORIGIN_DESTINATION")).toBeNull();
+    expect(createPassengerConflict({ "passenger.0.personId": "", "passenger.1.personId": "" }, "COMMON_ORIGIN_DESTINATION")).toBeNull();
+  });
   it("keeps request-type explanations local to the known type codes", () => {
     expect(typeExplanation("COMMON_ORIGIN")).toContain("مبدأ مشترک");
     expect(typeExplanation("COMMON_DESTINATION")).toContain("مقصد مشترک");

@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { InlineNotice } from "../../../../components/ui/inline-notice/inline-notice";
 import { JalaliDatePicker } from "../../../../components/ui/date-picker/jalali-date-picker";
 import {
@@ -59,6 +61,8 @@ export function RequestStep({
   locked?: boolean;
 }) {
   const isDisabled = pending || locked;
+  const [originId, setOriginId] = useState(() => value("commonOriginLocationId"));
+  const [destinationId, setDestinationId] = useState(() => value("commonDestinationLocationId"));
 
   return (
     <section
@@ -172,6 +176,8 @@ export function RequestStep({
                 label="مبدأ"
                 locations={locations}
                 defaultValue={value("commonOriginLocationId")}
+                excludedLocationIds={shareDestination ? [Number(destinationId)] : []}
+                onValueChange={setOriginId}
                 disabled={isDisabled}
                 required
                 invalid={fieldInvalid("commonOriginLocationId")}
@@ -186,6 +192,8 @@ export function RequestStep({
                 label="مقصد"
                 locations={locations}
                 defaultValue={value("commonDestinationLocationId")}
+                excludedLocationIds={shareOrigin ? [Number(originId)] : []}
+                onValueChange={setDestinationId}
                 disabled={isDisabled}
                 required
                 invalid={fieldInvalid("commonDestinationLocationId")}

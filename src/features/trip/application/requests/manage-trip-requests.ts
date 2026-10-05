@@ -18,6 +18,7 @@ import {
   normalizeTripRequest,
   requestTypeGroupingError,
   tripRequestError,
+  tripPassengerConflict,
 } from "../trip-validation";
 
 import { failure, locationInputFailure } from "../trip-write-rules";
@@ -32,6 +33,20 @@ export async function createRequest(repository: TripRepository, input: CreateTri
   });
   const validationError = tripRequestError(value);
   if (validationError) {
+    if (validationError === "SAME_ORIGIN_DESTINATION") {
+      const passengerIndex = value.passengers.findIndex(
+        (passenger) => passenger.originLocationId === passenger.destinationLocationId,
+      );
+      return locationInputFailure(validationError, passengerIndex, "destination");
+    }
+    const conflict = tripPassengerConflict(value.passengers);
+    if (conflict?.error === validationError) {
+      return {
+        success: false,
+        error: conflict.error,
+        failedPassengerIndex: conflict.passengerIndex,
+      };
+    }
     return failure(
       validationError,
       validationError === "PURPOSE_TOO_LONG" ? "purpose" : undefined,

@@ -16,6 +16,10 @@ export function isValidTripId(value: number): boolean {
   return Number.isInteger(value) && value > 0 && value <= SQL_INT_MAX;
 }
 
+export function hasMatchingTripEndpoints(originLocationId: number, destinationLocationId: number): boolean {
+  return isValidTripId(originLocationId) && originLocationId === destinationLocationId;
+}
+
 export function isValidTripDate(value: Date): boolean {
   return (
     value instanceof Date &&
@@ -67,6 +71,10 @@ export function tripPassengerError(
     return "INVALID_ID";
   }
 
+  if (hasMatchingTripEndpoints(passenger.originLocationId, passenger.destinationLocationId)) {
+    return "SAME_ORIGIN_DESTINATION";
+  }
+
   if (
     passenger.requestedPickupDateTime !== null &&
     !isValidTripDate(passenger.requestedPickupDateTime)
@@ -103,6 +111,30 @@ export function tripRequestError(
     if (error) return error;
   }
 
+  return tripPassengerConflict(input.passengers)?.error ?? null;
+}
+
+export function tripPassengerConflict(
+  passengers: Pick<
+    TripPassengerInput,
+    "passengerPersonId" | "originLocationId" | "destinationLocationId"
+  >[],
+): {
+  error: "DUPLICATE_PASSENGER" | "SAME_ORIGIN_DESTINATION";
+  passengerIndex: number;
+} | null {
+  const people = new Set<number>();
+  for (const [passengerIndex, passenger] of passengers.entries()) {
+    if (isValidTripId(passenger.passengerPersonId)) {
+      if (people.has(passenger.passengerPersonId)) {
+        return { error: "DUPLICATE_PASSENGER", passengerIndex };
+      }
+      people.add(passenger.passengerPersonId);
+    }
+    if (hasMatchingTripEndpoints(passenger.originLocationId, passenger.destinationLocationId)) {
+      return { error: "SAME_ORIGIN_DESTINATION", passengerIndex };
+    }
+  }
   return null;
 }
 

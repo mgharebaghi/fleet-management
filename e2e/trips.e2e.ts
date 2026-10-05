@@ -479,6 +479,11 @@ test.describe.serial("Trip management", () => {
 
       await createInlineLocation(page, requestStep, "مبدأ", inlineOriginName);
       await createInlineLocation(page, requestStep, "مقصد", inlineDestinationName);
+      await requestStep.getByLabel("مقصد", { exact: true }).click();
+      const destinationSearch = requestStep.getByRole("dialog", { name: "جستجوی مقصد" });
+      await destinationSearch.getByRole("combobox").fill(inlineOriginName);
+      await expect(destinationSearch.getByRole("option")).toHaveCount(0);
+      await page.keyboard.press("Escape");
       await requestStepNext().click();
       await expect(
         passengersStep.getByRole("button", { name: "+ افزودن مسافر", exact: true }),
@@ -513,9 +518,13 @@ test.describe.serial("Trip management", () => {
       expect(await tripRequestCountForFixturePerson()).toBe(0);
       await requestStepNext().click();
 
-      await passengersStep
-        .getByRole("button", { name: "+ افزودن مسافر", exact: true })
-        .click();
+      await selectSearchableOption(passengersStep, "مسافر", token, token);
+      await passengersStep.getByRole("button", { name: "+ افزودن مسافر", exact: true }).click();
+      await passengersStep.getByLabel("مسافر", { exact: true }).click();
+      const personSearch = passengersStep.getByRole("dialog", { name: "جستجوی مسافر" });
+      await personSearch.getByRole("combobox").fill(token);
+      await expect(personSearch.getByRole("option").filter({ hasText: token })).toHaveAttribute("aria-disabled", "true");
+      await page.keyboard.press("Escape");
       await expect(
         passengersStep.getByRole("article", { name: "اطلاعات مسافر 2" }),
       ).toBeVisible();
@@ -545,8 +554,9 @@ test.describe.serial("Trip management", () => {
       ).toBeVisible();
       await eventually(reviewStep.getByText("مبدأ و مقصد مشترک")).toBeVisible();
       await eventually(reviewStep.getByText(`مسافر ${token}`).first()).toBeVisible();
-      await eventually(reviewStep.getByText(inlineOriginName)).toBeVisible();
-      await eventually(reviewStep.getByText(inlineDestinationName)).toBeVisible();
+      await eventually(reviewStep.getByText(inlineOriginName).first()).toBeVisible();
+      await eventually(reviewStep.getByText(inlineDestinationName).first()).toBeVisible();
+      await captureResponsiveThemes(page, "trip-request-review");
 
       await page.setViewportSize({ width: 390, height: 844 });
       await expect(
@@ -671,7 +681,7 @@ test.describe.serial("Trip management", () => {
       await selectJalaliDate(page.getByRole("dialog", { name: "انتخاب تاریخ (شمسی)" }), currentJalaliYear, "فروردین", "۱");
       await setTime(passengerEdit, "ساعت", "09:00");
       await passengerEdit.getByRole("button", { name: "ذخیره تغییرات", exact: true }).click();
-      await expect(passengerEdit).toBeHidden();
+      await eventually(passengerEdit).toBeHidden();
       const pickup = await request().input("person", personId).query<{ minutes: number }>(
         "SELECT DATEDIFF(minute, r.RequestedTravelDateTime, t.RequestedPickupDateTime) AS minutes FROM trip.Trip t JOIN trip.TripRequest r ON r.TripRequestId=t.TripRequestId WHERE t.PassengerPersonId=@person",
       );

@@ -1,5 +1,5 @@
 import { ActionButton } from "../../../../components/ui/action-button/action-button";
-import styles from "../trip-wizard.module.css";
+import { FormActions } from "../../../../components/ui/form-field/form-field";
 
 export function CreateWizardNavigation({
   onBack,
@@ -15,27 +15,25 @@ export function CreateWizardNavigation({
   primaryDisabled?: boolean;
 }) {
   return (
-    <div className={styles.wizardFooter}>
-      <div className={styles.wizardNav}>
-        {onBack && (
-          <ActionButton
-            type="button"
-            variant="secondary"
-            disabled={pending}
-            onClick={onBack}
-          >
-            بازگشت
-          </ActionButton>
-        )}
+    <FormActions separated>
+      {onBack && (
         <ActionButton
           type="button"
-          disabled={pending || primaryDisabled}
-          pending={pending}
-          onClick={onPrimary}
+          variant="secondary"
+          disabled={pending}
+          onClick={onBack}
         >
-          {primaryLabel}
+          بازگشت
         </ActionButton>
-      </div>
-    </div>
+      )}
+      <ActionButton
+        type="button"
+        disabled={pending || primaryDisabled}
+        pending={pending}
+        onClick={onPrimary}
+      >
+        {primaryLabel}
+      </ActionButton>
+    </FormActions>
   );
 }

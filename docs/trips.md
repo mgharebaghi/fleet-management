@@ -44,6 +44,13 @@ FleetManagement.
 There is no approved physical Journey/run grouping across passengers. Each
 passenger remains one Trip.
 
+Within one request, each person may appear only once and each passenger's origin
+and destination must be different Location IDs. Different passengers may share
+the same valid origin/destination pair. Application validates these rules on
+request creation and passenger add/update; the create wizard also excludes the
+opposite endpoint and disables people already selected in another passenger.
+These are application rules; no SQL constraint or existing record is changed.
+
 ## Locations
 
 Origin and destination remain required Location foreign keys. When the catalog

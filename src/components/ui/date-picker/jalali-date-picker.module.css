@@ -118,10 +118,26 @@
   margin-bottom: var(--space-2);
 }
 
-.monthLabel {
-  color: var(--app-heading);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
+.monthControls {
+  display: flex;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.monthControls .monthSelect,
+.monthControls .yearInput {
+  min-height: 36px;
+  padding: var(--space-1) var(--space-2);
+}
+
+.monthSelect {
+  flex: 1;
+  min-width: 0;
+}
+
+.yearInput {
+  width: 5rem;
+  text-align: center;
 }
 
 .monthButton {

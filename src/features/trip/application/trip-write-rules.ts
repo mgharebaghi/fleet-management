@@ -8,7 +8,7 @@ export const failure = (error: TripFailure, field?: string): TripResult => ({
 });
 
 export function locationInputFailure(
-  error: "LOCATION_NOT_FOUND" | "LOCATION_INACTIVE",
+  error: "LOCATION_NOT_FOUND" | "LOCATION_INACTIVE" | "SAME_ORIGIN_DESTINATION",
   passengerIndex: number,
   locationRole: TripLocationInputRole,
 ): TripResult {

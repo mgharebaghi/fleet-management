@@ -297,6 +297,11 @@ an ordinary `Date` and SQL Server stores an ordinary date. `minDate`/`maxDate`
 only stop the panel offering a day; the business rule stays in the Application,
 which still rejects a future purchase date on its own.
 
+The calendar header offers direct month selection and a year field. Enter the
+Jalali year (Latin, Persian or Arabic digits) and press Enter or leave the field,
+then choose a month and day. Navigating does not submit the form or change its
+stored date until a day is selected; day limits still apply after a distant jump.
+
 ### Money
 
 Amounts use `MoneyInput`. The currency is **تومان** and is named in the field's

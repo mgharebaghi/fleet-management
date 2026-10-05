@@ -50,4 +50,10 @@ describe("tripPersonSelectOptions", () => {
     expect(markup).toContain("مریم احمدی");
     expect(markup).not.toContain("—");
   });
+
+  it("disables people selected for another passenger without disabling others", () => {
+    expect(tripPersonSelectOptions(people, [1]).map((option) => option.disabled)).toEqual([true, false]);
+    expect(tripPersonSelectOptions(people).map((option) => option.disabled)).toEqual([false, false]);
+    expect(renderToStaticMarkup(tripPersonSelectOptions(people, [1])[0].content as ReactElement)).toContain("قبلاً انتخاب شده");
+  });
 });

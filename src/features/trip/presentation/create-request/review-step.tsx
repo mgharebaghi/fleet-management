@@ -4,8 +4,17 @@ import { useState, useTransition } from "react";
 
 import { InlineNotice } from "@/components/ui/inline-notice/inline-notice";
 import { StatusBadge } from "@/components/ui/status-badge/status-badge";
+import { FormSection } from "../../../../components/ui/form-field/form-field";
+import { DataTable } from "../../../../components/ui/data-table/data-table";
+import {
+  RecordCardList,
+  RecordCard,
+  RecordCardHeader,
+  RecordCardDetails,
+  RecordCardDetail,
+} from "../../../../components/ui/record-cards/record-cards";
 
-import { createTripRequestAction } from "../trip.actions";
+import { createTripRequestAction, type CreateTripRequestResult } from "../trip.actions";
 import { tripMessages } from "../trip-form-data";
 import type { TripRequestReview } from "./create-wizard";
 import { CreateWizardNavigation } from "./create-wizard-navigation";
@@ -16,6 +25,7 @@ type ReviewStepProps = {
   review: TripRequestReview;
   formValues: Record<string, string>;
   onBack: () => void;
+  onFailure?: (result: Extract<CreateTripRequestResult, { success: false }>) => void;
 };
 
 export function ReviewStep({
@@ -23,6 +33,7 @@ export function ReviewStep({
   review,
   formValues,
   onBack,
+  onFailure,
 }: ReviewStepProps) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -33,6 +44,10 @@ export function ReviewStep({
     startTransition(async () => {
       const result = await createTripRequestAction(formValues);
       if (!result.success) {
+        if (onFailure && (result.field || result.failedLocation)) {
+          onFailure(result);
+          return;
+        }
         setError(tripMessages[result.error as keyof typeof tripMessages] ?? "ثبت نهایی انجام نشد.");
       }
     });
@@ -58,47 +73,49 @@ export function ReviewStep({
       {error && <InlineNotice tone="danger" role="alert">{error}</InlineNotice>}
 
       <div className={styles.reviewGridSections}>
-        <section className={styles.reviewCard}>
-          <div className={styles.reviewCardHeader}>
-            <h3>اطلاعات درخواست</h3>
-            <StatusBadge label="ثبت‌نشده" tone="info" />
-          </div>
+        <FormSection title="اطلاعات درخواست" aside={<StatusBadge label="ثبت‌نشده" tone="info" />}>
           <dl className={styles.reviewMetaList}>
             <div><dt>نوع درخواست</dt><dd>{review.requestTypeName}</dd></div>
             <div><dt>زمان درخواست سفر</dt><dd>{review.travelAt}</dd></div>
-            {review.purpose && <div className={styles.reviewWide}><dt>هدف سفر</dt><dd>{review.purpose}</dd></div>}
+            {review.purpose && <div><dt>هدف سفر</dt><dd>{review.purpose}</dd></div>}
             {review.description && <div className={styles.reviewWide}><dt>توضیحات</dt><dd>{review.description}</dd></div>}
           </dl>
-        </section>
+        </FormSection>
 
-        <section className={styles.reviewCard}>
-          <div className={styles.reviewCardHeader}>
-            <h3>فهرست مسافران</h3>
-            <span className={styles.muted}>
-              {`${review.passengers.length} مسافر`}
-            </span>
-          </div>
-          <div className={styles.reviewPassengerTableWrapper}>
-            <table className={styles.reviewTable}>
-                <thead>
-                  <tr>
-                    <th>مسافر</th>
-                    <th>مبدأ و مقصد</th>
-                    <th>توضیحات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {review.passengers.map((passenger, index) => (
-                    <tr key={index}>
-                      <td data-label="مسافر"><strong>{passenger.personName}</strong></td>
-                      <td data-label="مبدأ و مقصد">{passenger.originName} ← {passenger.destinationName}</td>
-                      <td data-label="توضیحات">{passenger.description ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-            </table>
-          </div>
-        </section>
+        <FormSection
+          title="فهرست مسافران"
+          aside={<span className={styles.muted}>{`${review.passengers.length.toLocaleString("fa-IR")} مسافر`}</span>}
+        >
+          <DataTable caption="فهرست مسافران درخواست سفر">
+            <thead>
+              <tr>
+                <th>مسافر</th>
+                <th>مبدأ و مقصد</th>
+                <th>توضیحات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {review.passengers.map((passenger, index) => (
+                <tr key={index}>
+                  <td><strong>{passenger.personName}</strong></td>
+                  <td>{passenger.originName} ← {passenger.destinationName}</td>
+                  <td>{passenger.description ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </DataTable>
+          <RecordCardList>
+            {review.passengers.map((passenger, index) => (
+              <RecordCard key={index}>
+                <RecordCardHeader title={passenger.personName} />
+                <RecordCardDetails>
+                  <RecordCardDetail label="مبدأ و مقصد">{passenger.originName} ← {passenger.destinationName}</RecordCardDetail>
+                  <RecordCardDetail label="توضیحات">{passenger.description ?? "—"}</RecordCardDetail>
+                </RecordCardDetails>
+              </RecordCard>
+            ))}
+          </RecordCardList>
+        </FormSection>
       </div>
 
       <CreateWizardNavigation

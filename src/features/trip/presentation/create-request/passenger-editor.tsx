@@ -31,6 +31,7 @@ export function PassengerEditor({
   allowPickupOverride = true,
   value,
   fieldInvalid,
+  excludedPersonIds = [],
 }: {
   index: number;
   prefix: string;
@@ -43,8 +44,13 @@ export function PassengerEditor({
   allowPickupOverride?: boolean;
   value: (name: string) => string;
   fieldInvalid: (name: string) => boolean;
+  excludedPersonIds?: readonly number[];
 }) {
-  const personOptions = tripPersonSelectOptions(people);
+  const personOptions = tripPersonSelectOptions(people, excludedPersonIds);
+  const [originId, setOriginId] = useState(() => value(`passenger.${index}.originLocationId`));
+  const [destinationId, setDestinationId] = useState(() => value(`passenger.${index}.destinationLocationId`));
+  const effectiveOrigin = shareOrigin ? value("commonOriginLocationId") : originId;
+  const effectiveDestination = shareDestination ? value("commonDestinationLocationId") : destinationId;
   const inheritedRouteHelp =
     shareOrigin && shareDestination
       ? "مبدأ و مقصد از اطلاعات درخواست استفاده می‌شود."
@@ -90,6 +96,8 @@ export function PassengerEditor({
                 label="مبدأ"
                 locations={locations}
                 defaultValue={value(`passenger.${index}.originLocationId`)}
+                excludedLocationIds={[Number(effectiveDestination)]}
+                onValueChange={setOriginId}
                 disabled={pending}
                 required
                 invalid={fieldInvalid(`passenger.${index}.originLocationId`)}
@@ -102,6 +110,8 @@ export function PassengerEditor({
                 name={`passenger.${index}.destinationLocationId`}
                 label="مقصد"
                 locations={locations}
+                excludedLocationIds={[Number(effectiveOrigin)]}
+                onValueChange={setDestinationId}
                 defaultValue={value(
                   `passenger.${index}.destinationLocationId`,
                 )}
