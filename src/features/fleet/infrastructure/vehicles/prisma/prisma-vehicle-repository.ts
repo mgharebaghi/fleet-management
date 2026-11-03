@@ -1,3 +1,5 @@
+import { guardDirectMeterEdit } from "../../../application/meter-readings/direct-meter-edit";
+import { lockVehicleDispatch } from "../../availability/prisma-vehicle-dispatch-readiness";
 import { Prisma, type PrismaClient } from "../../../../../generated/prisma/client";
 import {
   VehicleInUseError,
@@ -48,11 +50,11 @@ const vehicleDetailSelect = {
   } },
 } satisfies Prisma.VehicleSelect;
 type SelectedVehicleDetail = Prisma.VehicleGetPayload<{ select: typeof vehicleDetailSelect }>;
-type DecimalAmounts = { purchasePrice: string | null; currentOdometer: string | null; currentEngineHour: string | null };
+type DecimalAmounts = { hasMeterHistory: boolean; purchasePrice: string | null; currentOdometer: string | null; currentEngineHour: string | null };
 function mapVehicleDetail(row: SelectedVehicleDetail, amounts: DecimalAmounts): VehicleDetail {
   const model = row.VehicleModel;
   return {
-    vehicleId: row.VehicleId, vehicleCode: row.VehicleCode,
+    vehicleId: row.VehicleId, vehicleCode: row.VehicleCode, hasMeterHistory: amounts.hasMeterHistory,
     // The columns allow null at the database level, but every write this
     // application makes fills them; a stray null reads back as empty text
     // instead of breaking the (always-string) application shape.
@@ -107,7 +109,7 @@ function parseModelYear(search: string): number | null {
 }
 
 export class PrismaVehicleRepository implements VehicleWriter, VehicleReader, VehicleIdentifierReader, VehicleReferenceReader {
-  constructor(private readonly client: Pick<PrismaClient, "vehicle" | "vehicleModel" | "vehicleStatus" | "$queryRaw">) {}
+  constructor(private readonly client: Pick<PrismaClient, "vehicle" | "vehicleModel" | "vehicleStatus" | "$queryRaw" | "$transaction">) {}
   async identifierExists(identifier: VehicleIdentifier, value: string, excludeVehicleId?: number) {
     return await this.client.vehicle.findFirst({ where: {
       [identifierColumns[identifier]]: value,
@@ -159,7 +161,8 @@ export class PrismaVehicleRepository implements VehicleWriter, VehicleReader, Ve
       SELECT
         CONVERT(varchar(40), PurchasePrice) AS purchasePrice,
         CONVERT(varchar(40), CurrentOdometer) AS currentOdometer,
-        CONVERT(varchar(40), CurrentEngineHour) AS currentEngineHour
+        CONVERT(varchar(40), CurrentEngineHour) AS currentEngineHour,
+        CONVERT(bit,CASE WHEN EXISTS (SELECT 1 FROM fleet.VehicleMeterReading WHERE VehicleId=${vehicleId}) THEN 1 ELSE 0 END) AS hasMeterHistory
       FROM fleet.Vehicle
       WHERE VehicleId = ${vehicleId}
     `);
@@ -169,7 +172,13 @@ export class PrismaVehicleRepository implements VehicleWriter, VehicleReader, Ve
   async update(vehicleId: number, input: NewVehicle): Promise<void> {
     const decimal = (value: string | null) => value === null ? null : new Prisma.Decimal(value);
     try {
-      await this.client.vehicle.update({ where: { VehicleId: vehicleId }, data: {
+      await this.client.$transaction(async tx => {
+        await lockVehicleDispatch(tx, [vehicleId]);
+        const [current] = await tx.$queryRaw<Array<{ odometer: string | null; engineHours: string | null; hasHistory: boolean }>>`SELECT CONVERT(varchar(40),CurrentOdometer) odometer,CONVERT(varchar(40),CurrentEngineHour) engineHours,
+          CONVERT(bit,CASE WHEN EXISTS (SELECT 1 FROM fleet.VehicleMeterReading WHERE VehicleId=${vehicleId}) THEN 1 ELSE 0 END) hasHistory FROM fleet.Vehicle WHERE VehicleId=${vehicleId}`;
+        if (!current) throw new VehicleNotFoundError();
+        guardDirectMeterEdit(current, { odometer: input.currentOdometer, engineHours: input.currentEngineHour }, current.hasHistory);
+        await tx.vehicle.update({ where: { VehicleId: vehicleId }, data: {
         VehicleCode: input.vehicleCode, PlateNoLeftSide: input.plateNoLeftSide,
         PlateNoCenterChar: input.plateNoCenterChar, PlateNoRightSide: input.plateNoRightSide, PlateNoIranNo: input.plateNoIranNo,
         InternationalPlateNo: input.internationalPlateNo, VIN: input.vin, EngineNo: input.engineNo, ChassisNo: input.chassisNo,
@@ -177,6 +186,7 @@ export class PrismaVehicleRepository implements VehicleWriter, VehicleReader, Ve
         PurchaseDate: input.purchaseDate, PurchasePrice: decimal(input.purchasePrice),
         CurrentOdometer: decimal(input.currentOdometer), CurrentEngineHour: decimal(input.currentEngineHour),
       } });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 15000, timeout: 30000 });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") throw new VehicleNotFoundError();
       throw error;

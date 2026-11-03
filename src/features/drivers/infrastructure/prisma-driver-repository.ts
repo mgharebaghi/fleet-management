@@ -1,3 +1,4 @@
+import { lockVehicleDispatch, PrismaVehicleDispatchReadiness } from "../../fleet/infrastructure/availability/prisma-vehicle-dispatch-readiness";
 import { Prisma, type PrismaClient } from "../../../generated/prisma/client";
 import type { DriverRepository, DriverSession } from "../application/driver-repository";
 import type { Assignment, NewAssignment, NewLicense, UpdatedAssignment, UpdatedLicense } from "../application/driver-records";
@@ -34,7 +35,8 @@ async function readAssignments(client: Client, where: Prisma.VehicleDriverAssign
 }
 
 class PrismaDriverSession implements DriverSession {
-  constructor(private readonly client: Client) {}
+  readonly vehicleReadiness: PrismaVehicleDispatchReadiness;
+  constructor(private readonly client: Client, lockedVehicleIds: readonly number[] = []) { this.vehicleReadiness = new PrismaVehicleDispatchReadiness(client, lockedVehicleIds); }
   async person(id: number) { const row = await this.client.people.findUnique({ where: { PersonId: id }, select: personSelect }); return row ? mapPerson(row) : null; }
   async driverForPerson(id: number) { return await this.client.driver.findUnique({ where: { PersonId: id }, select: { DriverId: true } }) !== null; }
   async driver(id: number) {
@@ -99,15 +101,18 @@ class PrismaDriverSession implements DriverSession {
 
 export class PrismaDriverRepository implements DriverRepository {
   constructor(private readonly client: PrismaClient) {}
-  async atomic<T>(work: (session: DriverSession) => Promise<T>): Promise<T> {
+  async atomic<T>(work: (session: DriverSession) => Promise<T>, options?: { vehicleIds: readonly number[]; assignmentId?: number }): Promise<T> {
+    const existing = options?.assignmentId === undefined ? null : await this.client.vehicleDriverAssignment.findUnique({ where: { AssignmentId: options.assignmentId }, select: { VehicleId: true } });
+    const vehicleIds = [...new Set([...(options?.vehicleIds ?? []), ...(existing ? [existing.VehicleId] : [])])];
     return this.client.$transaction(async tx => {
+      await lockVehicleDispatch(tx, vehicleIds);
       // Transaction-owned application lock coordinates every Drivers writer,
       // including different application instances, without changing schema.
       const [lock] = await tx.$queryRaw<Array<{ result: number }>>`DECLARE @result int;
         EXEC @result = sys.sp_getapplock @Resource=N'FleetManagement.Drivers.Write', @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000;
         SELECT @result AS result;`;
       if (!lock || lock.result < 0) throw new Error("Drivers write lock could not be acquired.");
-      return work(new PrismaDriverSession(tx));
+      return work(new PrismaDriverSession(tx, vehicleIds));
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 15000, timeout: 20000 });
   }
   async list(search: string, page: number) {

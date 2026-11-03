@@ -1,3 +1,4 @@
+import type { VehicleDispatchReadiness } from "../../fleet/application/availability/vehicle-dispatch-readiness";
 import type {
   CreateTripRequestInput,
   NewTripRoute,
@@ -37,9 +38,13 @@ export type TripExecutionWriteRecord = {
 
 export type TripWriteOptions = {
   requestNoYear?: number;
+  dispatchAssignmentIds?: readonly number[];
+  dispatchRequestId?: number;
 };
 
 export interface TripWriteSession {
+  readonly vehicleReadiness: VehicleDispatchReadiness;
+  requestVehicleIds(requestId: number): Promise<number[]>;
   requestType(id: number): Promise<TripRequestTypeReference | null>;
   person(id: number): Promise<TripPersonReference | null>;
   location(id: number): Promise<TripLocationReference | null>;

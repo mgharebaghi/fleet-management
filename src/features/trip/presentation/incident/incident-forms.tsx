@@ -1,6 +1,7 @@
 "use client";
+import { useTripFormState } from "../use-trip-form-state";
 
-import { useActionState, useId } from "react";
+import { useId } from "react";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
 import { JalaliDatePicker } from "@/components/ui/date-picker/jalali-date-picker";
@@ -28,11 +29,11 @@ export function TripIncidentForms({
   tripRequestId: number;
   execution: TripExecutionRecord;
 }) {
-  const [accidentState, accidentAction, accidentPending] = useActionState(
+  const [accidentState, accidentAction, accidentPending, accidentStateInput] = useTripFormState(
     recordTripAccidentAction.bind(null, tripRequestId),
     {},
   );
-  const [violationState, violationAction, violationPending] = useActionState(
+  const [violationState, violationAction, violationPending, violationStateInput] = useTripFormState(
     recordTripViolationAction.bind(null, tripRequestId),
     {},
   );
@@ -41,7 +42,7 @@ export function TripIncidentForms({
   return (
     <div className={styles.dateRows}>
       <form
-        action={accidentAction}
+        action={accidentAction} onInputCapture={accidentStateInput}
         noValidate
         aria-label="ثبت تصادف برگشتی"
         className={styles.detailForm}
@@ -141,7 +142,7 @@ export function TripIncidentForms({
       </form>
 
       <form
-        action={violationAction}
+        action={violationAction} onInputCapture={violationStateInput}
         noValidate
         aria-label="ثبت تخلف برگشتی"
         className={styles.detailForm}

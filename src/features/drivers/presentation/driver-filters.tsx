@@ -3,6 +3,6 @@ import { ListFilterBar, ListSearchField } from "../../../components/ui/list-filt
 import { useListFilters } from "../../../components/ui/list-filters/use-list-filters";
 
 export function DriverFilters({ search }: { search: string }) {
-  const filters = useListFilters({ values: { search }, searchName: "search" });
-  return <ListFilterBar pending={filters.isPending}><ListSearchField name="search" label="جستجوی رانندگان" placeholder="نام، نام خانوادگی، کد ملی یا شمارهٔ پرسنلی" value={filters.values.search} onChange={filters.changeSearch} /></ListFilterBar>;
+  const filters = useListFilters({ values: { search }, defaults: { search: "" }, searchName: "search" });
+  return <ListFilterBar pending={filters.isPending} clear={filters.clear}><ListSearchField name="search" label="جستجوی رانندگان" placeholder="نام، نام خانوادگی، کد ملی یا شمارهٔ پرسنلی" value={filters.values.search} onChange={filters.changeSearch} /></ListFilterBar>;
 }

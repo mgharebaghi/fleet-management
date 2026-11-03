@@ -1,7 +1,10 @@
 "use client";
 
-import Link, { useLinkStatus } from "next/link";
+import { useLinkStatus } from "next/link";
+import { NavigationLink as Link } from "../navigation-link/navigation-link";
+import { isPageNavigation } from "../navigation-link/navigation-target";
 import type { ReactNode } from "react";
+import { LoadingIndicator } from "../loading-indicator/loading-indicator";
 
 import styles from "./action-link.module.css";
 
@@ -13,25 +16,21 @@ type ActionLinkProps = {
   variant?: ActionLinkVariant;
   size?: ActionLinkSize;
   rel?: string;
+  onNavigate?: () => void;
   children: ReactNode;
 };
 
-/**
- * A link whose target stays on the current page (pagination, "clear
- * filters") never suspends the shared route loading.tsx — React keeps the
- * already-revealed listing on screen instead, so nothing else signals that a
- * new result set is on the way. This decorative hint fills that gap; a link
- * to a different route is normally covered by loading.tsx already, so the
- * hint mostly resolves before it would even become visible there.
- */
-function LinkPendingHint() {
+/** Query-only changes retain their local hint; page changes use NavigationLink. */
+function LinkPendingHint({ href }: { href: string }) {
   const { pending } = useLinkStatus();
-  return (
+  const showHint = pending && typeof window !== "undefined" && !isPageNavigation(href, window.location.href);
+  return (<>
     <span
       aria-hidden="true"
-      className={`${styles.pendingHint} ${pending ? styles.pendingHintVisible : ""}`}
+      className={styles.pendingHint}
     />
-  );
+    {showHint && <LoadingIndicator scope="results" />}
+  </>);
 }
 
 export function ActionLink({
@@ -39,6 +38,7 @@ export function ActionLink({
   variant = "secondary",
   size = "md",
   rel,
+  onNavigate,
   children,
 }: ActionLinkProps) {
   return (
@@ -46,9 +46,10 @@ export function ActionLink({
       className={`${styles[variant]} ${styles[size]}`}
       href={href}
       rel={rel}
+      onNavigate={onNavigate}
     >
       {children}
-      <LinkPendingHint />
+      <LinkPendingHint href={href} />
     </Link>
   );
 }

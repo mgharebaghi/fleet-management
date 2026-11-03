@@ -77,6 +77,7 @@ const trip = {
 };
 
 const session = {
+  vehicleReadiness: { check: vi.fn() }, requestVehicleIds: vi.fn(),
   requestType: vi.fn(),
   requestLifecycle: vi.fn(),
   requestNumbers: vi.fn(),
@@ -227,6 +228,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-01-01T08:00:00Z"));
   vi.resetAllMocks();
+  session.vehicleReadiness.check.mockResolvedValue({ available: true }); session.requestVehicleIds.mockResolvedValue([2]);
   session.requestType.mockResolvedValue(requestType);
   session.requestLifecycle.mockResolvedValue({
     status: "New",
@@ -1981,5 +1983,29 @@ describe("Trip execution and survey", () => {
       expect(session.createExecution).toHaveBeenCalledTimes(1);
       expect(session.updateRequestStatus).toHaveBeenCalledWith(1, "Assigned");
     });
+  });
+});
+
+describe("vehicle dispatch readiness", () => {
+  it.each(["VEHICLE_UNDER_REPAIR", "VEHICLE_REPAIR_STATE_UNKNOWN", "VEHICLE_DISPATCH_CHANGED"] as const)("blocks a new execution with %s before writing", async reason => {
+    session.vehicleReadiness.check.mockResolvedValue({ available: false, reason });
+    expect(await manage.saveExecution(plannedExecutionInput)).toEqual({ success: false, error: reason }); expect(session.createExecution).not.toHaveBeenCalled();
+  });
+  it("blocks initial batch assignment and legacy request assignment/start", async () => {
+    session.vehicleReadiness.check.mockResolvedValue({ available: false, reason: "VEHICLE_UNDER_REPAIR" });
+    session.request.mockResolvedValue({ tripRequestId: 1, status: "New", tripRequestTypeId: 1, passengers: [{ tripId: 1 }] });
+    expect(await manage.assignInitialRequest({ tripRequestId: 1, passengers: [{ tripId: 1, vehicleDriverAssignmentId: 1, routes: [] }] })).toEqual({ success: false, error: "VEHICLE_UNDER_REPAIR" });
+    for (const target of ["Assigned", "InProgress"]) {
+      session.requestLifecycle.mockResolvedValue({ status: target === "Assigned" ? "New" : "Assigned", passengers: [{ tripId: 1, executions: [{ tripExecutionId: 2, status: "Planned", actualPickupDateTime: null }] }] });
+      expect(await manage.changeRequestStatus(1, target)).toEqual({ success: false, error: "VEHICLE_UNDER_REPAIR" });
+    }
+    expect(session.createExecution).not.toHaveBeenCalled(); expect(session.startTripExecutions).not.toHaveBeenCalled(); expect(session.updateRequestStatus).not.toHaveBeenCalled();
+  });
+  it("blocks individual execution start but permits finishing already-started travel", async () => {
+    session.vehicleReadiness.check.mockResolvedValue({ available: false, reason: "VEHICLE_UNDER_REPAIR" });
+    expect(await manage.saveExecution(startedExecutionInput)).toEqual({ success: false, error: "VEHICLE_UNDER_REPAIR" }); expect(session.updateExecution).not.toHaveBeenCalled();
+    session.execution.mockResolvedValue({ tripExecutionId: 2, tripId: 1, status: "InProgress", actualPickupDateTime: startedExecutionInput.actualPickupDateTime, actualDropoffDateTime: null, vehicleDriverAssignmentId: 1, requestId: 1, requestStatus: "InProgress" });
+    expect((await manage.saveExecution({ ...startedExecutionInput, status: "Completed", actualDropoffDateTime: new Date("2026-02-01T09:00:00Z"), endOdometer: "120" })).success).toBe(true);
+    expect(session.vehicleReadiness.check).toHaveBeenCalledTimes(1);
   });
 });

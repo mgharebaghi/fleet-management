@@ -1,0 +1,7 @@
+.track, .progress { display: block; width: 100%; min-width: 0; height: 7px; appearance: none; border: 0; border-radius: var(--app-radius-group); overflow: hidden; background: var(--app-border); color: var(--progress-color, var(--app-primary)); }
+.progress { --progress-color: var(--app-primary); }
+.progress[data-tone="warning"] { --progress-color: var(--app-warning-text); }
+.progress[data-tone="negative"] { --progress-color: var(--app-danger-text); }
+.progress::-webkit-progress-bar { background: var(--app-border); border-radius: inherit; }
+.progress::-webkit-progress-value { background: var(--progress-color); border-radius: inherit; }
+.progress::-moz-progress-bar { background: var(--progress-color); border-radius: inherit; }

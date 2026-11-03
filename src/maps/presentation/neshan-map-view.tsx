@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useInsertionEffect, useRef, useState } from "react";
+import { LoadingIndicator } from "../../components/ui/loading-indicator/loading-indicator";
 
 import "@neshan-maps-platform/maplibre-sdk/style.css";
 
@@ -96,7 +97,6 @@ export function NeshanMapView({
   onSelectPoint,
   onMarkerSelect,
   onViewCenterChange,
-  loadingMessage,
   unavailableMessage,
 }: {
   mapKey: string;
@@ -108,7 +108,6 @@ export function NeshanMapView({
   onSelectPoint?: (coordinate: MapCoordinate) => void;
   onMarkerSelect?: (markerId: string) => void;
   onViewCenterChange?: (coordinate: MapCoordinate) => void;
-  loadingMessage: string;
   unavailableMessage: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -304,11 +303,8 @@ export function NeshanMapView({
   return (
     <>
       <div ref={containerRef} className={styles.canvas} />
-      {status !== "ready" && (
-        <p className={styles.message}>
-          {status === "unavailable" ? unavailableMessage : loadingMessage}
-        </p>
-      )}
+      {status === "loading" && <LoadingIndicator />}
+      {status === "unavailable" && <p className={styles.message}>{unavailableMessage}</p>}
     </>
   );
 }

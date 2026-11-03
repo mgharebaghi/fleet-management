@@ -40,7 +40,8 @@ test.describe.serial("Drivers management", () => {
   });
 
   test("defines a driver, registers a license, assigns and closes the same history record", async ({ page }) => {
-    test.setTimeout(90000);
+    // This workflow performs multiple remote SQL writes and responsive captures.
+    test.setTimeout(240000);
     await page.goto("/drivers/create");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await selectSearchableOption(page, "شخص", token, token);
@@ -147,7 +148,7 @@ test.describe.serial("Drivers management", () => {
     const editAssignment = page.getByRole("form", { name: "ذخیره تغییرات تخصیص" });
     await editAssignment.getByLabel("توضیحات", { exact: true }).fill("اصلاح پیش از شروع");
     await editAssignment.getByRole("button", { name: "ذخیره تغییرات تخصیص", exact: true }).click();
-    await expect(page.locator("[data-admin-content]")).toHaveCSS("overflow-y", "auto");
+    await expect(page.locator("[data-admin-content]")).toHaveCSS("overflow-y", "auto", { timeout: 45000 });
     await expect(future).toContainText("اصلاح پیش از شروع");
 
     await page.setViewportSize({ width: 1280, height: 900 });

@@ -1,6 +1,8 @@
 /* Fills the workspace it is given rather than the viewport, so it still
    centres correctly once pages sit inside an app shell. */
 .page {
+  min-height: 100%;
+  width: 100%;
   display: grid;
   flex: 1;
   place-items: center;
@@ -9,12 +11,23 @@
   color: var(--app-text);
 }
 
+.inline {
+  display: grid;
+  place-items: center;
+  width: 100%;
+}
+
+.scopedOverlay {
+  position: fixed;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
 .surface {
   display: flex;
   align-items: center;
-}
-
-.page .surface {
   min-width: min(100%, 320px);
   justify-content: center;
   gap: var(--space-4);
@@ -25,25 +38,12 @@
   box-shadow: var(--app-card-shadow);
 }
 
-.inline .surface {
-  gap: var(--space-2);
-  padding: 10px var(--space-4);
-  border: 1px solid color-mix(in srgb, var(--app-info-text) 18%, transparent);
-  border-radius: var(--app-radius-message);
-  background: var(--app-info-background);
-  color: var(--app-info-text);
-}
-
 .visual {
-  --loading-size: 18px;
+  --loading-size: 42px;
   position: relative;
   width: var(--loading-size);
   height: var(--loading-size);
   flex: 0 0 auto;
-}
-
-.page .visual {
-  --loading-size: 42px;
 }
 
 .spinner {
@@ -58,7 +58,7 @@
   animation: loading-spin 750ms linear infinite;
 }
 
-.page .visual::after {
+.visual::after {
   position: absolute;
   inset: 25%;
   border-radius: 50%;
@@ -74,19 +74,9 @@
 }
 
 .copy strong {
-  color: inherit;
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-}
-
-.copy span {
-  color: var(--app-text-muted);
-  font-size: var(--font-size-xs);
-}
-
-.page .copy strong {
   color: var(--app-heading);
   font-size: var(--font-size-md);
+  font-weight: 700;
 }
 
 @keyframes loading-spin {
@@ -100,8 +90,8 @@
     padding: var(--space-4);
   }
 
-  .page .surface {
-    min-width: 100%;
+  .surface {
+    min-width: min(100%, 320px);
     padding: var(--space-5);
   }
 }

@@ -377,6 +377,8 @@ Testing is part of development.
 
 Use the smallest test level that proves the behavior:
 
+For routine changes, run only tests relevant to the changed behavior. Do not automatically run the full unit, Integration, or E2E suites for each task. Broader runs need a concrete regression risk or an explicit release/review scope. Report unrelated failures separately without expanding the task merely to make every test pass.
+
 Unit Test: Business/Application logic
 
 Integration Test: Repository / Prisma / SQL Server
@@ -430,6 +432,10 @@ Use labels that make sense to the user.
 Prefer a clean, modern, enterprise-oriented UI over decorative complexity.
 
 The repository must keep one coherent visual and interaction language across features.
+
+Avoid repeated headings and explanatory text within the same panel. Keep panel/section titles and important totals bold; ordinary labels and supporting text should use regular weight. Preserve established shared button and badge styling.
+
+In tabbed record summaries, do not duplicate tab navigation with View buttons. Prefer concise record previews and creation actions for empty sections, while preserving necessary record/workflow operations.
 
 Before building Presentation for a new page, slice, or feature, inspect and reuse the existing shared UI foundation and proven repository patterns.
 

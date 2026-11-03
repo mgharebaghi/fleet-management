@@ -1,6 +1,7 @@
 "use client";
+import { useFleetFormState } from "../../use-fleet-form-state";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { ActionButton } from "../../../../../components/ui/action-button/action-button";
 import { Dialog } from "../../../../../components/ui/dialog/dialog";
@@ -95,7 +96,7 @@ export function VehicleModelCreateDialog({
   hasReferenceLoadError,
   action,
 }: VehicleModelCreateDialogProps) {
-  const [actionState, formAction, isPending] = useActionState(
+  const [actionState, formAction, isPending, actionStateInput, actionStateSubmitted] = useFleetFormState(
     action,
     initialCreateVehicleModelActionState,
   );
@@ -108,12 +109,12 @@ export function VehicleModelCreateDialog({
       return;
     }
 
-    if (wasPendingRef.current && actionState.status === "idle") {
+    if (wasPendingRef.current && actionStateSubmitted.status === "idle") {
       wasPendingRef.current = false;
       formRef.current?.reset();
       onClose();
     }
-  }, [isPending, actionState, onClose]);
+  }, [isPending, actionStateSubmitted, onClose]);
 
   const fieldErrors = getCreateVehicleModelFieldErrors(actionState);
   const statusMessage = getCreateVehicleModelStatusMessage(actionState);
@@ -131,7 +132,7 @@ export function VehicleModelCreateDialog({
     >
       <form
         ref={formRef}
-        action={formAction}
+        action={formAction} onInputCapture={actionStateInput}
         className={styles.form}
         aria-busy={isPending}
         noValidate
@@ -192,7 +193,7 @@ export function VehicleModelCreateDialog({
           />
         </FormGrid>
 
-        {isPending && <LoadingIndicator label="در حال ایجاد مدل…" />}
+        {isPending && <LoadingIndicator />}
         {statusMessage && (
           <InlineNotice tone="danger" role="alert">
             {statusMessage}

@@ -1,0 +1,7 @@
+.rowActions {
+  width: max-content;
+}
+
+.rowActions > div {
+  flex-wrap: nowrap;
+}

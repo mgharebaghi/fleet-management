@@ -29,5 +29,7 @@ export async function updateVehicleAction(
 
   revalidatePath("/fleet/vehicles");
   revalidatePath(`/fleet/vehicles/${parsed.input.vehicleId}`);
+  revalidatePath("/maintenance/plans");
+  revalidatePath("/maintenance/plans/[planId]", "page");
   redirect(`/fleet/vehicles/${parsed.input.vehicleId}`);
 }

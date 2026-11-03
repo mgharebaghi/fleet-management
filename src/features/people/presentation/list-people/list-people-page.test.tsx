@@ -165,6 +165,20 @@ describe("ListPeoplePage", () => {
     );
   });
 
+  it("does not offer filter clearing for the explicit default status", async () => {
+    executeListPeople.mockResolvedValue({ people: [], totalCount: 0 });
+    const markup = await renderPage({ status: "active", search: "  " });
+    expect(markup).not.toContain("پاک کردن جستجو و فیلتر");
+  });
+
+  it("offers the first page rather than filter clearing for pagination alone", async () => {
+    executeListPeople.mockResolvedValue({ people: [], totalCount: 2 });
+    const markup = await renderPage({ page: "9" });
+    expect(markup).toContain("این صفحه خالی است");
+    expect(markup).toContain("صفحه اول");
+    expect(markup).not.toContain("پاک کردن جستجو و فیلتر");
+  });
+
   it("renders a safe Persian error without exposing internal details", async () => {
     executeListPeople.mockRejectedValue(
       new Error("Prisma SQL connection failed with secret details"),

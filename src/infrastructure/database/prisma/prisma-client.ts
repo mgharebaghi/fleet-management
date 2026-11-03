@@ -2,6 +2,7 @@ import { PrismaMssql } from "@prisma/adapter-mssql";
 
 import { PrismaClient } from "@/generated/prisma/client";
 import { createMssqlConfigFromEnvironment } from "@/infrastructure/database/prisma/mssql-config";
+import { prismaTransactionOptions } from "./prisma-transaction-options";
 
 const globalForPrisma = globalThis as typeof globalThis & {
   fleetManagementPrismaClient?: PrismaClient;
@@ -12,6 +13,7 @@ function createPrismaClient(): PrismaClient {
 
   return new PrismaClient({
     adapter: new PrismaMssql(mssqlConfig),
+    transactionOptions: prismaTransactionOptions,
   });
 }
 

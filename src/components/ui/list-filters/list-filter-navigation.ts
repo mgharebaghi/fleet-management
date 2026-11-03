@@ -6,6 +6,16 @@ type Navigate = (href: string) => void;
 
 export type ListFilterValues = Readonly<Record<string, string>>;
 
+export function hasListFilterCriteria(values: ListFilterValues, defaults: ListFilterValues): boolean {
+  return Object.keys(defaults).some(key => values[key]?.trim() !== defaults[key].trim());
+}
+
+export function buildClearListFiltersHref(pathname: string, searchParams: SearchParamsSnapshot, defaults: ListFilterValues): string {
+  const query = new URLSearchParams(searchParams.toString());
+  for (const name of [...Object.keys(defaults), "page"]) query.delete(name);
+  return `${pathname}${query.size ? `?${query}` : ""}`;
+}
+
 /** The URL-derived values a listing was rendered from, plus the local draft. */
 export type ListFilterDraft<TValues extends ListFilterValues> = {
   source: TValues;

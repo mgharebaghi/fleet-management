@@ -1,6 +1,7 @@
 "use client";
+import { useFleetFormState } from "../../use-fleet-form-state";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { ActionButton } from "../../../../../components/ui/action-button/action-button";
 import { ConfirmedSubmitButton } from "../../../../../components/ui/confirmed-submit/confirmed-submit-button";
@@ -54,7 +55,7 @@ export function VehicleModelEditDialog({
   hasReferenceLoadError,
   action,
 }: VehicleModelEditDialogProps) {
-  const [actionState, formAction, isPending] = useActionState(
+  const [actionState, formAction, isPending, actionStateInput, actionStateSubmitted] = useFleetFormState(
     action,
     initialUpdateVehicleModelActionState,
   );
@@ -66,11 +67,11 @@ export function VehicleModelEditDialog({
       return;
     }
 
-    if (wasPendingRef.current && actionState.status === "idle") {
+    if (wasPendingRef.current && actionStateSubmitted.status === "idle") {
       wasPendingRef.current = false;
       onClose();
     }
-  }, [isPending, actionState, onClose]);
+  }, [isPending, actionStateSubmitted, onClose]);
 
   const fieldErrors = getUpdateVehicleModelFieldErrors(actionState);
   const statusMessage = getUpdateVehicleModelStatusMessage(actionState);
@@ -87,7 +88,7 @@ export function VehicleModelEditDialog({
     >
       <form
         id="vehicle-model-edit-form"
-        action={formAction}
+        action={formAction} onInputCapture={actionStateInput}
         className={styles.form}
         aria-busy={isPending}
         noValidate
@@ -184,7 +185,7 @@ export function VehicleModelEditDialog({
           </label>
         </FormField>
 
-        {isPending && <LoadingIndicator label="در حال ذخیره…" />}
+        {isPending && <LoadingIndicator />}
         {statusMessage && (
           <InlineNotice tone="danger" role="alert">
             {statusMessage}

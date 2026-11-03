@@ -65,7 +65,7 @@ export async function TripsPage({
             نمایش {numberFormatter.format(rows.length)} مورد از{" "}
             {numberFormatter.format(result.totalCount)} سفر
           </p>
-          <DataTable caption="فهرست درخواست‌های سفر" minWidth={800}>
+          <DataTable caption="فهرست درخواست‌های سفر">
             <thead>
               <tr>
                 <th scope="col">شماره درخواست</th>

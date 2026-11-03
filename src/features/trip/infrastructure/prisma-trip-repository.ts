@@ -5,6 +5,7 @@ import {
 import type {
   TripRepository,
   TripWriteSession,
+  TripWriteOptions,
 } from "../application/trip-repository";
 import type { TripRequestDetails } from "../application/trip-records";
 import {
@@ -24,16 +25,23 @@ import {
 } from "./prisma-trip-mapping";
 import { readActivePassengerCountsByVehicle } from "./prisma-active-vehicle-occupancy";
 import { PrismaTripWriteSession } from "./prisma-trip-write-session";
+import { lockVehicleDispatch } from "../../fleet/infrastructure/availability/prisma-vehicle-dispatch-readiness";
+import { readRequestVehicleIds } from "./prisma-request-vehicle-ids";
 
 export class PrismaTripRepository implements TripRepository {
   constructor(private readonly client: PrismaClient) {}
 
   async atomic<T>(
     work: (session: TripWriteSession) => Promise<T>,
-    options?: { requestNoYear?: number },
+    options?: TripWriteOptions,
   ) {
+    const assignmentIds = options?.dispatchAssignmentIds ?? [];
+    const assignments = assignmentIds.length ? await this.client.vehicleDriverAssignment.findMany({ where: { AssignmentId: { in: [...assignmentIds] } }, select: { VehicleId: true } }) : [];
+    const requestVehicles = options?.dispatchRequestId === undefined ? [] : await readRequestVehicleIds(this.client, options.dispatchRequestId);
+    const vehicleIds = [...new Set([...assignments.map(row => row.VehicleId), ...requestVehicles])];
     return this.client.$transaction(
       async (transaction) => {
+        await lockVehicleDispatch(transaction, vehicleIds);
         if (options?.requestNoYear !== undefined) {
           const resource = `FleetManagement.Trip.RequestNo.${options.requestNoYear}`;
           const [lock] = await transaction.$queryRaw<
@@ -51,7 +59,7 @@ export class PrismaTripRepository implements TripRepository {
             throw new Error("Trip request-number lock could not be acquired.");
           }
         }
-        return work(new PrismaTripWriteSession(transaction));
+        return work(new PrismaTripWriteSession(transaction, vehicleIds));
       },
       {
         // SQL Server has no unique constraint for RequestNo, one non-terminal

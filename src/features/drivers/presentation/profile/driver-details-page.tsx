@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import { NavigationLink as Link } from "../../../../components/ui/navigation-link/navigation-link";
 import { notFound } from "next/navigation";
 import { PageShell } from "../../../../components/ui/page-shell/page-shell";
 import { StatusBadge } from "../../../../components/ui/status-badge/status-badge";

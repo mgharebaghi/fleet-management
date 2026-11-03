@@ -1,12 +1,11 @@
 "use client";
 
-import Link, { useLinkStatus } from "next/link";
+import { NavigationLink as Link } from "../ui/navigation-link/navigation-link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useState } from "react";
-import { createPortal } from "react-dom";
 
 import { Dialog } from "../ui/dialog/dialog";
-import { LoadingIndicator } from "../ui/loading-indicator/loading-indicator";
+import { PRODUCT_TITLE } from "../ui/brand-mark/brand-identity";
 import { AdminNavIcon } from "./admin-nav-icons";
 import {
   ADMIN_NAV_SECTIONS,
@@ -63,27 +62,20 @@ function NavList({
   tripQueueBadge,
   onNavigate,
 }: NavListProps) {
-  const [opened, setOpened] = useState<Record<string, boolean>>({});
+  const activeGroup = ADMIN_NAV_SECTIONS.find(section => section.children && isAdminNavSectionActive(pathname, section))?.href ?? null;
+  const [openGroup, setOpenGroup] = useState<string | null>(activeGroup);
   const [trackedPathname, setTrackedPathname] = useState(pathname);
   if (pathname !== trackedPathname) {
     setTrackedPathname(pathname);
-    setOpened({});
+    setOpenGroup(activeGroup);
   }
 
   function groupOpen(section: AdminNavSection) {
-    const choice = opened[section.href];
-    if (choice !== undefined) {
-      return choice;
-    }
-
-    return isAdminNavSectionActive(pathname, section);
+    return openGroup === section.href;
   }
 
   function toggleGroup(section: AdminNavSection) {
-    setOpened((current) => ({
-      ...current,
-      [section.href]: !groupOpen(section),
-    }));
+    setOpenGroup(current => current === section.href ? null : section.href);
   }
 
   return (
@@ -126,7 +118,7 @@ function NavList({
                 href={section.href}
                 className={styles.navLink}
                 aria-current={sectionActive ? "page" : undefined}
-                onClick={onNavigate}
+                onClick={() => { setOpenGroup(null); onNavigate?.(); }}
               >
                 <span className={styles.navIcon}>
                   <AdminNavIcon name={section.icon} />
@@ -167,7 +159,6 @@ function NavList({
                             tripBadge={tripQueueBadge}
                           />
                         )}
-                        {child.href === "/fleet/vehicles" && <VehicleListNavPending />}
                       </Link>
                     </li>
                   );
@@ -179,24 +170,6 @@ function NavList({
         );
       })}
     </ul>
-  );
-}
-
-// Client navigation into the vehicle list does not mount `(admin)/loading.tsx`
-// while its RSC response is still in flight. Surface the same indicator in the
-// content area for that link so the wait is visible.
-function VehicleListNavPending() {
-  const { pending } = useLinkStatus();
-  if (!pending || typeof document === "undefined") return null;
-  const content = document.querySelector("[data-admin-content]");
-  if (!content) return null;
-  return createPortal(
-    <LoadingIndicator
-      variant="page"
-      label="در حال بارگذاری…"
-      description="محتوای بخش مدیریت در حال آماده‌سازی است."
-    />,
-    content,
   );
 }
 
@@ -248,7 +221,7 @@ export function AdminBreadcrumb() {
 
   return (
     <p className={styles.breadcrumb}>
-      <span>FleetManagement</span>
+      <span>{PRODUCT_TITLE}</span>
       <span className={styles.breadcrumbSeparator} aria-hidden="true">
         ‹
       </span>
@@ -305,7 +278,7 @@ export function AdminMobileNav({
         open={open}
         onClose={() => setOpen(false)}
         titleId="admin-mobile-nav-title"
-        title="پنل مدیریت"
+        title={PRODUCT_TITLE}
         size="drawer"
       >
         <nav aria-label="پیمایش اصلی (موبایل)">

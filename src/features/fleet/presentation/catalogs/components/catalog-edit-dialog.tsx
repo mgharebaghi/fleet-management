@@ -1,6 +1,7 @@
 "use client";
+import { useFleetFormState } from "../../use-fleet-form-state";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { ActionButton } from "../../../../../components/ui/action-button/action-button";
 import { ConfirmedSubmitButton } from "../../../../../components/ui/confirmed-submit/confirmed-submit-button";
@@ -52,7 +53,7 @@ export function CatalogEditDialog({
   supportsActiveToggle,
   action,
 }: CatalogEditDialogProps) {
-  const [actionState, formAction, isPending] = useActionState(
+  const [actionState, formAction, isPending, actionStateInput, actionStateSubmitted] = useFleetFormState(
     action,
     initialUpdateCatalogEntryActionState,
   );
@@ -64,11 +65,11 @@ export function CatalogEditDialog({
       return;
     }
 
-    if (wasPendingRef.current && actionState.status === "idle") {
+    if (wasPendingRef.current && actionStateSubmitted.status === "idle") {
       wasPendingRef.current = false;
       onClose();
     }
-  }, [isPending, actionState, onClose]);
+  }, [isPending, actionStateSubmitted, onClose]);
 
   const fieldErrors = getUpdateCatalogEntryFieldErrorMessages(actionState);
   const statusMessage = getUpdateCatalogEntryStatusMessage(
@@ -89,7 +90,7 @@ export function CatalogEditDialog({
     >
       <form
         id={formId}
-        action={formAction}
+        action={formAction} onInputCapture={actionStateInput}
         className={styles.form}
         aria-busy={isPending}
         noValidate
@@ -133,7 +134,7 @@ export function CatalogEditDialog({
           </FormField>
         )}
 
-        {isPending && <LoadingIndicator label="در حال ذخیره…" />}
+        {isPending && <LoadingIndicator />}
         {statusMessage && (
           <InlineNotice tone="danger" role="alert">
             {statusMessage.text}

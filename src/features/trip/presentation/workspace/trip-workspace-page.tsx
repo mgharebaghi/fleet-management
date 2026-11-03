@@ -1,3 +1,4 @@
+import { RecordWorkspace } from "../../../../components/ui/record-workspace/record-workspace";
 import { notFound } from "next/navigation";
 
 import { PageShell } from "@/components/ui/page-shell/page-shell";
@@ -120,7 +121,7 @@ export async function TripWorkspacePage({
       <TripWorkspaceFocus sectionId={section} />
       <div className={styles.workspace}>
         <WorkspaceIdentity view={view} backHref="/trips/requests" />
-        <div className={styles.workspaceBody}>
+        <RecordWorkspace>
           <TripWorkspaceTabs
             tripRequestId={details.tripRequestId}
             activeSection={section}
@@ -138,7 +139,7 @@ export async function TripWorkspacePage({
             />
           </TripWorkspaceTabs>
           <NextActionPanel details={details} view={view} />
-        </div>
+        </RecordWorkspace>
       </div>
     </PageShell>
   );

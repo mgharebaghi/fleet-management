@@ -23,9 +23,13 @@ import {
   type TripPrismaClient,
 } from "./prisma-trip-mapping";
 import { readActivePassengerCountsByVehicle } from "./prisma-active-vehicle-occupancy";
+import { PrismaVehicleDispatchReadiness } from "../../fleet/infrastructure/availability/prisma-vehicle-dispatch-readiness";
+import { readRequestVehicleIds } from "./prisma-request-vehicle-ids";
 
 export class PrismaTripWriteSession implements TripWriteSession {
-  constructor(private readonly client: TripPrismaClient) {}
+  readonly vehicleReadiness: PrismaVehicleDispatchReadiness;
+  constructor(private readonly client: TripPrismaClient, lockedVehicleIds: readonly number[] = []) { this.vehicleReadiness = new PrismaVehicleDispatchReadiness(client, lockedVehicleIds); }
+  requestVehicleIds(id: number) { return readRequestVehicleIds(this.client, id); }
 
   async requestType(id: number) {
     const row = await this.client.tripRequestType.findUnique({

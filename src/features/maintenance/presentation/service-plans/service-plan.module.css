@@ -1,0 +1,16 @@
+.form { display: grid; gap: var(--space-5); min-width: 0; }
+.third { grid-column: span 4; min-width: 0; }
+.half { grid-column: span 6; min-width: 0; }
+.full { grid-column: 1 / -1; min-width: 0; }
+.criteriaOptions { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); }
+.criteriaOptions label { display: inline-flex; align-items: center; gap: var(--space-2); }
+.criterionFields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.criterionFields legend { padding: 0; margin-bottom: var(--space-3); font-size: var(--font-size-sm); font-weight: 700; }
+.fact { min-width: 0; overflow-wrap: anywhere; }
+.fact p { margin: 0; }
+.operations { display: grid; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--app-border); }
+.operations h3 { margin: 0; font-size: var(--font-size-sm); font-weight: 700; }
+.note { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
+.progress { display: grid; min-width: 0; gap: var(--space-1); margin-block: var(--space-2); }
+.progress small { color: var(--app-text-muted); font-size: var(--font-size-xs); overflow-wrap: anywhere; }
+@media (max-width: 900px) { .third, .half { grid-column: 1 / -1; } }

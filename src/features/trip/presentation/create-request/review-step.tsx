@@ -1,4 +1,6 @@
 "use client";
+import { RecordDetailsButton } from "../../../../components/ui/record-details-button/record-details-button";
+
 
 import { useState, useTransition } from "react";
 
@@ -91,7 +93,7 @@ export function ReviewStep({
               <tr>
                 <th>مسافر</th>
                 <th>مبدأ و مقصد</th>
-                <th>توضیحات</th>
+                <th>عملیات</th>
               </tr>
             </thead>
             <tbody>
@@ -99,7 +101,7 @@ export function ReviewStep({
                 <tr key={index}>
                   <td><strong>{passenger.personName}</strong></td>
                   <td>{passenger.originName} ← {passenger.destinationName}</td>
-                  <td>{passenger.description ?? "—"}</td>
+                  <td><RecordDetailsButton title={passenger.personName} fields={[["مبدأ", passenger.originName], ["مقصد", passenger.destinationName]]} description={passenger.description} /></td>
                 </tr>
               ))}
             </tbody>
@@ -110,7 +112,7 @@ export function ReviewStep({
                 <RecordCardHeader title={passenger.personName} />
                 <RecordCardDetails>
                   <RecordCardDetail label="مبدأ و مقصد">{passenger.originName} ← {passenger.destinationName}</RecordCardDetail>
-                  <RecordCardDetail label="توضیحات">{passenger.description ?? "—"}</RecordCardDetail>
+                  <RecordCardDetail label="عملیات"><RecordDetailsButton title={passenger.personName} fields={[["مبدأ", passenger.originName], ["مقصد", passenger.destinationName]]} description={passenger.description} /></RecordCardDetail>
                 </RecordCardDetails>
               </RecordCard>
             ))}

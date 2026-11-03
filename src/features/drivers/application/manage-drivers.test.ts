@@ -9,12 +9,14 @@ const license: NewLicense = { driverId: 1, licenseType: "Heavy", licenseNo: "LIC
 const assignment: NewAssignment = { driverId: 1, vehicleId: 2, fromDateTime: new Date("2026-01-01T08:00:00Z"), toDateTime: null, startOdometer: "100.10", endOdometer: null, description: null };
 const vehicle = { vehicleId: 2, vehicleCode: "V2", plate: "12", isActive: true };
 const session = {
+  vehicleReadiness: { check: vi.fn() },
   person: vi.fn(), driverForPerson: vi.fn(), driver: vi.fn(), vehicle: vi.fn(), licenses: vi.fn(), license: vi.fn(), licenseNumberExists: vi.fn(), overlap: vi.fn(), currentAssignmentHolder: vi.fn(), assignment: vi.fn(), assignmentHasTripExecutions: vi.fn(), createDriver: vi.fn(), createLicense: vi.fn(), updateLicense: vi.fn(), deleteLicense: vi.fn(), createAssignment: vi.fn(), updateAssignment: vi.fn(), closeAssignment: vi.fn(), deleteAssignment: vi.fn(),
 } satisfies DriverSession;
 const repository = { atomic: async <T>(work: (s: DriverSession) => Promise<T>) => work(session), list: vi.fn(), details: vi.fn(), availablePeople: vi.fn(), availableVehicles: vi.fn(), currentVehicleAssignments: vi.fn() } satisfies DriverRepository;
 const useCase = new ManageDrivers(repository, () => new Date("2026-06-01T08:00:00Z"));
 beforeEach(() => {
   vi.resetAllMocks();
+  session.vehicleReadiness.check.mockResolvedValue({ available: true });
   session.person.mockResolvedValue(person); session.driver.mockResolvedValue({ ...person, driverId: 1 });
   session.vehicle.mockResolvedValue(vehicle); session.licenses.mockResolvedValue([{ ...license, licenseId: 1 }]);
   session.license.mockResolvedValue({ ...license, licenseId: 1 });
@@ -219,5 +221,20 @@ describe("edit assignment", () => {
     session.assignment.mockResolvedValue({ ...assignment, assignmentId: 3, vehicle, fromDateTime: new Date("2026-01-01T08:00:00Z"), toDateTime: new Date("2026-01-02T08:00:00Z") });
     expect(await useCase.updateAssignment({ ...assignment, assignmentId: 3 })).toEqual(fails("ASSIGNMENT_IMMUTABLE"));
     expect(session.updateAssignment).not.toHaveBeenCalled();
+  });
+});
+
+describe("vehicle dispatch readiness", () => {
+  it("blocks new assignments and identity/window changes while the vehicle is being repaired", async () => {
+    session.vehicleReadiness.check.mockResolvedValue({ available: false, reason: "VEHICLE_UNDER_REPAIR" });
+    expect(await useCase.assignVehicle(assignment)).toEqual(fails("VEHICLE_UNDER_REPAIR"));
+    expect(await useCase.updateAssignment({ ...assignment, assignmentId: 3, fromDateTime: new Date("2026-02-01T08:00:00Z") })).toEqual(fails("VEHICLE_UNDER_REPAIR"));
+    expect(session.createAssignment).not.toHaveBeenCalled(); expect(session.updateAssignment).not.toHaveBeenCalled();
+  });
+  it("allows closing an assignment and editing its note without allocating a repaired vehicle again", async () => {
+    session.vehicleReadiness.check.mockResolvedValue({ available: false, reason: "VEHICLE_UNDER_REPAIR" });
+    expect((await useCase.closeAssignment(3, new Date("2026-07-01T08:00:00Z"), "120")).success).toBe(true);
+    expect((await useCase.updateAssignment({ ...assignment, assignmentId: 3, description: "Note" })).success).toBe(true);
+    expect(session.vehicleReadiness.check).not.toHaveBeenCalled();
   });
 });

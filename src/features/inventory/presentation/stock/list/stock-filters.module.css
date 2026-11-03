@@ -1,0 +1,7 @@
+.field {
+  grid-column: span 4;
+}
+
+.field > div {
+  max-width: none;
+}

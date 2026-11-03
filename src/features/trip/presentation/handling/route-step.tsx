@@ -255,7 +255,15 @@ export function RouteStep({
         description="مسیر و نقاط اختیاری آن تا ثبت نهایی فقط در فرم نگه‌داری می‌شوند."
         size="wide"
       >
-        <form onSubmit={saveRoute} className={styles.routeDraftForm}>
+        <form onSubmit={saveRoute} className={styles.routeDraftForm} onInputCapture={event => {
+          if (!error) return;
+          const form = event.currentTarget;
+          requestAnimationFrame(() => {
+            const data = new FormData(form);
+            const points = pointKeys.map((_, index) => ({ locationId: Number(data.get(`point.${index}.locationId`)) }));
+            setError(String(data.get("routeName") ?? "").trim() ? routePointLocationError(points) : "نام مسیر را وارد کنید.");
+          });
+        }}>
           {error && <InlineNotice tone="danger" role="alert">{error}</InlineNotice>}
 
           <section className={styles.routeBasics}>

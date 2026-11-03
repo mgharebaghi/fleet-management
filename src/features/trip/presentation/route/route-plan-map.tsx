@@ -32,7 +32,6 @@ type RouteLookupEntry =
   | { status: "ok"; route: MapRoute }
   | { status: "unavailable" };
 
-const MAP_LOADING_MESSAGE = "در حال بارگذاری نقشه…";
 const MAP_UNAVAILABLE_MESSAGE =
   "نقشه در دسترس نیست. ثبت مسیر بدون نقشه ادامه دارد.";
 
@@ -178,7 +177,6 @@ export function RoutePlanMap({
               const stop = stops.find((item) => item.id === markerId);
               if (stop) focusStop(stop);
             }}
-            loadingMessage={MAP_LOADING_MESSAGE}
             unavailableMessage={MAP_UNAVAILABLE_MESSAGE}
           />
         </div>

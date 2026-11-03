@@ -168,7 +168,13 @@ export async function changeRequestStatus(repository: TripRepository, tripReques
         planned:
           planned !== null && isValidTripDate(planned) ? planned : null,
       });
+      const readiness = await session.vehicleReadiness.check(await session.requestVehicleIds(tripRequestId));
+      if (!readiness.available) return failure(readiness.reason);
       await session.startTripExecutions(tripRequestId, departure);
+    }
+    if (targetStatus === "Assigned") {
+      const readiness = await session.vehicleReadiness.check(await session.requestVehicleIds(tripRequestId));
+      if (!readiness.available) return failure(readiness.reason);
     }
     if (
       targetStatus === "Completed" &&
@@ -184,7 +190,7 @@ export async function changeRequestStatus(repository: TripRepository, tripReques
       targetStatus as TripRequestStatus,
     );
     return { success: true, id: tripRequestId };
-  });
+  }, targetStatus === "Assigned" || targetStatus === "InProgress" ? { dispatchRequestId: tripRequestId } : undefined);
 }
 
 export async function cancelRequest(repository: TripRepository, tripRequestId: number): Promise<TripResult> {

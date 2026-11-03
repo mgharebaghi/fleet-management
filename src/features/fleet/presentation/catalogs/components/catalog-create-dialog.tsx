@@ -1,6 +1,7 @@
 "use client";
+import { useFleetFormState } from "../../use-fleet-form-state";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { ActionButton } from "../../../../../components/ui/action-button/action-button";
 import { Dialog } from "../../../../../components/ui/dialog/dialog";
@@ -49,7 +50,7 @@ export function CatalogCreateDialog({
   duplicateMessage,
   action,
 }: CatalogCreateDialogProps) {
-  const [actionState, formAction, isPending] = useActionState(
+  const [actionState, formAction, isPending, actionStateInput, actionStateSubmitted] = useFleetFormState(
     action,
     initialCreateCatalogEntryActionState,
   );
@@ -61,11 +62,11 @@ export function CatalogCreateDialog({
       return;
     }
 
-    if (wasPendingRef.current && actionState.status === "idle") {
+    if (wasPendingRef.current && actionStateSubmitted.status === "idle") {
       wasPendingRef.current = false;
       onClose();
     }
-  }, [isPending, actionState, onClose]);
+  }, [isPending, actionStateSubmitted, onClose]);
 
   const fieldErrors = getCreateCatalogEntryFieldErrorMessages(actionState);
   const statusMessage = getCreateCatalogEntryStatusMessage(
@@ -83,7 +84,7 @@ export function CatalogCreateDialog({
       title={`افزودن ${title}`}
     >
       <form
-        action={formAction}
+        action={formAction} onInputCapture={actionStateInput}
         className={styles.form}
         aria-busy={isPending}
         noValidate
@@ -104,7 +105,7 @@ export function CatalogCreateDialog({
           <FieldErrors id={errorId} messages={fieldErrors} />
         </FormField>
 
-        {isPending && <LoadingIndicator label="در حال ثبت…" />}
+        {isPending && <LoadingIndicator />}
         {statusMessage && (
           <InlineNotice tone="danger" role="alert">
             {statusMessage.text}

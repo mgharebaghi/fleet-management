@@ -129,6 +129,7 @@ export function TripCompletionDialog({
     message: string;
     field?: string;
     savedBefore: boolean;
+    dismissed?: boolean;
   } | null>(null);
   const [pending, setPending] = useState(false);
   const [wasOpen, setWasOpen] = useState(open);
@@ -309,13 +310,14 @@ export function TripCompletionDialog({
           </nav>
         )}
 
-        {failure && failure.tripId === currentPassenger?.tripId && (
+        {failure && !failure.dismissed && failure.tripId === currentPassenger?.tripId && (
           <InlineNotice tone="danger" role="alert">
             {failure.savedBefore
               ? `ثبت این مسافر انجام نشد. مسافرانی که پیش از آن ثبت شده‌اند ذخیره شده‌اند. ${failure.message}`
               : failure.message}
           </InlineNotice>
         )}
+        {failure?.dismissed && failure.savedBefore && <InlineNotice tone="info">اطلاعات بعضی مسافران قبلاً ذخیره شده است؛ تغییرات باقی‌مانده را ثبت کنید.</InlineNotice>}
         {currentDirty && (
           <p className={styles.executionHelp}>تغییرات این مسافر هنوز ثبت نشده است.</p>
         )}
@@ -331,17 +333,21 @@ export function TripCompletionDialog({
               embedded
               formRef={formRef}
               invalidField={
-                failure?.tripId === currentPassenger.tripId ? failure.field : null
+                !failure?.dismissed && failure?.tripId === currentPassenger.tripId ? failure.field : null
               }
               externalMessage={
-                failure?.tripId === currentPassenger.tripId ? failure.message : null
+                !failure?.dismissed && failure?.tripId === currentPassenger.tripId ? failure.message : null
               }
-              onDraftChange={(draft) =>
+              onDraftChange={(draft) => {
+                const field = failure?.field as keyof PassengerExecutionDraft | undefined;
+                if (failure?.tripId === currentPassenger.tripId && field && draft[field]?.trim() && draft[field] !== currentDraft?.[field] && !dropoffBeforePickup(draft)) {
+                  setFailure(current => current ? { ...current, dismissed: true } : null);
+                }
                 setDrafts((current) => ({
                   ...current,
                   [currentPassenger.tripId]: draft,
-                }))
-              }
+                }));
+              }}
             />
           ) : (
             <div className={styles.section}>

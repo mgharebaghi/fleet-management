@@ -1,8 +1,9 @@
 "use client";
+import { useTripFormState } from "../use-trip-form-state";
 
 import { RouteAssistedField } from "./route-assisted-field";
 
-import { useActionState, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
 import { IconActionButton, IconActionGroup } from "@/components/ui/icon-action-button/icon-action-button";
@@ -132,7 +133,7 @@ export function TripRouteForm({
   initialState,
 }: TripRouteFormProps) {
   const defaultAction = addTripRouteAction.bind(null, tripRequestId);
-  const [state, formAction, pending] = useActionState<RouteActionState, FormData>(
+  const [state, formAction, pending, stateInput] = useTripFormState<RouteActionState>(
     action ?? defaultAction,
     initialState ?? {},
   );
@@ -373,7 +374,16 @@ export function TripRouteForm({
   return (
     <form
       ref={formRef}
-      action={formAction}
+      action={formAction} onInputCapture={event => {
+        stateInput(event);
+        if (!clientError) return;
+        requestAnimationFrame(() => {
+          const current = readFormValues();
+          const identityError = validateRouteStep1(current);
+          const missingPoint = pointIds.findIndex((_, index) => !current[`point.${index}.locationId`]?.trim());
+          setClientError(identityError ?? (missingPoint >= 0 ? `لطفاً مکان را برای نقطه ${missingPoint + 1} انتخاب کنید.` : null));
+        });
+      }}
       onSubmit={handleSubmit}
       aria-label={
         value("routeId") ? "ویرایش مسیر برنامه‌ریزی‌شده" : "ثبت مسیر برنامه‌ریزی‌شده"

@@ -40,6 +40,7 @@ export type VehicleSummary = {
 };
 
 export type VehicleDetail = NewVehicle & {
+  hasMeterHistory: boolean;
   vehicleId: number;
   isActive: boolean;
   createdAt: Date;

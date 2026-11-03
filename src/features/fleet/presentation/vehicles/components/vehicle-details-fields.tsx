@@ -1,7 +1,7 @@
 "use client";
 import { PlatePartInput, platePartNames } from "./vehicle-plate-input";
 import { JalaliDatePicker } from "../../../../../components/ui/date-picker/jalali-date-picker";
-import { FieldLabel, formControlClassName } from "../../../../../components/ui/form-field/form-field";
+import { FieldHint, FieldLabel, formControlClassName } from "../../../../../components/ui/form-field/form-field";
 import { FormGrid } from "../../../../../components/ui/form-grid/form-grid";
 import { MoneyInput } from "../../../../../components/ui/money-input/money-input";
 import type { NewVehicle } from "../../../application/vehicles/vehicle";
@@ -12,13 +12,14 @@ import styles from "./vehicle-form.module.css";
 
 type VehicleFieldErrors = Partial<Record<keyof NewVehicle, string>>;
 
-export function VehicleDetailsFields({ valueOf, errors, modelOptions, statusOptions, today, isPending }: {
+export function VehicleDetailsFields({ valueOf, errors, modelOptions, statusOptions, today, isPending, metersReadOnly = false }: {
   valueOf: (name: keyof VehicleFormValues) => string;
   errors: VehicleFieldErrors;
   modelOptions: ReturnType<typeof buildModelOptions>;
   statusOptions: ReturnType<typeof buildStatusOptions>;
   today: string;
   isPending: boolean;
+  metersReadOnly?: boolean;
 }) {
   return (
     <>
@@ -209,6 +210,7 @@ export function VehicleDetailsFields({ valueOf, errors, modelOptions, statusOpti
 
           <VehicleTextField
             name="currentOdometer"
+            readOnly={metersReadOnly}
             label={vehicleLabels.currentOdometer}
             span={3}
             defaultValue={valueOf("currentOdometer")}
@@ -218,6 +220,7 @@ export function VehicleDetailsFields({ valueOf, errors, modelOptions, statusOpti
 
           <VehicleTextField
             name="currentEngineHour"
+            readOnly={metersReadOnly}
             label={vehicleLabels.currentEngineHour}
             span={3}
             defaultValue={valueOf("currentEngineHour")}
@@ -225,6 +228,7 @@ export function VehicleDetailsFields({ valueOf, errors, modelOptions, statusOpti
             inputMode="decimal"
           />
         </FormGrid>
+        {metersReadOnly && <FieldHint>کارکرد از تب «کارکرد خودرو» ثبت می‌شود؛ مقادیر فعلی اینجا فقط خواندنی هستند.</FieldHint>}
       </fieldset>
     </>
   );

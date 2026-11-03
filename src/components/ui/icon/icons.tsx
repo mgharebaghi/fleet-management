@@ -84,6 +84,10 @@ export function CheckIcon(props: IconProps) {
   );
 }
 
+export function CancelIcon(props: IconProps) {
+  return <Icon {...props}><circle cx="12" cy="12" r="8.5" /><path d="m9 9 6 6m0-6-6 6" /></Icon>;
+}
+
 export function MoveUpIcon(props: IconProps) {
   return (
     <Icon {...props}>

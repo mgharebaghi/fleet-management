@@ -32,16 +32,9 @@
   border-bottom: 1px solid rgb(255 255 255 / 8%);
 }
 
-.sidebarTitle {
-  padding: 17px 23px 5px;
-  color: var(--app-sidebar-muted);
-  font-size: 11px;
-  font-weight: 700;
-}
-
 .sidebarNav {
   min-width: 0;
-  padding: 0 10px 20px;
+  padding: 12px 10px 20px;
 }
 
 .navList {
@@ -120,6 +113,11 @@ button.navLink {
   color: #fff;
 }
 
+.navLink[aria-expanded="true"] {
+  background: rgb(255 255 255 / 5%);
+  color: #fff;
+}
+
 .navChevron {
   display: inline-flex;
   margin-inline-start: auto;
@@ -159,11 +157,17 @@ button.navLink {
 .navSubPanel {
   display: grid;
   grid-template-rows: 0fr;
+  margin-inline-start: 12px;
+  border-inline-start: 1px solid transparent;
+  border-radius: 8px;
   transition: grid-template-rows 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .navSubPanel[data-open="true"] {
   grid-template-rows: 1fr;
+  margin-block: 4px 10px;
+  border-inline-start-color: rgb(255 255 255 / 18%);
+  background: rgb(255 255 255 / 2%);
 }
 
 .navSubList {
@@ -171,7 +175,7 @@ button.navLink {
   flex-direction: column;
   min-height: 0;
   margin: 0;
-  padding-inline-start: 21px;
+  padding-inline-start: 6px;
   overflow: hidden;
   list-style: none;
   opacity: 0;
@@ -180,6 +184,7 @@ button.navLink {
 
 .navSubPanel[data-open="true"] .navSubList {
   opacity: 1;
+  padding-block: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -284,6 +289,11 @@ button.navLink {
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+/* Keep one visible loading surface, including when loading.tsx also mounts. */
+.content:has(> [data-route-navigation-loading]) > :not([data-route-navigation-loading]) {
+  visibility: hidden;
 }
 
 .mobileToggle {

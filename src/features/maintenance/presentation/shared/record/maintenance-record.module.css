@@ -1,0 +1,4 @@
+.sections { display: grid; gap: var(--space-5); min-width: 0; }
+.summaryField { grid-column: span 4; min-width: 0; overflow-wrap: anywhere; }
+.summaryField p { margin: 0; }
+.text { white-space: pre-wrap; overflow-wrap: anywhere; }

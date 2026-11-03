@@ -3,13 +3,21 @@ import type { ReactNode } from "react";
 import { FieldLabel, formControlClassName } from "../form-field/form-field";
 import { LoadingIndicator } from "../loading-indicator/loading-indicator";
 import styles from "./list-filter-bar.module.css";
+import { ActionLink } from "../action-link/action-link";
+/** Compact desktop filter row; feature-owned FormGrid spans apply on mobile. */
+export const listFilterGridClassName = styles.grid;
 
 type ListFilterBarProps = {
   children: ReactNode;
-  /** A filter navigation is in flight; shows a compact shared indicator below the bar. */
+  /** A filter navigation is in flight; centres feedback in the results region. */
   pending?: boolean;
-  pendingLabel?: string;
+  clear: { visible: boolean; href: string; onNavigate: () => void };
 };
+
+/** Shared sizing for composite filters such as searchable selects and dates. */
+export function ListFilterField({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={[styles.selectField, className].filter(Boolean).join(" ")}>{children}</div>;
+}
 
 /**
  * Rendered as a sibling of `.bar`, not inside it — `.bar` relies on
@@ -19,14 +27,14 @@ type ListFilterBarProps = {
 export function ListFilterBar({
   children,
   pending = false,
-  pendingLabel = "در حال به‌روزرسانی نتایج…",
+  clear,
 }: ListFilterBarProps) {
   return (
     <>
-      <div className={styles.bar}>{children}</div>
+      <div className={styles.bar}>{children}{clear.visible && <ActionLink href={clear.href} variant="quiet" onNavigate={clear.onNavigate}>پاک کردن فیلترها</ActionLink>}</div>
       {pending && (
         <div className={styles.pendingRow}>
-          <LoadingIndicator label={pendingLabel} />
+          <LoadingIndicator scope="results" />
         </div>
       )}
     </>

@@ -24,7 +24,6 @@ import {
 } from "./location-map-selection";
 import styles from "./location-map-select-dialog.module.css";
 
-const MAP_LOADING_MESSAGE = "در حال بارگذاری نقشه…";
 const MAP_UNAVAILABLE_MESSAGE =
   "نقشه موقتاً در دسترس نیست؛ می‌توانید مکان را از فهرست انتخاب کنید.";
 
@@ -124,7 +123,6 @@ export function LocationMapSelectDialog({
             markers={savedLocationMarkers(choices, selectedId)}
             focus={focus}
             onMarkerSelect={choose}
-            loadingMessage={MAP_LOADING_MESSAGE}
             unavailableMessage={MAP_UNAVAILABLE_MESSAGE}
           />
         </section>

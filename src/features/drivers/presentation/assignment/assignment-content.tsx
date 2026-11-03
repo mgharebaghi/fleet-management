@@ -34,7 +34,7 @@ export function AssignmentContent({ assignment: a, now, state, vehicles, current
           <DriverForm kind="close" driverId={a.driverId} assignmentId={a.assignmentId} />
         </DriverFormDialog>}
         {editable && <IconActionGroup>
-          <DriverFormDialog iconTrigger triggerLabel={`ویرایش تخصیص ${a.vehicle.vehicleCode}`} dialogTitle="ویرایش تخصیص خودرو" titleId={`edit-assignment-${a.assignmentId}-title`} size="list">
+          <DriverFormDialog key={JSON.stringify(initialValues)} iconTrigger triggerLabel={`ویرایش تخصیص ${a.vehicle.vehicleCode}`} dialogTitle="ویرایش تخصیص خودرو" titleId={`edit-assignment-${a.assignmentId}-title`} size="list">
             <DriverForm kind="editAssignment" driverId={a.driverId} assignmentId={a.assignmentId} vehicles={vehicles} currentAssignments={currentAssignments} initialValues={initialValues} />
           </DriverFormDialog>
           <DeleteAssignmentButton driverId={a.driverId} assignmentId={a.assignmentId} vehicleLabel={`${a.vehicle.brandName} ${a.vehicle.modelName} — ${a.vehicle.vehicleCode}`} />

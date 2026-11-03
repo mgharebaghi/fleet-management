@@ -10,6 +10,33 @@ import {
 } from "./admin-nav-items";
 
 describe("ADMIN_NAV_SECTIONS labels", () => {
+  it("orders daily operations before supporting records in the shared navigation", () => {
+    expect(ADMIN_NAV_SECTIONS.map(section => section.label)).toEqual([
+      "سفرها", "ناوگان", "رانندگان", "تعمیرات و نگهداری", "قطعات و انبار", "افراد",
+    ]);
+    expect(ADMIN_NAV_SECTIONS[0].children?.map(child => child.href)).toEqual([
+      "/trips/requests", "/trips/create",
+    ]);
+  });
+  it("links completed maintenance reference routes and their record navigation", () => {
+    const maintenance = ADMIN_NAV_SECTIONS.find(section => section.label === "تعمیرات و نگهداری")!;
+    expect(maintenance.children?.map(child => child.label)).toEqual(["درخواست‌های تعمیر", "پرونده‌های تعمیر/سرویس", "برنامه‌های سرویس", "تعمیرگاه‌ها", "تعمیرکاران", "اطلاعات پایه"]);
+    expect(findAdminNavTrail("/maintenance/work-orders/1/edit")).toEqual(["تعمیرات و نگهداری", "پرونده‌های تعمیر/سرویس"]);
+    expect(findAdminNavTrail("/maintenance/workshops/1/edit")).toEqual(["تعمیرات و نگهداری", "تعمیرگاه‌ها"]);
+    expect(findAdminNavTrail("/maintenance/technicians/2")).toEqual(["تعمیرات و نگهداری", "تعمیرکاران"]);
+    expect(findAdminNavTrail("/maintenance/requests/3/edit")).toEqual(["تعمیرات و نگهداری", "درخواست‌های تعمیر"]);
+    expect(findAdminNavTrail("/maintenance/catalogs/create")).toEqual(["تعمیرات و نگهداری", "اطلاعات پایه"]);
+  });
+  it("exposes only the completed inventory routes with Persian labels", () => {
+    const inventory = ADMIN_NAV_SECTIONS.find(section => section.label === "قطعات و انبار")!;
+    expect(inventory.children?.map(child => [child.label, child.href])).toEqual([
+      ["موجودی انبار", "/inventory/stock"], ["گردش انبار", "/inventory/movements"],
+      ["قطعات", "/inventory/parts"],
+      ["انبارها", "/inventory/warehouses"], ["اطلاعات پایه", "/inventory/catalogs"],
+    ]);
+    expect(findAdminNavTrail("/inventory/warehouses/7/edit")).toEqual(["قطعات و انبار", "انبارها"]);
+    expect(findAdminNavTrail("/inventory/catalogs")).toEqual(["قطعات و انبار", "اطلاعات پایه"]);
+  });
   const fleetSection = ADMIN_NAV_SECTIONS.find(
     (section) => section.label === "ناوگان",
   )!;

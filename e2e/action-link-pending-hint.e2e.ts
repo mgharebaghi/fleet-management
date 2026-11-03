@@ -35,12 +35,12 @@ function gateNextNavigation() {
  * "پاک کردن" (clear filters) link, which every listing in scope shares with
  * pagination through the same `ActionLink` component.
  */
-test("shows a pending hint on a same-route ActionLink while its navigation is held, and hides it once released", async ({
+test("centres same-route ActionLink loading in the results panel while navigation is held", async ({
   page,
 }) => {
   await page.goto("/people?search=E2E-ACTIONLINK-HINT");
 
-  const clearLink = page.getByRole("link", { name: "پاک کردن", exact: true });
+  const clearLink = page.getByRole("link", { name: "پاک کردن فیلترها", exact: true });
   await expect(clearLink).toBeVisible();
   const hint = clearLink.locator('span[aria-hidden="true"]');
   await expect(hint).toHaveCSS("visibility", "hidden");
@@ -61,7 +61,12 @@ test("shows a pending hint on a same-route ActionLink while its navigation is he
   await clearLink.click();
 
   await gate.reached;
-  await expect(hint).toHaveCSS("visibility", "visible", { timeout: 10_000 });
+  await expect(page.locator("[data-scoped-loading]")).toBeVisible();
+  await expect(hint).toHaveCSS("visibility", "hidden");
+  const overlay = await page.locator("[data-scoped-loading]").boundingBox();
+  const status = await page.getByRole("status").boundingBox();
+  expect(overlay && status).toBeTruthy();
+  expect(Math.abs(overlay!.y + overlay!.height / 2 - status!.y - status!.height / 2)).toBeLessThan(2);
 
   gate.release();
 

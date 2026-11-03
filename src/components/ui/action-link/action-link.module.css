@@ -4,6 +4,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
   border-radius: var(--app-radius-control);
   font-weight: 700;
   transition:
@@ -86,11 +87,19 @@
   }
 }
 
-/* Reserves its own space so appearing/disappearing never shifts the link's
-   layout, and only fades in after a short delay so an instant navigation
-   never flashes it. */
+/* Match the hint's reserved space on the other side to centre the label. */
+.primary::before,
+.secondary::before,
+.quiet::before {
+  content: "";
+  flex: 0 0 10px;
+  margin-inline-end: var(--space-2);
+}
+
+/* Keep the hint's space reserved while hidden to avoid layout shifts. */
 .pendingHint {
   display: inline-block;
+  flex: 0 0 auto;
   width: 10px;
   height: 10px;
   margin-inline-start: var(--space-2);

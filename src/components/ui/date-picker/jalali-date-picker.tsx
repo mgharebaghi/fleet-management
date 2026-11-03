@@ -106,6 +106,7 @@ export function JalaliDatePicker({
       return;
     }
     hiddenDateRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
+    hiddenDateRef.current?.dispatchEvent(new Event("input", { bubbles: true }));
   }, [selectedDate]);
 
   useLayoutEffect(() => {

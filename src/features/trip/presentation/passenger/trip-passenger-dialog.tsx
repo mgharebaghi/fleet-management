@@ -1,6 +1,7 @@
 "use client";
+import { useTripFormState } from "../use-trip-form-state";
 
-import { useActionState, useEffect, useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog/confirm-dialog";
@@ -48,7 +49,7 @@ function TripPassengerForm({
       ? updateTripPassengerAction.bind(null, tripRequestId, passenger.tripId)
       : addTripPassengerAction.bind(null, tripRequestId);
 
-  const [state, formAction, pending] = useActionState(action, {});
+  const [state, formAction, pending, stateInput] = useTripFormState(action, {});
   const prefix = useId();
 
   const pickup = passenger
@@ -95,7 +96,7 @@ function TripPassengerForm({
 
   return (
     <form
-      action={formAction}
+      action={formAction} onInputCapture={stateInput}
       noValidate
       className={styles.workspaceForm}
       aria-busy={pending}
@@ -261,7 +262,7 @@ export function DeletePassengerButton({
   const [open, setOpen] = useState(false);
   const prefix = useId();
   const titleId = `${prefix}-delete-passenger-title`;
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending, stateInput] = useTripFormState(
     deleteTripPassengerAction.bind(null, tripRequestId, trip.tripId),
     {},
   );
@@ -303,7 +304,7 @@ export function DeletePassengerButton({
         message="آیا از حذف این مسافر از درخواست سفر اطمینان دارید؟ با حذف مسافر، مسیرها و برنامه‌های مرتبط با وی نیز حذف خواهند شد."
         tone="danger"
       >
-        <form action={formAction} aria-busy={pending} noValidate>
+        <form action={formAction} onInputCapture={stateInput} aria-busy={pending} noValidate>
           {state.error && (
             <InlineNotice tone="danger" role="alert">
               {tripMessages[state.error as keyof typeof tripMessages] ??

@@ -31,7 +31,25 @@ export type AdminNavSection = {
  * entry once it exists, not before.
  */
 export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
-  { label: "افراد", href: "/people", icon: "people" },
+  {
+    label: "سفرها",
+    href: "/trips",
+    icon: "trips",
+    children: [
+      {
+        label: "فهرست درخواست‌ها",
+        href: "/trips/requests",
+        icon: "catalog",
+        includesTripFiles: true,
+      },
+      {
+        label: "ثبت درخواست سفر",
+        href: "/trips/create",
+        icon: "create",
+        action: true,
+      },
+    ],
+  },
   {
     label: "ناوگان",
     href: "/fleet/vehicles",
@@ -48,24 +66,31 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
   },
   { label: "رانندگان", href: "/drivers", icon: "drivers" },
   {
-    label: "سفرها",
-    href: "/trips",
-    icon: "trips",
+    label: "تعمیرات و نگهداری",
+    href: "/maintenance/requests",
+    icon: "catalog",
     children: [
-      {
-        label: "ثبت درخواست سفر",
-        href: "/trips/create",
-        icon: "create",
-        action: true,
-      },
-      {
-        label: "فهرست درخواست‌ها",
-        href: "/trips/requests",
-        icon: "catalog",
-        includesTripFiles: true,
-      },
+      { label: "درخواست‌های تعمیر", href: "/maintenance/requests", icon: "catalog" },
+      { label: "پرونده‌های تعمیر/سرویس", href: "/maintenance/work-orders", icon: "catalog" },
+      { label: "برنامه‌های سرویس", href: "/maintenance/plans", icon: "catalog" },
+      { label: "تعمیرگاه‌ها", href: "/maintenance/workshops", icon: "catalog" },
+      { label: "تعمیرکاران", href: "/maintenance/technicians", icon: "people" },
+      { label: "اطلاعات پایه", href: "/maintenance/catalogs", icon: "catalog" },
     ],
   },
+  {
+    label: "قطعات و انبار",
+    href: "/inventory/warehouses",
+    icon: "catalog",
+    children: [
+      { label: "موجودی انبار", href: "/inventory/stock", icon: "catalog" },
+      { label: "گردش انبار", href: "/inventory/movements", icon: "catalog" },
+      { label: "قطعات", href: "/inventory/parts", icon: "catalog" },
+      { label: "انبارها", href: "/inventory/warehouses", icon: "catalog" },
+      { label: "اطلاعات پایه", href: "/inventory/catalogs", icon: "catalog" },
+    ],
+  },
+  { label: "افراد", href: "/people", icon: "people" },
 ];
 
 /** A section/link counts as active for itself and everything nested under it. */

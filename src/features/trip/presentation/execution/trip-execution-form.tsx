@@ -1,6 +1,7 @@
 "use client";
+import { useTripFormState } from "../use-trip-form-state";
 
-import { useActionState, useEffect, useId, useState, type FormEvent, type Ref } from "react";
+import { useEffect, useId, useState, type FormEvent, type Ref } from "react";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog/confirm-dialog";
@@ -84,7 +85,7 @@ export function TripExecutionForm({
     trip.tripId,
     execution.tripExecutionId,
   );
-  const [state, formAction, pending] = useActionState(action, {});
+  const [state, formAction, pending, stateInput] = useTripFormState(action, {});
   const prefix = useId();
   const [cancelOpen, setCancelOpen] = useState(false);
   const pickup = tehranDateTimeInputs(execution.actualPickupDateTime);
@@ -371,7 +372,7 @@ export function TripExecutionForm({
         recordName={`${trip.passenger.firstName} ${trip.passenger.lastName}`}
         message="فقط برنامهٔ شروع‌نشده لغو می‌شود. پس از آن می‌توان تخصیص جدیدی ثبت کرد."
       >
-        <form action={formAction}>
+        <form action={formAction} onInputCapture={stateInput}>
           <input
             type="hidden"
             name="assignmentId"

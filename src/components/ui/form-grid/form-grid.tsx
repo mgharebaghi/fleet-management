@@ -8,12 +8,13 @@ type FormGridProps = {
    * fields business-driven widths through its own span classes.
    */
   columns?: 2 | 12;
+  className?: string;
   children: ReactNode;
 };
 
-export function FormGrid({ columns = 2, children }: FormGridProps) {
+export function FormGrid({ columns = 2, children, className }: FormGridProps) {
   return (
-    <div className={styles.grid} data-columns={columns}>
+    <div className={[styles.grid, className].filter(Boolean).join(" ")} data-columns={columns}>
       {children}
     </div>
   );

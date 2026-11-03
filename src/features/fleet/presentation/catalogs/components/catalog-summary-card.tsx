@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { ActionButton } from "../../../../../components/ui/action-button/action-button";
 import { InlineNotice } from "../../../../../components/ui/inline-notice/inline-notice";
+import { CatalogPanel } from "../../../../../components/ui/catalog-panel/catalog-panel";
 import { CatalogCreateDialog } from "./catalog-create-dialog";
 import { CatalogDeleteDialog } from "./catalog-delete-dialog";
 import { CatalogEditDialog } from "./catalog-edit-dialog";
@@ -12,9 +13,6 @@ import type { CatalogEntryView } from "./catalog-entry-view";
 import type { CreateCatalogEntryActionState } from "../create-catalog-entry/create-catalog-entry.action-state";
 import type { DeleteCatalogEntryActionState } from "../delete-catalog-entry/delete-catalog-entry.action-state";
 import type { UpdateCatalogEntryActionState } from "../update-catalog-entry/update-catalog-entry.action-state";
-import styles from "./catalog-summary-card.module.css";
-
-const persianNumberFormatter = new Intl.NumberFormat("fa-IR");
 
 type CreateCatalogEntryAction = (
   previousState: CreateCatalogEntryActionState,
@@ -87,47 +85,19 @@ export function CatalogSummaryCard({
   }
 
   return (
-    <section className={styles.card} aria-labelledby={titleId}>
-      <header className={styles.header}>
-        <h2 id={titleId}>{title}</h2>
-        {description && <p>{description}</p>}
-      </header>
-
+    <CatalogPanel titleId={titleId} title={title} description={description}
+      count={hasLoadError ? undefined : totalCount} inactiveCount={inactiveCount}
+      actions={hasLoadError ? undefined : <>
+        <ActionButton size="sm" onClick={() => setOpenDialog({ type: "create" })}>+ افزودن</ActionButton>
+        {totalCount > 0 && <ActionButton variant="secondary" size="sm" onClick={() => setOpenDialog({ type: "list" })}>مشاهده همه</ActionButton>}
+      </>}
+    >
       {hasLoadError ? (
         <InlineNotice tone="danger" role="alert">
           دریافت فهرست امکان‌پذیر نبود. لطفاً دوباره تلاش کنید.
         </InlineNotice>
       ) : (
         <>
-          <div className={styles.counts}>
-            <p className={styles.count}>
-              {persianNumberFormatter.format(totalCount)} مورد ثبت‌شده
-            </p>
-            {inactiveCount > 0 && (
-              <p className={styles.inactiveCount}>
-                {persianNumberFormatter.format(inactiveCount)} مورد غیرفعال
-              </p>
-            )}
-          </div>
-
-          <div className={styles.actions}>
-            <ActionButton
-              size="sm"
-              onClick={() => setOpenDialog({ type: "create" })}
-            >
-              + افزودن
-            </ActionButton>
-            {totalCount > 0 && (
-              <ActionButton
-                variant="secondary"
-                size="sm"
-                onClick={() => setOpenDialog({ type: "list" })}
-              >
-                مشاهده همه
-              </ActionButton>
-            )}
-          </div>
-
           <CatalogCreateDialog
             open={openDialog.type === "create"}
             onClose={closeDialog}
@@ -180,6 +150,6 @@ export function CatalogSummaryCard({
           )}
         </>
       )}
-    </section>
+    </CatalogPanel>
   );
 }

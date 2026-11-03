@@ -1,4 +1,8 @@
 "use client";
+import { dataTableClassName } from "../../../../components/ui/data-table/data-table";
+
+import { RecordDetailsButton } from "../../../../components/ui/record-details-button/record-details-button";
+
 
 import { useMemo, useState, useTransition } from "react";
 
@@ -214,14 +218,14 @@ export function TripRequestHandlingPage({
                   </span>
                 </div>
                 <div className={styles.reviewPassengerTableWrapper}>
-                  <table className={styles.reviewTable}>
+                  <table className={dataTableClassName + " " + styles.reviewTable}>
                     <thead>
                       <tr>
                         <th>مسافر</th>
                         <th>شماره پرسنلی</th>
                         <th>مبدأ و مقصد</th>
                         <th>زمان سوارشدن</th>
-                        <th>توضیحات</th>
+                        <th>عملیات</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -251,7 +255,7 @@ export function TripRequestHandlingPage({
                             <td data-label="زمان سوارشدن">
                               {formatTripDateTime(pickupDate)}
                             </td>
-                            <td data-label="توضیحات">{p.description ?? "—"}</td>
+                            <td data-label="عملیات"><RecordDetailsButton title="مسافر" fields={[["مسافر", p.passenger.firstName + " " + p.passenger.lastName]]} description={p.description} /></td>
                           </tr>
                         );
                       })}
@@ -281,6 +285,7 @@ export function TripRequestHandlingPage({
             selectedAssignments={selectedAssignments}
             activePassengerCountsByVehicle={activePassengerCountsByVehicle}
             onSelectionChange={(passengerKey, assignmentId) => {
+              if (!allAssigned && wizardPassengers.every(item => item.key === passengerKey ? assignmentId : selectedAssignments[item.key])) setSubmissionError(null);
               setSelectedAssignments((prev) => ({
                 ...prev,
                 [passengerKey]: assignmentId,

@@ -1,6 +1,7 @@
 "use client";
+import { useDriversFormState } from "./use-drivers-form-state";
 
-import { useActionState, useId } from "react";
+import { useId } from "react";
 import { ActionButton } from "../../../components/ui/action-button/action-button";
 import { FormField, FieldLabel, FieldHint, FieldErrors, FormActions, FormSection, formControlClassName } from "../../../components/ui/form-field/form-field";
 import { FormGrid } from "../../../components/ui/form-grid/form-grid";
@@ -23,7 +24,7 @@ const titles = { driver: "تعریف راننده", license: "ثبت گواهی�
 
 export function DriverForm(props: Props) {
   const action = props.kind === "driver" ? defineDriverAction : props.kind === "license" ? addLicenseAction.bind(null, props.driverId) : props.kind === "editLicense" ? updateLicenseAction.bind(null, props.driverId, props.licenseId) : props.kind === "assignment" ? assignVehicleAction.bind(null, props.driverId) : props.kind === "editAssignment" ? updateAssignmentAction.bind(null, props.driverId, props.assignmentId) : closeAssignmentAction.bind(null, props.driverId, props.assignmentId);
-  const [state, formAction, pending] = useActionState(action, {});
+  const [state, formAction, pending, stateInput] = useDriversFormState(action, {});
   const prefix = useId();
   const value = (name: string) => state.values?.[name] ?? ("initialValues" in props ? props.initialValues[name] : undefined) ?? "";
   const licenseKind = props.kind === "license" || props.kind === "editLicense";
@@ -34,13 +35,13 @@ export function DriverForm(props: Props) {
   // Vehicles use the same option shape as Create VehicleInsurance, so the
   // brand/model line, formatted plate and disambiguating code stay identical
   // wherever a vehicle is picked.
-  const vehicleError = state.error === "VEHICLE_CURRENTLY_ASSIGNED" || state.error === "VEHICLE_INACTIVE" || state.error === "VEHICLE_NOT_FOUND" ? driverMessages[state.error] : null;
+  const vehicleError = state.error === "VEHICLE_UNDER_REPAIR" || state.error === "VEHICLE_REPAIR_STATE_UNKNOWN" || state.error === "VEHICLE_DISPATCH_CHANGED" || state.error === "VEHICLE_CURRENTLY_ASSIGNED" || state.error === "VEHICLE_INACTIVE" || state.error === "VEHICLE_NOT_FOUND" ? driverMessages[state.error] : null;
   const vehicleHintId = `${prefix}-vehicle-hint`;
   const vehicleErrorId = `${prefix}-vehicle-error`;
   const options = props.kind === "driver" ? props.people.map(p => ({ value: String(p.personId), label: `${p.firstName} ${p.lastName} ${p.personnelNo ?? ""} ${p.nationalCode ?? ""}`, searchText: `${p.firstName} ${p.lastName} ${p.personnelNo ?? ""} ${p.nationalCode ?? ""}`, content: <span>{p.firstName} {p.lastName} — <TechnicalValue>{p.personnelNo ?? p.nationalCode ?? String(p.personId)}</TechnicalValue></span> })) : assignmentKind ? buildAssignmentVehicleOptions(props.vehicles, props.currentAssignments, props.kind === "editAssignment" ? props.assignmentId : undefined) : [];
   const selectable = options.some(option => !("disabled" in option && option.disabled));
 
-  return <form action={formAction} noValidate aria-busy={pending} aria-label={titles[props.kind]} aria-describedby={state.error ? `${prefix}-error` : undefined} className={styles.form}>
+  return <form action={formAction} onInputCapture={stateInput} noValidate aria-busy={pending} aria-label={titles[props.kind]} aria-describedby={state.error ? `${prefix}-error` : undefined} className={styles.form}>
     {state.error && <div id={`${prefix}-error`}><InlineNotice tone="danger" role="alert">{driverMessages[state.error]}</InlineNotice></div>}
     <FormSection title={titles[props.kind]}>
     <FormGrid>
@@ -55,7 +56,7 @@ export function DriverForm(props: Props) {
         {assignmentKind && vehicleError && <FieldErrors id={vehicleErrorId} messages={[vehicleError]} />}
       </FormField>}
       {textFields.map(name => <FormField key={name}><FieldLabel htmlFor={`${prefix}-${name}`} required={name === "licenseType" || name === "licenseNo"}>{labels[name]}</FieldLabel>
-        <input id={`${prefix}-${name}`} name={name} className={formControlClassName} type="text" dir={name === "description" || name === "licenseType" ? "rtl" : "ltr"} inputMode={name.includes("Odometer") ? "decimal" : undefined} defaultValue={value(name)} disabled={pending} />
+        <input id={`${prefix}-${name}`} name={name} required={name === "licenseType" || name === "licenseNo"} className={formControlClassName} type="text" dir={name === "description" || name === "licenseType" ? "rtl" : "ltr"} inputMode={name.includes("Odometer") ? "decimal" : undefined} defaultValue={value(name)} disabled={pending} />
       </FormField>)}
       {/* Dates without a clock are ordinary fields and share the grid. */}
       {dayFields.length === 0 && dateFields.map(name => <FormField key={name}>

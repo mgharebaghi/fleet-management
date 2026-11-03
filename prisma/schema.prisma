@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "sqlserver"
-  schemas  = ["common", "driver", "fleet", "person", "trip"]
+  schemas  = ["common", "driver", "fleet", "inventory", "maintenance", "person", "trip"]
 }
 
 model Accident {
@@ -94,11 +94,14 @@ model Vehicle {
   CurrentEngineHour       Decimal?                  @db.Decimal(18, 2)
   IsActive                Boolean                   @default(true, map: "DF_Vehicle_IsActive")
   CreatedAt               DateTime                  @default(dbgenerated("sysdatetime()"), map: "DF_Vehicle_CreatedAt")
+  MaintenancePlan         MaintenancePlan[]
+  MaintenanceRequest      MaintenanceRequest[]
   VehicleModel            VehicleModel              @relation(fields: [ModelId], references: [ModelId], onUpdate: NoAction, map: "FK_Vehicle_VehicleModel")
   VehicleStatus           VehicleStatus             @relation(fields: [VehicleStatusId], references: [VehicleStatusId], onUpdate: NoAction, map: "FK_Vehicle_VehicleStatus")
   VehicleDriverAssignment VehicleDriverAssignment[]
   VehicleInsurance        VehicleInsurance[]
   VehicleMeterReading     VehicleMeterReading[]
+  WorkOrder               WorkOrder[]
 
   @@schema("fleet")
 }
@@ -159,16 +162,17 @@ model VehicleMeterReading {
 }
 
 model VehicleModel {
-  ModelId       Int          @id(map: "PK_VehicleModel") @default(autoincrement())
-  BrandId       Int
-  VehicleTypeId Int?
-  ModelName     String       @db.NVarChar(100)
-  FuelTypeId    Int?
-  IsActive      Boolean      @default(true, map: "DF_VehicleModel_IsActive")
-  Vehicle       Vehicle[]
-  FuelType      FuelType?    @relation(fields: [FuelTypeId], references: [FuelTypeId], onDelete: NoAction, onUpdate: NoAction, map: "FK_VehicleModel_FuelType")
-  VehicleBrand  VehicleBrand @relation(fields: [BrandId], references: [BrandId], onUpdate: NoAction, map: "FK_VehicleModel_VehicleBrand")
-  VehicleType   VehicleType? @relation(fields: [VehicleTypeId], references: [VehicleTypeId], onDelete: NoAction, onUpdate: NoAction, map: "FK_VehicleModel_VehicleType")
+  ModelId                  Int                        @id(map: "PK_VehicleModel") @default(autoincrement())
+  BrandId                  Int
+  VehicleTypeId            Int?
+  ModelName                String                     @db.NVarChar(100)
+  FuelTypeId               Int?
+  IsActive                 Boolean                    @default(true, map: "DF_VehicleModel_IsActive")
+  PartVehicleCompatibility PartVehicleCompatibility[]
+  Vehicle                  Vehicle[]
+  FuelType                 FuelType?                  @relation(fields: [FuelTypeId], references: [FuelTypeId], onDelete: NoAction, onUpdate: NoAction, map: "FK_VehicleModel_FuelType")
+  VehicleBrand             VehicleBrand               @relation(fields: [BrandId], references: [BrandId], onUpdate: NoAction, map: "FK_VehicleModel_VehicleBrand")
+  VehicleType              VehicleType?               @relation(fields: [VehicleTypeId], references: [VehicleTypeId], onDelete: NoAction, onUpdate: NoAction, map: "FK_VehicleModel_VehicleType")
 
   @@schema("fleet")
 }
@@ -343,4 +347,232 @@ model VehicleTrip {
   Description        String?
 
   @@schema("trip")
+}
+
+model MaintenancePlan {
+  MaintenancePlanId     Int             @id(map: "PK_MaintenancePlan") @default(autoincrement())
+  VehicleId             Int
+  MaintenanceTypeId     Int             @db.TinyInt
+  PlanTitle             String          @db.NVarChar(200)
+  Description           String?
+  IntervalKm            Decimal?        @db.Decimal(18, 2)
+  IntervalDays          Int?
+  IntervalEngineHours   Decimal?        @db.Decimal(18, 2)
+  WarningKm             Decimal?        @db.Decimal(18, 2)
+  WarningDays           Int?
+  WarningEngineHours    Decimal?        @db.Decimal(18, 2)
+  LastServiceOdometer   Decimal?        @db.Decimal(18, 2)
+  LastServiceDate       DateTime?       @db.Date
+  LastServiceEngineHour Decimal?        @db.Decimal(18, 2)
+  IsActive              Boolean         @default(true, map: "DF_MaintenancePlan_IsActive")
+  CreatedAt             DateTime        @default(dbgenerated("sysdatetime()"), map: "DF_MaintenancePlan_CreatedAt")
+  MaintenanceType       MaintenanceType @relation(fields: [MaintenanceTypeId], references: [MaintenanceTypeId], onUpdate: NoAction, map: "FK_MaintenancePlan_MaintenanceType")
+  Vehicle               Vehicle         @relation(fields: [VehicleId], references: [VehicleId], onUpdate: NoAction, map: "FK_MaintenancePlan_Vehicle")
+  WorkOrder             WorkOrder[]
+
+  @@schema("maintenance")
+}
+
+model MaintenanceRequest {
+  MaintenanceRequestId Int             @id(map: "PK__Maintena__ADBE63E4BB54124C") @default(autoincrement())
+  VehicleId            Int
+  MaintenanceTypeId    Int             @db.TinyInt
+  RequestDateTime      DateTime        @default(dbgenerated("sysdatetime()"), map: "DF__Maintenan__Reque__3552E9B6")
+  ProblemDescription   String?
+  ReportedOdometer     Decimal?        @db.Decimal(18, 2)
+  ReportedEngineHour   Decimal?        @db.Decimal(18, 2)
+  Priority             String?         @db.NVarChar(50)
+  Status               String          @default("N'Open'", map: "DF__Maintenan__Statu__36470DEF") @db.NVarChar(50)
+  Description          String?
+  CreatedAt            DateTime        @default(dbgenerated("sysdatetime()"), map: "DF__Maintenan__Creat__373B3228")
+  MaintenanceType      MaintenanceType @relation(fields: [MaintenanceTypeId], references: [MaintenanceTypeId], onUpdate: NoAction, map: "FK_MaintenanceRequest_MaintenanceType")
+  Vehicle              Vehicle         @relation(fields: [VehicleId], references: [VehicleId], onUpdate: NoAction, map: "FK_MaintenanceRequest_Vehicle")
+  WorkOrder            WorkOrder[]
+
+  @@schema("maintenance")
+}
+
+model MaintenanceType {
+  MaintenanceTypeId  Int                  @id(map: "PK_MaintenanceType") @db.TinyInt
+  TypeCode           String               @unique(map: "UQ_MaintenanceType_TypeCode") @db.VarChar(50)
+  TypeName           String               @db.NVarChar(100)
+  Description        String?              @db.NVarChar(500)
+  IsActive           Boolean              @default(true, map: "DF_MaintenanceType_IsActive")
+  MaintenancePlan    MaintenancePlan[]
+  MaintenanceRequest MaintenanceRequest[]
+  WorkOrder          WorkOrder[]
+
+  @@schema("maintenance")
+}
+
+model Technician {
+  TechnicianId  Int             @id(map: "PK__Technici__301F812197D4426C") @default(autoincrement())
+  WorkshopId    Int?
+  FirstName     String          @db.NVarChar(100)
+  LastName      String          @db.NVarChar(100)
+  Mobile        String?         @db.NVarChar(20)
+  Specialty     String?         @db.NVarChar(150)
+  IsActive      Boolean         @default(true, map: "DF__Technicia__IsAct__40C49C62")
+  Description   String?
+  CreatedAt     DateTime        @default(dbgenerated("sysdatetime()"), map: "DF__Technicia__Creat__41B8C09B")
+  Workshop      Workshop?       @relation(fields: [WorkshopId], references: [WorkshopId], onDelete: NoAction, onUpdate: NoAction, map: "FK_Technician_Workshop")
+  WorkOrderTask WorkOrderTask[]
+
+  @@schema("maintenance")
+}
+
+model WorkOrder {
+  WorkOrderId          Int                 @id(map: "PK__WorkOrde__AE7551154439CB1F") @default(autoincrement())
+  WorkOrderNo          String              @db.NVarChar(50)
+  VehicleId            Int
+  MaintenanceTypeId    Int                 @db.TinyInt
+  MaintenancePlanId    Int?
+  MaintenanceRequestId Int?
+  WorkLocationType     String              @db.NVarChar(50)
+  WorkshopId           Int?
+  OpenDateTime         DateTime            @default(dbgenerated("sysdatetime()"), map: "DF__WorkOrder__OpenD__4589517F")
+  ActualStartDateTime  DateTime?
+  ActualEndDateTime    DateTime?
+  Odometer             Decimal?            @db.Decimal(18, 2)
+  EngineHour           Decimal?            @db.Decimal(18, 2)
+  ProblemDescription   String?
+  Diagnosis            String?
+  FinalDescription     String?
+  Status               String              @default("N'Open'", map: "DF__WorkOrder__Statu__467D75B8") @db.NVarChar(50)
+  Description          String?
+  CreatedAt            DateTime            @default(dbgenerated("sysdatetime()"), map: "DF__WorkOrder__Creat__477199F1")
+  MaintenancePlan      MaintenancePlan?    @relation(fields: [MaintenancePlanId], references: [MaintenancePlanId], onDelete: NoAction, onUpdate: NoAction, map: "FK_WorkOrder_MaintenancePlan")
+  MaintenanceRequest   MaintenanceRequest? @relation(fields: [MaintenanceRequestId], references: [MaintenanceRequestId], onDelete: NoAction, onUpdate: NoAction, map: "FK_WorkOrder_MaintenanceRequest")
+  MaintenanceType      MaintenanceType     @relation(fields: [MaintenanceTypeId], references: [MaintenanceTypeId], onUpdate: NoAction, map: "FK_WorkOrder_MaintenanceType")
+  Vehicle              Vehicle             @relation(fields: [VehicleId], references: [VehicleId], onUpdate: NoAction, map: "FK_WorkOrder_Vehicle")
+  Workshop             Workshop?           @relation(fields: [WorkshopId], references: [WorkshopId], onDelete: NoAction, onUpdate: NoAction, map: "FK_WorkOrder_Workshop")
+  WorkOrderPart        WorkOrderPart[]
+  WorkOrderTask        WorkOrderTask[]
+
+  @@schema("maintenance")
+}
+
+model WorkOrderPart {
+  WorkOrderPartId Int            @id(map: "PK__WorkOrde__53622B8FCC3523F1") @default(autoincrement())
+  WorkOrderId     Int
+  WorkOrderTaskId Int?
+  PartId          Int
+  Quantity        Decimal        @db.Decimal(18, 2)
+  UnitPrice       Decimal?       @db.Decimal(18, 2)
+  TotalPrice      Decimal?       @db.Decimal(37, 4)
+  Description     String?
+  CreatedAt       DateTime       @default(dbgenerated("sysdatetime()"), map: "DF__WorkOrder__Creat__54CB950F")
+  WorkOrder       WorkOrder      @relation(fields: [WorkOrderId], references: [WorkOrderId], onUpdate: NoAction, map: "FK_WorkOrderPart_WorkOrder")
+  WorkOrderTask   WorkOrderTask? @relation(fields: [WorkOrderTaskId], references: [WorkOrderTaskId], onDelete: NoAction, onUpdate: NoAction, map: "FK_WorkOrderPart_WorkOrderTask")
+
+  @@schema("maintenance")
+}
+
+model WorkOrderTask {
+  WorkOrderTaskId Int             @id(map: "PK__WorkOrde__29C798FBFE35B57E") @default(autoincrement())
+  WorkOrderId     Int
+  TaskTitle       String          @db.NVarChar(200)
+  TechnicianId    Int?
+  LaborHours      Decimal?        @db.Decimal(10, 2)
+  LaborCost       Decimal?        @db.Decimal(18, 2)
+  Status          String          @default("N'Open'", map: "DF__WorkOrder__Statu__4F12BBB9") @db.NVarChar(50)
+  Description     String?
+  CreatedAt       DateTime        @default(dbgenerated("sysdatetime()"), map: "DF__WorkOrder__Creat__5006DFF2")
+  WorkOrderPart   WorkOrderPart[]
+  Technician      Technician?     @relation(fields: [TechnicianId], references: [TechnicianId], onDelete: NoAction, onUpdate: NoAction, map: "FK_WorkOrderTask_Technician")
+  WorkOrder       WorkOrder       @relation(fields: [WorkOrderId], references: [WorkOrderId], onUpdate: NoAction, map: "FK_WorkOrderTask_WorkOrder")
+
+  @@schema("maintenance")
+}
+
+model Workshop {
+  WorkshopId    Int          @id(map: "PK__Workshop__7A008C0ADCDF489C") @default(autoincrement())
+  WorkshopName  String       @db.NVarChar(150)
+  WorkshopType  String       @db.NVarChar(50)
+  IsInternal    Boolean      @default(false, map: "DF__Workshop__IsInte__3BFFE745")
+  Address       String?      @db.NVarChar(500)
+  Phone         String?      @db.NVarChar(50)
+  ContactPerson String?      @db.NVarChar(150)
+  Description   String?
+  IsActive      Boolean      @default(true, map: "DF__Workshop__IsActi__3CF40B7E")
+  CreatedAt     DateTime     @default(dbgenerated("sysdatetime()"), map: "DF__Workshop__Create__3DE82FB7")
+  Technician    Technician[]
+  WorkOrder     WorkOrder[]
+
+  @@schema("maintenance")
+}
+
+model Part {
+  PartId                   Int                        @id(map: "PK_Part") @default(autoincrement())
+  PartCode                 String                     @db.NVarChar(50)
+  PartName                 String                     @db.NVarChar(150)
+  PartCategoryId           Int?
+  UnitId                   Int
+  PartNumber               String?                    @db.NVarChar(100)
+  Manufacturer             String?                    @db.NVarChar(100)
+  MinStock                 Decimal?                   @db.Decimal(18, 2)
+  MaxStock                 Decimal?                   @db.Decimal(18, 2)
+  ReorderPoint             Decimal?                   @db.Decimal(18, 2)
+  IsActive                 Boolean                    @default(true, map: "DF_Part_IsActive")
+  PartCategory             PartCategory?              @relation(fields: [PartCategoryId], references: [PartCategoryId], onDelete: NoAction, onUpdate: NoAction, map: "FK_Part_PartCategory")
+  Unit                     Unit                       @relation(fields: [UnitId], references: [UnitId], onUpdate: NoAction, map: "FK_Part_Unit")
+  PartVehicleCompatibility PartVehicleCompatibility[]
+  StockTransaction         StockTransaction[]
+
+  @@schema("inventory")
+}
+
+model PartCategory {
+  PartCategoryId Int     @id(map: "PK_PartCategory") @default(autoincrement())
+  CategoryName   String  @db.NVarChar(100)
+  IsActive       Boolean @default(true, map: "DF_PartCategory_IsActive")
+  Part           Part[]
+
+  @@schema("inventory")
+}
+
+model PartVehicleCompatibility {
+  PartId         Int          @default(autoincrement())
+  VehicleModelId Int
+  Description    String?      @db.NVarChar(500)
+  Part           Part         @relation(fields: [PartId], references: [PartId], onUpdate: NoAction, map: "FK_PartVehicleCompatibility_Part")
+  VehicleModel   VehicleModel @relation(fields: [VehicleModelId], references: [ModelId], onUpdate: NoAction, map: "FK_PartVehicleCompatibility_VehicleModel")
+
+  @@id([PartId, VehicleModelId], map: "PK_PartVehicleCompatibility")
+  @@schema("inventory")
+}
+
+model StockTransaction {
+  StockTransactionId BigInt    @id(map: "PK_StockTransaction") @default(autoincrement())
+  WarehouseId        Int
+  PartId             Int
+  TransactionDate    DateTime  @default(dbgenerated("sysdatetime()"), map: "DF_StockTransaction_TransactionDate")
+  TransactionType    String    @db.NVarChar(50)
+  Quantity           Decimal   @db.Decimal(18, 2)
+  UnitPrice          Decimal?  @db.Decimal(18, 2)
+  Description        String?   @db.NVarChar(500)
+  Part               Part      @relation(fields: [PartId], references: [PartId], onUpdate: NoAction, map: "FK_StockTransaction_Part")
+  Warehouse          Warehouse @relation(fields: [WarehouseId], references: [WarehouseId], onUpdate: NoAction, map: "FK_StockTransaction_Warehouse")
+
+  @@schema("inventory")
+}
+
+model Unit {
+  UnitId   Int     @id(map: "PK_Unit") @default(autoincrement())
+  UnitName String  @db.NVarChar(50)
+  Symbol   String? @db.NVarChar(20)
+  Part     Part[]
+
+  @@schema("inventory")
+}
+
+model Warehouse {
+  WarehouseId      Int                @id(map: "PK_Warehouse") @default(autoincrement())
+  WarehouseCode    String             @db.NVarChar(50)
+  WarehouseName    String             @db.NVarChar(150)
+  Location         String?            @db.NVarChar(500)
+  IsActive         Boolean            @default(true, map: "DF_Warehouse_IsActive")
+  StockTransaction StockTransaction[]
+
+  @@schema("inventory")
 }
