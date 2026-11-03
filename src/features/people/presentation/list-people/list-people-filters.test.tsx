@@ -29,7 +29,6 @@ describe("ListPeopleFilters", () => {
       <ListPeopleFilters
         initialSearch="Ali"
         initialStatus="inactive"
-        hasCriteria
       />,
     );
 
@@ -48,7 +47,6 @@ describe("ListPeopleFilters", () => {
       <ListPeopleFilters
         initialSearch="Maryam"
         initialStatus="all"
-        hasCriteria
       />,
     );
 
@@ -61,7 +59,6 @@ describe("ListPeopleFilters", () => {
       <ListPeopleFilters
         initialSearch=""
         initialStatus="active"
-        hasCriteria={false}
       />,
     );
 
@@ -73,7 +70,6 @@ describe("ListPeopleFilters", () => {
       <ListPeopleFilters
         initialSearch=""
         initialStatus="active"
-        hasCriteria={false}
       />,
     );
 

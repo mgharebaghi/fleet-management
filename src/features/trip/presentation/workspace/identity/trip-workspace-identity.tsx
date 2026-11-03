@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { NavigationLink as Link } from "../../../../../components/ui/navigation-link/navigation-link";
 
 import { StatusBadge } from "@/components/ui/status-badge/status-badge";
 import { formatTripDateTime } from "../../trip-format";

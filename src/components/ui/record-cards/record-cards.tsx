@@ -8,7 +8,7 @@ import styles from "./record-cards.module.css";
  * feature; this module owns only the surface, spacing and label typography.
  */
 export function RecordCardList({ children }: { children: ReactNode }) {
-  return <ul className={styles.list}>{children}</ul>;
+  return <ul className={styles.list} data-loading-results>{children}</ul>;
 }
 
 export function RecordCard({ children }: { children: ReactNode }) {

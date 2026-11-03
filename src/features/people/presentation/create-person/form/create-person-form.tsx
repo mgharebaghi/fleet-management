@@ -1,8 +1,7 @@
 "use client";
+import { usePeopleFormState } from "../../use-people-form-state";
 
 import { PersonFormFields } from "../../components/person-form-fields";
-
-import { useActionState } from "react";
 
 import { ActionButton } from "../../../../../components/ui/action-button/action-button";
 import { BackLink } from "../../../../../components/ui/back-link/back-link";
@@ -22,7 +21,7 @@ import { getCreatePersonFieldErrorMessages, getCreatePersonStatusMessage } from 
 const CREATE_PERSON_TITLE_ID = "create-person-title";
 
 export function CreatePersonForm() {
-  const [actionState, formAction, isPending] = useActionState(
+  const [actionState, formAction, isPending, actionStateInput] = usePeopleFormState(
     createPersonAction,
     initialCreatePersonActionState,
   );
@@ -68,7 +67,7 @@ export function CreatePersonForm() {
       />
 
       <form
-        action={formAction}
+        action={formAction} onInputCapture={actionStateInput}
         className={styles.form}
         aria-busy={isPending}
         aria-labelledby="person-details-title"
@@ -93,7 +92,7 @@ export function CreatePersonForm() {
         </FormGrid>
         </FormSection>
 
-        {isPending && <LoadingIndicator label="در حال ثبت اطلاعات…" />}
+        {isPending && <LoadingIndicator />}
 
         {statusMessage && (
           <InlineNotice tone="danger" role="alert">

@@ -1,0 +1,2 @@
+.half { grid-column: span 6; }
+.full { grid-column: 1 / -1; }

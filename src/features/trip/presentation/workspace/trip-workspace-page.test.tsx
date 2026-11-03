@@ -273,15 +273,16 @@ describe("Trip workspace presentation", () => {
     }));
     const markup = await renderWorkspace("passengers");
     for (const value of [
-      "P-1", "09120000000", "تهران", "قم", "صبح زود",
+      "P-1", "09120000000", "تهران", "قم",
       "مسافر", "مسیر", "زمان درخواست سوارشدن", "وضعیت ثبت‌شده",
-      "وضعیت مسافر", "برنامه‌ریزی / اجرا", "ترتیب (سوار / پیاده)",
+      "مسیر و زمان سوارشدن", "ترتیب و وضعیت اجرا",
     ]) {
       expect(markup).toContain(value);
     }
     expect(markup).toContain("<table");
     expect(markup).toContain("فهرست مسافران سفر");
-    expect(markup.match(/<th scope="col">/g)).toHaveLength(7);
+    expect(markup.match(/<th scope="col">/g)).toHaveLength(4);
+    expect(markup).not.toContain("صبح زود");
     expect(markup).toMatch(/<span[^>]*dir="ltr"[^>]*>P-1<\/span>/);
     expect(markup).toMatch(
       /<span[^>]*dir="ltr"[^>]*>09120000000<\/span>/,

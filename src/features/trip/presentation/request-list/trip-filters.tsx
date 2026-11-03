@@ -19,11 +19,11 @@ export function TripFilters({
 }) {
   const filters = useListFilters({
     values: { search, status },
-    searchName: "search",
+    defaults: { search: "", status: "" }, searchName: "search",
   });
 
   return (
-    <ListFilterBar pending={filters.isPending}>
+    <ListFilterBar pending={filters.isPending} clear={filters.clear}>
       <ListSearchField
         name="search"
         label="جستجوی سفرها"

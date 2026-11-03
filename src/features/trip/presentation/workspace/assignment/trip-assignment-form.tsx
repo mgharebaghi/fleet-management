@@ -1,6 +1,7 @@
 "use client";
+import { useTripFormState } from "../../use-trip-form-state";
 
-import { useActionState, useId, useState } from "react";
+import { useId, useState } from "react";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
 import { Dialog } from "@/components/ui/dialog/dialog";
@@ -62,7 +63,7 @@ export function TripAssignmentPlanner({
     trip.tripId,
     execution?.status === "Planned" ? execution.tripExecutionId : null,
   );
-  const [state, formAction, pending] = useActionState(action, {});
+  const [state, formAction, pending, stateInput] = useTripFormState(action, {});
   const [dialogOpen, setDialogOpen] = useState(false);
   const dialogTitleId = useId();
   const eligible = assignments.filter((assignment) =>
@@ -136,7 +137,7 @@ export function TripAssignmentPlanner({
             description="تخصیص فعال و واجد شرایط را برای این مسافر انتخاب کنید."
           >
             <form
-              action={formAction}
+              action={formAction} onInputCapture={stateInput}
               noValidate
               aria-label={
                 persisted

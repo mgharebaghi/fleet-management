@@ -1,3 +1,4 @@
+import { dataTableClassName } from "@/components/ui/data-table/data-table";
 import { notFound } from "next/navigation";
 
 import { ActionLink } from "@/components/ui/action-link/action-link";
@@ -157,7 +158,7 @@ export async function TripVoucherPage({
 
         <section className={styles.section}>
           <h2>مسافر و مسیر</h2>
-          <table className={styles.passengerTable}>
+          <table className={dataTableClassName + " " + styles.passengerTable}>
             <thead>
               <tr>
                 <th>نام مسافر</th>
@@ -233,7 +234,7 @@ export async function TripVoucherPage({
 
         <section className={styles.section}>
           <h2>توقف‌ها — دست‌نویس</h2>
-          <table className={styles.passengerTable}>
+          <table className={dataTableClassName + " " + styles.passengerTable}>
             <thead>
               <tr>
                 <th>شروع</th>

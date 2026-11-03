@@ -52,6 +52,7 @@ export async function saveExecution(repository: TripRepository, input: SaveTripE
     }
 
     let alreadyStarted = false;
+    let assignmentChanged = false;
     if (value.tripExecutionId !== null) {
       const execution = await session.execution(value.tripExecutionId);
       if (!execution || execution.tripId !== value.tripId) {
@@ -61,6 +62,7 @@ export async function saveExecution(repository: TripRepository, input: SaveTripE
         return failure("INVALID_EXECUTION_STATUS");
       }
       alreadyStarted = executionHasStarted(execution);
+      assignmentChanged = execution.vehicleDriverAssignmentId !== value.vehicleDriverAssignmentId;
       if (
         !canTransitionTripExecution(
           execution.status,
@@ -93,6 +95,10 @@ export async function saveExecution(repository: TripRepository, input: SaveTripE
       scheduledDateTime,
     );
     if (!assignment) return failure("ASSIGNMENT_NOT_FOUND");
+    if (value.tripExecutionId === null || assignmentChanged || (!alreadyStarted && targetStatus !== "Cancelled" && (targetStatus !== "Planned" || value.actualPickupDateTime !== null))) {
+      const readiness = await session.vehicleReadiness.check([assignment.vehicle.vehicleId]);
+      if (!readiness.available) return failure(readiness.reason);
+    }
     if (!alreadyStarted) {
       const eligibilityError = assignmentFailure(
         assignment,
@@ -124,5 +130,5 @@ export async function saveExecution(repository: TripRepository, input: SaveTripE
       tripExecutionId: value.tripExecutionId,
     });
     return { success: true, id: value.tripExecutionId };
-  });
+  }, { dispatchAssignmentIds: [value.vehicleDriverAssignmentId] });
 }

@@ -1,0 +1,12 @@
+export type MaintenanceType = { id: number; code: string; name: string; description: string | null; isActive: boolean };
+export type MaintenanceTypeListItem = MaintenanceType & { isUsed: boolean };
+export type Workshop = { id: number; name: string; workshopType: string; isInternal: boolean; address: string | null; phone: string | null; contactPerson: string | null; description: string | null; isActive: boolean };
+export type Technician = { id: number; workshopId: number | null; firstName: string; lastName: string; mobile: string | null; specialty: string | null; description: string | null; isActive: boolean; workshopName: string | null; workshopActive: boolean | null };
+export type SaveMaintenanceType = Omit<MaintenanceType, "id"> & { id: number | null };
+export type SaveWorkshop = Omit<Workshop, "id"> & { id: number | null };
+export type SaveTechnician = Omit<Technician, "id" | "workshopName" | "workshopActive"> & { id: number | null };
+export type ReferenceSearch = { search: string; active: "active" | "inactive" | "all"; page: number };
+export type ReferencePage<T> = { rows: T[]; totalCount: number };
+export type WorkshopRecord = Workshop & { technicians: Technician[]; workOrderCount: number };
+export type ReferenceFailure = { type: "VALIDATION_ERROR"; fields: Record<string, "REQUIRED" | "TOO_LONG" | "INVALID"> } | { type: "NOT_FOUND" | "DUPLICATE_CODE" | "TYPE_CAPACITY" | "WORKSHOP_UNAVAILABLE" | "TYPE_IN_USE" };
+export type ReferenceResult<T> = { success: true; value: T } | { success: false; error: ReferenceFailure };

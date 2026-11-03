@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { NavigationLink as Link } from "../../../components/ui/navigation-link/navigation-link";
 import { useRouter } from "next/navigation";
 import { useTransition, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 
@@ -86,13 +86,11 @@ export function DriverRecordTabs({
           );
         })}
       </div>
-      <div className={styles.tabContentArea} aria-busy={isPending || undefined}>
+      <div className={styles.tabContentArea} data-loading-panel aria-busy={isPending || undefined}>
         {children}
         {isPending && (
           <div className={styles.tabLoadingOverlay}>
-            <div className={styles.tabLoadingCard}>
-              <LoadingIndicator label="در حال بارگذاری بخش…" />
-            </div>
+              <LoadingIndicator />
           </div>
         )}
       </div>

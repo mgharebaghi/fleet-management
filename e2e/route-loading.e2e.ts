@@ -26,23 +26,17 @@ function gateNextNavigation() {
 }
 
 /**
- * Regression coverage for the audited "missing route loading" report on
- * Fleet Catalogs and Vehicle Insurance: navigating from one admin route to a
- * different one always mounts a fresh instance of the shared
- * `(admin)/loading.tsx` Suspense boundary, because the destination is a
- * different page component, not a re-render of the current one. React only
- * skips a loading fallback for a transition that keeps rendering the SAME
- * revealed component (e.g. a search-param-only update on the current page);
- * a cross-route navigation is never that case. Verified here by holding the
- * RSC response for each target route and asserting the shared indicator
- * shows while it's held, for every route in the approved scope — including
- * the two specifically reported as missing.
+ * Hold the RSC response to cover the interval before a route loading.tsx
+ * fallback can arrive. Every submenu uses the shared central loading surface.
  */
 const adminRoutes = [
   { path: "/fleet/catalogs", linkName: "کاتالوگ خودروها" },
   { path: "/fleet/vehicle-insurances", linkName: "بیمه ها" },
   { path: "/fleet/vehicles", linkName: "خودروهای سازمان" },
   { path: "/drivers", linkName: "رانندگان" },
+  { path: "/inventory/parts", linkName: "قطعات" },
+  { path: "/inventory/warehouses", linkName: "انبارها" },
+  { path: "/inventory/catalogs", linkName: "اطلاعات پایه" },
 ] as const;
 
 for (const target of adminRoutes) {
@@ -81,6 +75,9 @@ for (const target of adminRoutes) {
       const fleet = sidebar.getByRole("button", { name: "ناوگان" });
       await fleet.click();
       await expect(fleet).toHaveAttribute("aria-expanded", "true");
+    }
+    if (target.path.startsWith("/inventory")) {
+      await sidebar.getByRole("button", { name: "قطعات و انبار", exact: true }).click();
     }
     navigationArmed = true;
     await sidebar.getByRole("link", { name: target.linkName }).click();

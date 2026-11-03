@@ -1,6 +1,5 @@
 "use client";
 
-import { ActionLink } from "../../../../components/ui/action-link/action-link";
 import {
   ListFilterBar,
   ListSearchField,
@@ -13,21 +12,19 @@ export type ListPeopleStatus = "active" | "inactive" | "all";
 type ListPeopleFiltersProps = {
   initialSearch: string;
   initialStatus: ListPeopleStatus;
-  hasCriteria: boolean;
 };
 
 export function ListPeopleFilters({
   initialSearch,
   initialStatus,
-  hasCriteria,
 }: ListPeopleFiltersProps) {
   const filters = useListFilters({
     values: { search: initialSearch, status: initialStatus },
-    searchName: "search",
+    defaults: { search: "", status: "active" }, searchName: "search",
   });
 
   return (
-    <ListFilterBar pending={filters.isPending}>
+    <ListFilterBar pending={filters.isPending} clear={filters.clear}>
       <ListSearchField
         label="جستجوی اشخاص"
         name="search"
@@ -46,12 +43,6 @@ export function ListPeopleFilters({
         <option value="inactive">غیرفعال</option>
         <option value="all">همه</option>
       </ListSelectField>
-
-      {hasCriteria && (
-        <ActionLink href="/people" variant="quiet">
-          پاک کردن
-        </ActionLink>
-      )}
     </ListFilterBar>
   );
 }

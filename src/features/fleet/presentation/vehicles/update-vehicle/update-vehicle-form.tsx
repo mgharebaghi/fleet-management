@@ -1,8 +1,9 @@
 "use client";
+import { useFleetFormState } from "../../use-fleet-form-state";
 
 import { VehicleDetailsFields } from "../components/vehicle-details-fields";
 
-import { useActionState, useMemo } from "react";
+import { useMemo } from "react";
 
 import { ConfirmedSubmitButton } from "../../../../../components/ui/confirmed-submit/confirmed-submit-button";
 
@@ -58,7 +59,7 @@ export function UpdateVehicleForm({
   models,
   statuses,
 }: UpdateVehicleFormProps) {
-  const [state, formAction, isPending] = useActionState(
+  const [state, formAction, isPending, stateInput] = useFleetFormState(
     updateVehicleAction,
     {},
   );
@@ -75,7 +76,7 @@ export function UpdateVehicleForm({
         errors[field] = vehicleValidationMessages[code];
       }
     }
-  } else if (state.error) {
+  } else if (state.error && state.error.type !== "METER_HISTORY_LOCKED") {
     const failure = vehicleFailureMessages[state.error.type];
     errors[failure.field] = failure.message;
   }
@@ -91,7 +92,7 @@ export function UpdateVehicleForm({
   return (
     <form
       id="update-vehicle-form"
-      action={formAction}
+      action={formAction} onInputCapture={stateInput}
       className={styles.form}
       aria-busy={isPending}
       noValidate
@@ -102,15 +103,17 @@ export function UpdateVehicleForm({
         <InlineNotice tone="danger" role="alert">
           {state.formError === "not_found"
             ? "این خودرو قبلاً حذف شده است."
+            : state.error?.type === "METER_HISTORY_LOCKED"
+              ? "برای این خودرو تاریخچهٔ کارکرد ایجاد شده است؛ صفحه را به‌روزرسانی کنید و کارکرد را از تب کارکرد خودرو ثبت کنید."
             : state.formError
               ? "ذخیره تغییرات انجام نشد. اطلاعات را بررسی کنید و دوباره تلاش کنید."
               : "اطلاعات مشخص‌شده را اصلاح کنید."}
         </InlineNotice>
       )}
 
-      <VehicleDetailsFields valueOf={valueOf} errors={errors} modelOptions={modelOptions} statusOptions={statusOptions} today={today} isPending={isPending} />
+      <VehicleDetailsFields valueOf={valueOf} errors={errors} modelOptions={modelOptions} statusOptions={statusOptions} today={today} isPending={isPending} metersReadOnly={vehicle.hasMeterHistory} />
 
-      {isPending && <LoadingIndicator label="در حال ذخیره تغییرات…" />}
+      {isPending && <LoadingIndicator />}
 
       <FormActions>
         <ConfirmedSubmitButton

@@ -1,6 +1,7 @@
 "use client";
+import { useTripFormState } from "../use-trip-form-state";
 
-import { useActionState, useId, useState } from "react";
+import { useId, useState } from "react";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
 import { Dialog } from "@/components/ui/dialog/dialog";
@@ -83,7 +84,7 @@ export function TripSurveyDialog({
   const titleId = `${prefix}-survey-dialog-title`;
   const isRecorded = surveyIsRecorded(execution);
 
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending, stateInput] = useTripFormState(
     async (prevState: TripActionState, formData: FormData) => {
       const res = await savePassengerSurveyAction(
         tripRequestId,
@@ -115,7 +116,7 @@ export function TripSurveyDialog({
       title={isRecorded ? "مشاهده و ویرایش نظرسنجی" : "ثبت نظرسنجی مسافر"}
     >
       <form
-        action={formAction}
+        action={formAction} onInputCapture={stateInput}
         noValidate
         aria-label="فرم نظرسنجی مسافر"
         aria-busy={pending}

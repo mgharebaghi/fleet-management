@@ -1,3 +1,4 @@
+import { VehicleMeterHistoryError } from "../../meter-readings/direct-meter-edit";
 import {
   normalizeCreateVehicle,
   validateCreateVehicle,
@@ -68,6 +69,7 @@ export class UpdateVehicle {
       await this.writer.update(vehicleId, value);
       return { success: true };
     } catch (error) {
+      if (error instanceof VehicleMeterHistoryError) return { success: false, error: { type: "METER_HISTORY_LOCKED" } };
       if (error instanceof VehicleNotFoundError) {
         return { success: false, error: { type: "NOT_FOUND" } };
       }

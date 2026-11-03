@@ -21,6 +21,8 @@ export async function assignVehicle(repository: DriverRepository, now: () => Dat
     const vehicle = await session.vehicle(value.vehicleId);
     if (!vehicle) return failure("VEHICLE_NOT_FOUND");
     if (!vehicle.isActive) return failure("VEHICLE_INACTIVE");
+    const readiness = await session.vehicleReadiness.check([value.vehicleId]);
+    if (!readiness.available) return failure(readiness.reason);
     if (!(await session.licenses(value.driverId)).some(license => licenseEligible(license, value.fromDateTime))) return failure("NO_ELIGIBLE_LICENSE");
     const holder = await session.currentAssignmentHolder(value.vehicleId, now());
     if (holder !== null && holder !== value.driverId) return failure("VEHICLE_CURRENTLY_ASSIGNED");
@@ -28,7 +30,7 @@ export async function assignVehicle(repository: DriverRepository, now: () => Dat
     if (await session.overlap(value, "vehicle")) return failure("VEHICLE_OVERLAP");
     if (holder === value.driverId) return failure("VEHICLE_CURRENTLY_ASSIGNED");
     return { success: true, id: await session.createAssignment(value) };
-  });
+  }, { vehicleIds: [value.vehicleId] });
 }
 
 export async function closeAssignment(repository: DriverRepository, id: number, end: Date, odometer: string | null, expectedDriverId?: number): Promise<DriverResult> {
@@ -65,6 +67,10 @@ export async function updateAssignment(repository: DriverRepository, now: () => 
     const vehicle = await session.vehicle(value.vehicleId);
     if (!vehicle) return failure("VEHICLE_NOT_FOUND");
     if (!vehicle.isActive) return failure("VEHICLE_INACTIVE");
+    if (changesIdentityOrWindow) {
+      const readiness = await session.vehicleReadiness.check([value.vehicleId]);
+      if (!readiness.available) return failure(readiness.reason);
+    }
     if (!(await session.licenses(value.driverId)).some(license => licenseEligible(license, value.fromDateTime))) return failure("NO_ELIGIBLE_LICENSE");
     const holder = await session.currentAssignmentHolder(value.vehicleId, now(), value.assignmentId);
     if (holder !== null && holder !== value.driverId) return failure("VEHICLE_CURRENTLY_ASSIGNED");
@@ -73,7 +79,7 @@ export async function updateAssignment(repository: DriverRepository, now: () => 
     if (holder === value.driverId) return failure("VEHICLE_CURRENTLY_ASSIGNED");
     await session.updateAssignment(value);
     return { success: true, id: value.assignmentId };
-  });
+  }, { vehicleIds: [value.vehicleId], assignmentId: value.assignmentId });
 }
 
 export async function deleteAssignment(repository: DriverRepository, now: () => Date, driverId: number, assignmentId: number): Promise<DriverResult> {

@@ -4,7 +4,22 @@ import {
   buildListFilterHref,
   scheduleListFilterNavigation,
   synchronizeListFilterDraft,
+  hasListFilterCriteria,
+  buildClearListFiltersHref,
 } from "./list-filter-navigation";
+
+describe("shared clear-filter rules", () => {
+  it("compares only declared filters against feature-owned defaults", () => {
+    const defaults = { search: "", active: "active" };
+    expect(hasListFilterCriteria({ search: "  ", active: "active", page: "9" }, defaults)).toBe(false);
+    expect(hasListFilterCriteria({ search: "Ali", active: "active" }, defaults)).toBe(true);
+    expect(hasListFilterCriteria({ search: "", active: "all" }, defaults)).toBe(true);
+  });
+  it("clears all owned filters and paging while preserving unrelated parameters", () => {
+    expect(buildClearListFiltersHref("/people", new URLSearchParams("search=Ali&status=all&page=9&view=compact&keep=1&keep=2"), { search: "", status: "active" })).toBe("/people?view=compact&keep=1&keep=2");
+    expect(buildClearListFiltersHref("/drivers", new URLSearchParams("search=Ali&page=2"), { search: "" })).toBe("/drivers");
+  });
+});
 
 describe("buildListFilterHref", () => {
   it("keeps unrelated query parameters and restarts paging", () => {

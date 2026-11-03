@@ -1,8 +1,9 @@
 "use client";
+import { useFleetFormState } from "../../use-fleet-form-state";
 
 import { VehicleDetailsFields } from "../components/vehicle-details-fields";
 
-import { useActionState, useMemo } from "react";
+import { useMemo } from "react";
 
 import { ActionButton } from "../../../../../components/ui/action-button/action-button";
 
@@ -35,7 +36,7 @@ export function CreateVehicleForm({
   models,
   statuses,
 }: CreateVehicleFormProps) {
-  const [state, formAction, isPending] = useActionState(
+  const [state, formAction, isPending, stateInput] = useFleetFormState(
     createVehicleAction,
     {},
   );
@@ -65,7 +66,7 @@ export function CreateVehicleForm({
 
   return (
     <form
-      action={formAction}
+      action={formAction} onInputCapture={stateInput}
       className={styles.form}
       aria-busy={isPending}
       noValidate
@@ -80,7 +81,7 @@ export function CreateVehicleForm({
 
       <VehicleDetailsFields valueOf={valueOf} errors={errors} modelOptions={modelOptions} statusOptions={statusOptions} today={today} isPending={isPending} />
 
-      {isPending && <LoadingIndicator label="در حال ثبت اطلاعات…" />}
+      {isPending && <LoadingIndicator />}
 
       <FormActions>
         <ActionButton type="submit" disabled={isPending} pending={isPending}>

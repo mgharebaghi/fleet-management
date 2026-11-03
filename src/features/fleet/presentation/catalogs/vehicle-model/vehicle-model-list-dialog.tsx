@@ -89,7 +89,7 @@ export function VehicleModelListDialog({
         <InlineNotice tone="empty">هنوز مدل خودرویی ثبت نشده است.</InlineNotice>
       ) : (
         <>
-          <DataTable caption="فهرست مدل‌های خودرو" minWidth={560}>
+          <DataTable caption="فهرست مدل‌های خودرو">
             <thead>
               <tr>
                 <th scope="col">نام مدل</th>

@@ -7,21 +7,24 @@
 
 .logoFrame {
   display: grid;
-  width: 39px;
-  height: 39px;
+  width: 42px;
+  height: 42px;
   flex: none;
   place-items: center;
   overflow: hidden;
-  border-radius: 13px;
-  background: #85ebcb;
+  border-radius: var(--app-radius-control);
+  background: var(--app-primary);
 }
 
 .logo {
   display: block;
-  width: 30px;
-  height: 24px;
+  width: 34px;
+  height: 26px;
   object-fit: contain;
+  filter: brightness(0) invert(1);
 }
+
+:global([data-theme="dark"]) .logo { filter: brightness(0); }
 
 .copy {
   min-width: 0;
@@ -32,15 +35,14 @@
   color: #fff;
   font-size: 16px;
   font-weight: 800;
-  line-height: 1.2;
-  letter-spacing: -0.04em;
-  direction: ltr;
-  text-align: right;
+  line-height: 1.7;
+  direction: rtl;
+  text-align: start;
 }
 
 .tagline {
   display: block;
-  color: #9eb3c6;
+  color: var(--app-sidebar-text);
   font-size: 11px;
   font-weight: 500;
 }

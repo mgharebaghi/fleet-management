@@ -2,6 +2,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
   gap: var(--space-2);
   border-radius: var(--app-radius-control);
   font: inherit;
@@ -90,12 +91,19 @@
 }
 
 .spinner {
+  flex: 0 0 auto;
   width: 16px;
   height: 16px;
   border: 2px solid color-mix(in srgb, currentcolor 40%, transparent);
   border-top-color: currentcolor;
   border-radius: 50%;
   animation: spin 700ms linear infinite;
+}
+
+/* Balance the spinner so the label stays centred while submitting. */
+.button[aria-busy="true"]::after {
+  content: "";
+  flex: 0 0 16px;
 }
 
 @keyframes spin {

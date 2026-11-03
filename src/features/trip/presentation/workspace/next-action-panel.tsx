@@ -3,7 +3,7 @@ import type { TripRequestDetails } from "../../application/trip-records";
 import { TripCompletionButton } from "../execution/trip-completion-dialog";
 import { formatTripDateTime } from "../trip-format";
 import { TripRequestStatusControl } from "./trip-request-status-control";
-import styles from "./trip-workspace.module.css";
+import { RecordSidePanel, RecordProgress } from "../../../../components/ui/record-workspace/record-workspace";
 import {
   workspaceTabHref,
   type TripWorkspaceView,
@@ -84,19 +84,7 @@ export function NextActionPanel({
   const events = historyEvents(details);
 
   return (
-    <aside className={styles.sideColumn} aria-label="اقدام بعدی">
-      <section className={styles.nextPanel}>
-        <h2>اقدام بعدی</h2>
-        <p
-          className={
-            details.status === "Assigned" || details.status === "Cancelled"
-              ? styles.warningNote
-              : styles.infoNote
-          }
-        >
-          {leadFor(view)}
-        </p>
-        {action.hint && <p className={styles.nextHint}>{action.hint}</p>}
+    <RecordSidePanel title="اقدام بعدی" lead={leadFor(view)} hint={action.hint} warning={details.status === "Assigned" || details.status === "Cancelled"} action={<>
         {action.id === "plan-assignment" && (
           <ActionLink
             href={workspaceTabHref(details.tripRequestId, "assignment")}
@@ -116,20 +104,11 @@ export function NextActionPanel({
         {action.id !== "view-details" && action.id !== "record-return" && (
           <TripRequestStatusControl details={details} view={view} compact />
         )}
-        <div className={styles.statusTrack}>
-          <h3>ردیابی وضعیت</h3>
-          <ol className={styles.historyList}>
-            {events.map((event) => (
-              <li key={`${event.label}-${event.at.toISOString()}`}>
-                <b>{event.label}</b>
-                <time dateTime={event.at.toISOString()}>
-                  {formatTripDateTime(event.at)}
-                </time>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-    </aside>
+      </>}>
+      <RecordProgress title="ردیابی وضعیت" items={events.map(event => ({
+        id: event.label + event.at.toISOString(), label: event.label,
+        detail: <time dateTime={event.at.toISOString()}>{formatTripDateTime(event.at)}</time>,
+      }))} />
+    </RecordSidePanel>
   );
 }

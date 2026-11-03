@@ -90,6 +90,9 @@ export const tripMessages: Record<
   NO_ELIGIBLE_LICENSE:
     "راننده در روز سفر گواهینامهٔ فعال و معتبر ندارد.",
   DRIVER_INACTIVE: "راننده غیرفعال است و قابل تخصیص نیست.",
+  VEHICLE_UNDER_REPAIR: "این خودرو در حال تعمیر است؛ پس از پایان تعمیر دوباره تلاش کنید.",
+  VEHICLE_REPAIR_STATE_UNKNOWN: "وضعیت تعمیرات خودرو نامشخص است؛ ابتدا پرونده‌های تعمیر را بررسی کنید.",
+  VEHICLE_DISPATCH_CHANGED: "اطلاعات تخصیص خودرو تغییر کرده است؛ صفحه را به‌روزرسانی کنید.",
   VEHICLE_INACTIVE: "خودرو غیرفعال است و قابل تخصیص نیست.",
   ASSIGNMENT_IMMUTABLE:
     "پس از شروع واقعی سفر، تخصیص خودرو و راننده تغییر نمی‌کند.",
@@ -173,6 +176,9 @@ export const tripErrorFields: Partial<
   NO_ELIGIBLE_LICENSE: "assignmentId",
   DRIVER_INACTIVE: "assignmentId",
   VEHICLE_INACTIVE: "assignmentId",
+  VEHICLE_UNDER_REPAIR: "assignmentId",
+  VEHICLE_REPAIR_STATE_UNKNOWN: "assignmentId",
+  VEHICLE_DISPATCH_CHANGED: "assignmentId",
   VEHICLE_PASSENGER_CAPACITY_EXCEEDED: "assignmentId",
   MISSING_ACTUAL_PICKUP: "actualPickupDay",
   MISSING_ACTUAL_DROPOFF: "actualDropoffDay",

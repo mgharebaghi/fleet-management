@@ -28,7 +28,21 @@ Presentation conventions, testing, git workflow) is defined in
 [AGENTS.md](./AGENTS.md) and is the reference for any change to this
 repository.
 
+Within each layer, group related files by capability and responsibility as they
+grow. Inventory keeps Application/Infrastructure reference data together and
+organizes Presentation into `catalogs`, `warehouses/list`, `warehouses/form`,
+`warehouses/details` and feature-local `shared`. Tests live beside the code they
+exercise. Do not create empty folders or a separate directory for every function.
+
 ## Database-first with SQL Server
+
+The shared Prisma client allows up to 15 seconds to acquire/start a transaction.
+Prisma's 2-second default can fail with `P2028` on a cold remote SQL Server pool
+before the first people list is returned. This setting does not retry writes or
+extend transaction execution timeouts; feature-specific overrides still apply.
+People-list failures log only the operation, safe error category and Prisma code.
+After changing client startup configuration, restart an existing development
+server so its cached Prisma singleton is recreated.
 
 SQL Server is the source of truth for the data model. Prisma is a consumer of
 the database, not its designer. The only supported flow is:
@@ -174,6 +188,7 @@ npm run prisma:generate    # generate Prisma Client
 
 npm run test:unit          # unit tests, no database required
 npm run test:integration   # integration tests, requires TEST_DATABASE_*
+npm run test:maintenance-contract # read-only maintenance/inventory contract check in both test DBs
 npm run test:e2e           # Playwright E2E, requires E2E_DATABASE_*
 ```
 
@@ -250,6 +265,132 @@ still has a race for external writers until SQL Server receives an approved
 unique constraint. See [docs/trips.md](./docs/trips.md) for the full data
 semantics, paper workflow, limitations and focused test commands.
 
+## Maintenance and inventory
+
+The first Inventory slice is available in the admin menu under **قطعات و انبار**:
+`/inventory/catalogs` manages units (including their optional symbol) and part
+categories; `/inventory/warehouses` provides live search, paging, create, detail
+and update. Categories and warehouses can be deactivated; unused units,
+categories and warehouses can be deleted after confirmation. Warehouse rows and
+mobile cards provide delete and deactivate/reactivate actions. Any stock history,
+including a zero current balance, prevents warehouse deletion. Unit has no active flag. All writes use Application validation and
+transaction-scoped duplicate checks; no SQL Server structure changes are made.
+
+Stock creation identifies missing active parts and warehouses separately, linking
+directly to creation or to existing inactive records for reactivation. Part
+creation guides users to define a unit first when no unit exists. Compatibility
+with vehicle models remains read-only under the current database contract.
+
+The shared entry point for reference definitions is named **اطلاعات پایه**
+with a link to warehouse management; Parts retains its independent working list.
+
+Warehouse addresses remain editable text. Create/update forms also offer a
+shared Neshan address picker: search or click a point, review the reverse-geocoded
+address and confirm to fill the existing text field. Cancelling leaves the
+current text intact; map/reverse failures preserve manual entry. Only the text
+is persisted in `Warehouse.Location`; this flow does not create common.Location
+records, retain warehouse coordinates or change the schema. The existing public
+map key and server-only Neshan service key are reused.
+
+Part list/create/detail/update is now available at `/inventory/parts`, including
+exact decimal stock thresholds, inactive references, read-only vehicle-model
+compatibility and protection against changing a used part's unit. Stock
+movements are available at `/inventory/movements` (including creation), and
+`/inventory/stock` provides per-warehouse balances and part-wide threshold
+warnings.
+
+The **تعمیرات و نگهداری** menu now provides `/maintenance/catalogs` for types
+of repair/service, `/maintenance/workshops` and `/maintenance/technicians`.
+Each includes live search, active/all/inactive filters, pagination, shared
+responsive tables/cards, create/detail/edit and confirmed updates. References
+can be deactivated to preserve history. Unused repair/service types can also be
+deleted after confirmation; the delete button is disabled when a type is used
+by any request, work order or maintenance plan. Server checks and the real FKs
+protect against usage added after the list was loaded. Workshops and technicians
+are retained through deactivation. Workshop classification remains free text;
+internal/external affiliation is a separate flag. Technicians may be independent
+or linked to a workshop. Existing inactive workshop affiliations can be retained;
+new assignments to inactive workshops are rejected. Maintenance type identifiers
+are allocated from 1 through 255 under a transaction lock; application startup
+performs no seeding or DDL.
+Repair requests are available at `/maintenance/requests`: registration, exact
+reported readings, editing, tracking and confirmed closure/cancellation. This
+is the first vertical slice of stage 5. The request's state is independent of
+actual repair execution. Linked unresolved orders prevent closure; any linked
+order freezes the vehicle/type origin. Closed requests cannot be edited or
+reopened. Reported readings do not update the vehicle meter or its history.
+Work-order preparation is available at `/maintenance/work-orders`: direct
+registration or creation from an open request or existing active service plan,
+annual `WO-{JalaliYear}-{4-digit sequence}` numbering, searchable responsive
+lists, details and confirmed edits to location, readings and diagnosis. Creating
+a file leaves its status `Open` and does not start repair, update vehicle meters,
+change service baselines or move inventory. Closed files are read-only here.
+The shared record tabs now provide **اطلاعات و عیب‌یابی**, **کارها و اجرت**, **قطعات مصرف‌شده** and **هزینه‌های پرونده**.
+Tasks have their own title, optional technician, exact decimal hours/cost and
+status. Preparation and cancellation are available before repair starts; active
+or completed task states require an actually started InProgress file. Cancellation
+preserves previous hours/cost. Unknown cost remains distinct from explicit zero,
+and known labor totals include cancelled work without floating-point rounding.
+Closed files only allow filling a previously unknown labor cost once; existing
+costs and task metadata remain fixed. Tasks are retained through cancellation.
+Consumed parts now support same-file task selection, exact quantities and optional prices,
+SQL-computed four-place totals and confirmed open-file corrections. Closed files
+allow completing a previously unknown price once. Consumption never posts stock
+movements; warehouse issue remains a separate manual operation. The cost-summary tab combines
+known labor and computed part totals with exact four-place precision, links to
+the original cost-entry tabs, and distinguishes missing prices from explicit
+zero. The repair sidebar presents a concise record summary with a bold total,
+a real-time approximate duration bar based on task hours. Task/part details and creation stay in their tabs; file operations are hidden while repair is in progress.
+Existing records and missing amounts are managed through the tabs. Linked requests become read-only and show repair-derived progress in a compact two-panel workspace; completion is green and request filters match the displayed repair status. Repair start and bidirectional dispatch guards are implemented; completion, meter history and service scheduling remain later slices. No unsupported repair-complete buttons
+are exposed.
+
+The maintenance submenu and page heading use **اطلاعات پایه**. User-approved
+starter service types can be previewed with
+`node scripts/seed-maintenance-reference-data.mjs` and inserted with `--apply`.
+The command only permits `FleetManagementDB_Development`, verifies its live
+identity, shares the maintenance reference lock and adds missing codes/names
+without updating existing records (including inactive ones). It never creates
+workshops, technicians, repairs or service intervals. It is an explicit manual
+command, not application startup behavior.
+Part rows use the shared view/edit/delete icon actions. Only parts without stock,
+repair consumption or compatibility references can be deleted after confirmation.
+The approved scope, manual acceptance steps and
+remaining limitations are in [docs/maintenance.md](./docs/maintenance.md), including
+independent stock/repair records and read-only part compatibility.
+
+Editable forms share `useEditableActionState` for stale field feedback. After a
+failed submission, editing a field dismisses only that field's previous error;
+untouched fields and service failures remain visible. Empty required fields retain
+their errors. Composite selectors, dates and times notify the same form behavior.
+The general validation notice clears when no field errors remain. Each feature
+owns its field-to-error mapping; Application/server validation still runs on every
+submission. Clearing feedback does not certify uniqueness or persist a change.
+
+Before the first business slice, run `npm run test:maintenance-contract`. This
+read-only check verifies the dedicated Integration and E2E database identities
+and compares their maintenance/inventory metadata with the reviewed SQL Server
+contract. It does not run a browser, write rows or provision tables. Required
+test-account access and `VIEW DEFINITION` must be available; an unavailable or
+different contract fails instead of falling back to Development. Both test
+connections and the full maintenance/inventory contract now pass after the
+environment owner corrected credentials and granted metadata visibility.
+
+Focused checks for reference data:
+
+```bash
+npx vitest run src/features/inventory/application src/features/inventory/presentation
+npx vitest run src/features/inventory/infrastructure/reference-data/prisma-inventory-reference-repository.integration.test.ts --no-file-parallelism
+npx playwright test e2e/inventory-references.e2e.ts --retries=0
+```
+
+The user-approved Development starter catalog contains 10 conventional units and
+14 flat part categories. `node scripts/seed-inventory-reference-data.mjs` previews
+missing entries; adding `--apply` inserts only missing names into the verified
+`FleetManagementDB_Development` database under the same reference-data lock.
+Existing names, symbols and active flags are never overwritten. This command is
+manual, does not run in setup/CI and never provisions structure or inserts stock,
+parts or warehouse records. It requires Node 24's native TypeScript support.
+
 ## Shared presentation foundation
 
 Every page builds on the primitives under `src/components/ui`: `PageShell`
@@ -260,6 +401,23 @@ appearance, `FormGrid`, `InlineNotice`, `DataTable`, `RecordCards`,
 visual, layout and URL concerns only — columns, labels, field order and every
 business rule stay in the feature, so a change to one page should be checked
 against the others.
+
+Full-page create/edit forms use `PageShell width="narrow"`, which applies the
+shared `FormLayout`: the same 1080px content limit, surface and responsive spacing
+as the trip-request form. Features must not add a separate form-width limit.
+Modal field editors keep the shared `Dialog` sizing rather than becoming full-page forms.
+
+`DataTable` has no forced minimum width or desktop scrolling frame. It wraps
+headings and values; features group related values in a cell where their column
+count would otherwise make text unreadable. Free-text descriptions and notes
+belong in record details, not table cells or mobile list cards. Main records use
+their existing detail page; embedded child records use `RecordDetailsButton` with
+the shared read-only dialog. `ProgressBar` owns the common visual treatment while
+the feature calculates its business-specific progress.
+
+`CatalogPanel` centralizes the existing catalog surface, heading, counts and
+action layout. Fleet's name-only catalogs and Inventory's units/categories use
+it; their field editors, lifecycle rules and persistence remain feature-owned.
 
 `PageShell` owns centring. The card is centred horizontally, and vertically too
 whenever the page is shorter than the workspace; a taller page keeps its top
@@ -284,6 +442,19 @@ name cell.
 
 Search is live everywhere it exists: typing navigates after a debounce, other
 filters navigate at once, both restart paging, and there is no submit control.
+On desktop (above 760px), `ListFilterBar` keeps fields and clearing in one row
+and lets field widths shrink as more filters are added. Nested `FormGrid`
+compositions use `listFilterGridClassName` for the same layout; mobile keeps
+the existing stacked layout.
+List-wide clearing is shown only for an applied search or a filter different
+from its default. Pagination, unrelated query parameters and explicitly selecting
+the default status do not count as filters. Returning to default criteria hides
+the clear action again; an out-of-range page offers first-page navigation.
+Every list supplies its feature-owned default values to `useListFilters` and
+passes the returned `clear` contract to `ListFilterBar`. The shared bar owns
+the label, appearance and conditional rendering of `پاک کردن فیلترها`; pages
+must not add a parallel clear control inside the filter bar. Clearing cancels pending search debounce,
+resets owned query fields and paging, and preserves unrelated query parameters.
 Each list is searchable across every field it displays; the searchable set and
 its query live in that feature's Application and Infrastructure, never in the
 shared components.
@@ -325,6 +496,11 @@ must preserve that precision as well.
 
 ## Admin shell and navigation
 
+Sidebar groups use one open-group state: opening a group closes the previous
+one. Selecting a top-level leaf closes every group before navigating. Route
+changes reveal the group for the destination, and mobile uses the same NavList
+behavior inside its drawer. Clicking an open group again collapses it.
+
 `People`, `Fleet` and `Drivers` share one persistent shell, wired through the
 `(admin)` route group (`src/app/(admin)/layout.tsx`) so it applies without
 changing any URL. `AdminShell` (`src/components/admin-shell`) renders a
@@ -334,6 +510,24 @@ added to navigation in exactly one place. The shell only arranges navigation —
 it carries no business logic, and every page keeps its own `PageShell`/
 `PageHeader` inside it, so nothing here duplicates a feature's own identity or
 actions.
+
+Page links use shared `NavigationLink`, including text/icon actions, back links,
+sidebar entries and links inside features. While a different page is pending,
+it reuses the page `LoadingIndicator` in the centre of the admin workspace;
+the fixed bounds stay centred even when the source table is scrolled. The
+covered content is hidden so it cannot show a second visible loading state.
+Next.js still owns prefetching, completion/cancellation and modified-click
+navigation. Query-only filters, pagination and record tabs keep their local
+feedback. New page links should use this component instead of importing
+`next/link` directly; programmatic page exits reuse `PageNavigationPending`.
+
+Loading indicators fill and centre within their scope. Page fallbacks fill the
+admin workspace (or viewport at the root). Results feedback targets the visible
+table/mobile card list; form and tab feedback targets its own panel. Scoped
+feedback stays in the visible portion when a long panel is scrolled, and tracks
+scrolling and responsive resizing without changing the surrounding layout.
+All scopes, including maps, use the same loading surface and the fixed text
+`در حال بارگذاری`. Page/panel variants control placement only, not appearance.
 
 ## Detail, Update and Delete
 
@@ -360,3 +554,55 @@ guesses at or bypasses the constraint. `Driver`, `DriverLicense` and
 `VehicleDriverAssignment` intentionally keep no generic delete — see
 [docs/drivers.md](./docs/drivers.md) for why history stays immutable and
 `Close Assignment` is the only supported end to a period.
+
+
+### Vehicle meter history
+
+Open **Fleet → Organization vehicles → Vehicle record → Vehicle meters**
+(`/fleet/vehicles/[vehicleId]/meter-readings`). The shared two-panel workspace
+keeps vehicle identity, current odometer/engine hours and tab-specific actions
+in the sidebar. Details expose edit/delete; meter history exposes Record meter.
+The read-only table/mobile cards provide live search and pagination. Filtering
+history never changes the current values shown in the sidebar.
+
+Recording requires a valid non-future Tehran date/time and at least one exact,
+nonnegative odometer or accumulated engine-hours value. Persian digits/grouping
+are accepted; engine hours use the common accumulated-duration picker. Observation
+and current-value synchronization are atomic. Historical entries must fit both
+neighboring readings for each metric and never reduce the current value. Invalid
+existing history/current values block new writes rather than silently repair data.
+Existing records cannot be edited/deleted in this version; odometer replacement
+and downward correction remain unsupported.
+
+After any history exists, vehicle-edit meter controls are read-only. Application
+policy plus the Infrastructure transaction reject direct changes even from stale
+or tampered forms, while allowing other vehicle edits and numerically equivalent
+values. Meter writes, direct vehicle edits and repair/dispatch use the same
+physical-vehicle lock. Decimal values travel as exact strings; SQL Server local
+datetime2 values are explicitly mapped to/from Tehran instants. SQL Server's
+existing fleet.VehicleMeterReading contract is unchanged. Service completion can
+select these observations through its existing history selection.
+
+Focused tests: `record-vehicle-meter.test.ts`, vehicle-update/action tests,
+`prisma-vehicle-meter-repository.integration.test.ts` and
+`e2e/vehicle-meter-readings.e2e.ts`. SQL tests use isolated Integration/E2E
+configurations only. No migration, seed or development data write is needed.
+
+
+### Periodic service plans
+
+Maintenance → Service plans (`/maintenance/plans`) supports create/edit, active or
+inactive plans, live search, status/vehicle filters, pagination and a two-panel
+detail with linked service files. Define at least one positive interval in
+calendar days, kilometers or engine hours. Optional warning margins must be
+smaller than their interval. Missing service baselines stay unknown; creation
+time is never substituted. Any reached criterion makes the plan due.
+
+The detail offers Create service file through the existing shared work-order
+form. Source vehicle/type and service baselines freeze after a file is linked;
+completion updates the baseline using the existing atomic completion flow.
+Deactivation preserves all files and prevents new service-file creation. Plan
+status is calculated in Application from exact decimals and the SQL Server
+Tehran date; filtering occurs before pagination. Existing schema and defaults
+are preserved. Only focused plan-rule tests, one isolated repository scenario
+and one targeted browser scenario are needed for this slice.

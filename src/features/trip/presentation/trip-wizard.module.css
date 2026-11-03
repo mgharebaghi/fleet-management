@@ -4,12 +4,6 @@
   gap: var(--space-4);
 }
 
-.createFormShell {
-  width: 100%;
-  max-width: 1080px;
-  margin-inline: auto;
-}
-
 .createProgress {
   min-width: 0;
 }
@@ -214,7 +208,7 @@
 
 .reviewTable {
   width: 100%;
-  min-width: 32rem;
+  min-width: 0;
   border-collapse: collapse;
   font-size: var(--font-size-sm);
 }

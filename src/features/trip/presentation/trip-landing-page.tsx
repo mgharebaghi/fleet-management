@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { NavigationLink as Link } from "../../../components/ui/navigation-link/navigation-link";
 
 import { PageHeader } from "@/components/ui/page-header/page-header";
 import { PageShell } from "@/components/ui/page-shell/page-shell";

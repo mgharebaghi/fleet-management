@@ -1,4 +1,5 @@
 import { DataTable } from "@/components/ui/data-table/data-table";
+import { RecordDetailsButton } from "../../../../../components/ui/record-details-button/record-details-button";
 import {
   RecordCard,
   RecordCardDetail,
@@ -47,9 +48,6 @@ function PassengerIdentity({ item }: { item: PassengerItem }) {
           )}
         </span>
       )}
-      {item.description && (
-        <span className={styles.passengerDescription}>{item.description}</span>
-      )}
     </span>
   );
 }
@@ -88,16 +86,13 @@ function PassengerTable({
 }) {
   return (
     <div className={styles.passengerTable}>
-      <DataTable caption="فهرست مسافران سفر" minWidth={680}>
+      <DataTable caption="فهرست مسافران سفر">
         <thead>
           <tr>
             <th scope="col">مسافر</th>
-            <th scope="col">مسیر</th>
-            <th scope="col">زمان درخواست سوارشدن</th>
-            <th scope="col">ترتیب (سوار / پیاده)</th>
-            <th scope="col">وضعیت مسافر</th>
-            <th scope="col">برنامه‌ریزی / اجرا</th>
-            {!isPlanningFrozen && <th scope="col">عملیات</th>}
+            <th scope="col">مسیر و زمان سوارشدن</th>
+            <th scope="col">ترتیب و وضعیت اجرا</th>
+            <th scope="col">عملیات</th>
           </tr>
         </thead>
         <tbody>
@@ -107,25 +102,20 @@ function PassengerTable({
               <tr key={item.tripId}>
                 <td>
                   <PassengerIdentity item={item} />
+                  <PassengerStatus item={item} />
                 </td>
                 <td>
                   <PassengerRoute item={item} />
-                </td>
-                <td className={styles.passengerDateTime}>
-                  {formatTripDateTime(item.pickupAt)}
-                </td>
-                <td className={styles.passengerOrder}>
-                  {item.pickupOrder ?? "—"} / {item.dropoffOrder ?? "—"}
+                  <div>{formatTripDateTime(item.pickupAt)}</div>
                 </td>
                 <td>
-                  <PassengerStatus item={item} />
+                  <span className={styles.passengerOrder}>{item.pickupOrder ?? "—"} / {item.dropoffOrder ?? "—"}</span>
+                  <div>{presentPlanningExecutionStatusLabel(item)}</div>
                 </td>
-                <td className={styles.passengerPlanningStatus}>
-                  {presentPlanningExecutionStatusLabel(item)}
-                </td>
-                {!isPlanningFrozen && trip && (
                   <td>
                     <div className={styles.passengerActions}>
+                      <RecordDetailsButton title={item.personName} fields={[["مبدأ", item.originName], ["مقصد", item.destinationName], ["زمان سوارشدن", formatTripDateTime(item.pickupAt)]]} description={item.description} />
+                      {!isPlanningFrozen && trip && <>
                       <EditPassengerButton
                         tripRequestId={details.tripRequestId}
                         passenger={trip}
@@ -136,9 +126,9 @@ function PassengerTable({
                         tripRequestId={details.tripRequestId}
                         trip={trip}
                       />
+                      </>}
                     </div>
                   </td>
-                )}
               </tr>
             );
           })}
@@ -185,6 +175,7 @@ function PassengerCards({
                 {presentPlanningExecutionStatusLabel(item)}
               </RecordCardDetail>
             </RecordCardDetails>
+            <RecordDetailsButton title={item.personName} fields={[["مبدأ", item.originName], ["مقصد", item.destinationName], ["زمان سوارشدن", formatTripDateTime(item.pickupAt)]]} description={item.description} />
             {!isPlanningFrozen && trip && (
               <div className={styles.passengerCardActions}>
                 <EditPassengerButton

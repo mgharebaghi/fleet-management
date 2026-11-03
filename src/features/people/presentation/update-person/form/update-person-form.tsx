@@ -1,8 +1,7 @@
 "use client";
+import { usePeopleFormState } from "../../use-people-form-state";
 
 import { PersonFormFields } from "../../components/person-form-fields";
-
-import { useActionState } from "react";
 
 import { BackLink } from "../../../../../components/ui/back-link/back-link";
 import { ConfirmedSubmitButton } from "../../../../../components/ui/confirmed-submit/confirmed-submit-button";
@@ -37,7 +36,7 @@ function buildPersonIdentityLines(person: Person): ConfirmDialogIdentityLine[] {
 }
 
 export function UpdatePersonForm({ person }: { person: Person }) {
-  const [actionState, formAction, isPending] = useActionState(
+  const [actionState, formAction, isPending, actionStateInput] = usePeopleFormState(
     updatePersonAction,
     initialUpdatePersonActionState,
   );
@@ -83,7 +82,7 @@ export function UpdatePersonForm({ person }: { person: Person }) {
 
       <form
         id="update-person-form"
-        action={formAction}
+        action={formAction} onInputCapture={actionStateInput}
         className={styles.form}
         aria-busy={isPending}
         aria-labelledby="person-details-title"
@@ -123,7 +122,7 @@ export function UpdatePersonForm({ person }: { person: Person }) {
         </FormGrid>
         </FormSection>
 
-        {isPending && <LoadingIndicator label="در حال ذخیره اطلاعات…" />}
+        {isPending && <LoadingIndicator />}
 
         {statusMessage && (
           <InlineNotice tone="danger" role="alert">

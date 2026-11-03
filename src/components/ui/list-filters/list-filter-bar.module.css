@@ -18,6 +18,16 @@
   gap: var(--space-2);
 }
 
+.grid {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.bar .grid > *,
+.bar .grid > * > * {
+  max-width: none;
+}
+
 .searchField {
   flex: 2 1 240px;
 }
@@ -34,6 +44,39 @@
 .pendingRow {
   margin-top: calc(var(--space-5) * -1 + var(--space-2));
   margin-bottom: var(--space-3);
+}
+
+@media (min-width: 761px) {
+  .bar {
+    flex-wrap: nowrap;
+    align-items: flex-end;
+  }
+
+  .bar > .searchField {
+    flex-basis: 0;
+  }
+
+  .bar > .selectField {
+    flex-basis: 0;
+  }
+
+  /* Filter rows shrink with their field count instead of using form spans. */
+  .bar > .grid {
+    display: flex;
+    flex: 1 1 0;
+    align-items: flex-end;
+    gap: 9px;
+  }
+
+  .bar > .grid > * {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .bar > :last-child:not(.searchField):not(.selectField):not(.grid) {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
 }
 
 @media (max-width: 760px) {

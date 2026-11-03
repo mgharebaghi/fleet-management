@@ -1,6 +1,5 @@
 "use client";
 
-import { ActionLink } from "../../../../../components/ui/action-link/action-link";
 import {
   ListFilterBar,
   ListSearchField,
@@ -15,7 +14,6 @@ type ListVehiclesFiltersProps = {
   initialStatus: string;
   initialActive: string;
   statuses: CatalogEntry[];
-  hasCriteria: boolean;
 };
 
 export function ListVehiclesFilters({
@@ -23,7 +21,6 @@ export function ListVehiclesFilters({
   initialStatus,
   initialActive,
   statuses,
-  hasCriteria,
 }: ListVehiclesFiltersProps) {
   const filters = useListFilters({
     values: {
@@ -31,11 +28,11 @@ export function ListVehiclesFilters({
       status: initialStatus,
       active: initialActive,
     },
-    searchName: "search",
+    defaults: { search: "", status: "", active: "active" }, searchName: "search",
   });
 
   return (
-    <ListFilterBar pending={filters.isPending}>
+    <ListFilterBar pending={filters.isPending} clear={filters.clear}>
       <ListSearchField
         label="جستجوی خودرو"
         name="search"
@@ -68,12 +65,6 @@ export function ListVehiclesFilters({
         <option value="inactive">غیرفعال</option>
         <option value="all">همه</option>
       </ListSelectField>
-
-      {hasCriteria && (
-        <ActionLink href="/fleet/vehicles" variant="quiet">
-          پاک کردن
-        </ActionLink>
-      )}
     </ListFilterBar>
   );
 }

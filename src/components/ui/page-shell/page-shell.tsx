@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { FormLayout } from "../form-layout/form-layout";
 
 import styles from "./page-shell.module.css";
 
@@ -20,7 +21,7 @@ export function PageShell({
         className={width === "narrow" ? styles.narrowCard : styles.card}
         aria-labelledby={labelledBy}
       >
-        {children}
+        {width === "narrow" ? <FormLayout>{children}</FormLayout> : children}
       </section>
     </main>
   );

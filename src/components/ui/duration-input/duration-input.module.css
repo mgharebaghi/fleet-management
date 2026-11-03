@@ -1,0 +1,4 @@
+.trigger { display: flex; justify-content: space-between; align-items: center; text-align: start; }
+.trigger[data-invalid="true"] { border-color: var(--app-danger-border); }
+.trigger[data-invalid="true"]:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-danger) 14%, transparent); }
+.form { display: grid; gap: var(--space-4); }

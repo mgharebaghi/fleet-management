@@ -1,8 +1,7 @@
 import Image from "next/image";
+import { PRODUCT_NAME, PRODUCT_TITLE } from "./brand-identity";
 
 import styles from "./brand-mark.module.css";
-
-const PRODUCT_NAME = "سامانه مدیریت ناوگان";
 
 /**
  * The product's identity as it appears in the panel's top bar. It carries no
@@ -23,8 +22,8 @@ export function BrandMark() {
         />
       </div>
       <div className={styles.copy}>
-        <strong className={styles.name}>FleetManagement</strong>
-        <small className={styles.tagline}>مدیریت یکپارچه ناوگان</small>
+        <strong className={styles.name}>{PRODUCT_TITLE}</strong>
+        <small className={styles.tagline}>سفر، تعمیرات و انبار</small>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import type { VehicleDispatchFailure } from "../../fleet/application/availability/vehicle-dispatch-readiness";
 export type TripRequestTypeReference = {
   tripRequestTypeId: number;
   typeCode:
@@ -266,6 +267,7 @@ export type TripFailure =
   | "NO_ELIGIBLE_LICENSE"
   | "DRIVER_INACTIVE"
   | "VEHICLE_INACTIVE"
+  | VehicleDispatchFailure
   | "ASSIGNMENT_IMMUTABLE"
   | "ACTIVE_EXECUTION_EXISTS"
   | "EXECUTION_STATE_DATA"

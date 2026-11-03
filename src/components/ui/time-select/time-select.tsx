@@ -4,6 +4,7 @@ import { useEffect, useInsertionEffect, useLayoutEffect, useRef, useState } from
 import { createPortal } from "react-dom";
 
 import { FieldLabel } from "../form-field/form-field";
+import { useFormValueNotification } from "../../../shared/presentation/use-form-value-notification";
 import styles from "./time-select.module.css";
 import {
   QUICK_MINUTES,
@@ -167,6 +168,7 @@ export function TimeSelect({
   }, [isOpen]);
 
   const value = composeCanonical(parts?.hour ?? null, parts?.minute ?? null);
+  useFormValueNotification(hiddenInputRef, value);
   const displayValue = formatPersianTime(parts);
 
   function writeParts(next: TimeParts | null) {

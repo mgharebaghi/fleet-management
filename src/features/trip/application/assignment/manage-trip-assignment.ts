@@ -95,6 +95,8 @@ export async function assignInitialRequest(repository: TripRepository, input: As
       await session.activePassengerCountsByVehicle([
         ...new Set(resolvedVehicleIds),
       ]);
+    const readiness = await session.vehicleReadiness.check(resolvedVehicleIds);
+    if (!readiness.available) return failure(readiness.reason);
     if (
       vehiclePassengerCapacityExceeded({
         persistedActiveCounts,
@@ -134,5 +136,5 @@ export async function assignInitialRequest(repository: TripRepository, input: As
 
     await session.updateRequestStatus(input.tripRequestId, "Assigned");
     return { success: true, id: input.tripRequestId };
-  });
+  }, { dispatchAssignmentIds: input.passengers.map(passenger => passenger.vehicleDriverAssignmentId) });
 }

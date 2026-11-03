@@ -61,7 +61,7 @@ function InsuranceRecords({ insurances }: { insurances: VehicleInsuranceSummary[
   const ambiguousVehicleIds = findAmbiguousVehicleIds(insurances);
   const now = new Date();
   return <>
-    <DataTable caption="فهرست بیمه خودروها" minWidth={860}>
+    <DataTable caption="فهرست بیمه خودروها">
       <thead><tr><th scope="col">خودرو</th><th scope="col">بیمه‌نامه</th><th scope="col">دوره بیمه</th><th scope="col">مبالغ</th><th scope="col">وضعیت رکورد</th><th scope="col">عملیات</th></tr></thead>
       <tbody>{insurances.map(insurance => { const coverage = getInsuranceExpiryStatus(insurance, now); return <tr key={insurance.vehicleInsuranceId}>
         <td className={styles.cell}><VehicleCell vehicle={insurance.vehicle} showCode={ambiguousVehicleIds.has(insurance.vehicle.vehicleId)} /></td>

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { NavigationLink as Link } from "../navigation-link/navigation-link";
 import type { ReactNode } from "react";
 
 import styles from "./icon-action-button.module.css";

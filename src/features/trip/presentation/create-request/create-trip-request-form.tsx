@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useInsertionEffect, useRef, useState } from "react";
+import { useEffect, useId, useInsertionEffect, useRef, useState, useTransition } from "react";
+import { PageNavigationPending } from "@/components/ui/navigation-link/navigation-link";
 import { useRouter } from "next/navigation";
 
 import { ActionButton } from "@/components/ui/action-button/action-button";
@@ -33,6 +34,7 @@ type CreateTripRequestFormProps = {
 
 export function CreateTripRequestForm({ requestTypes, people, locations }: CreateTripRequestFormProps) {
   const router = useRouter();
+  const [leaving, startLeaving] = useTransition();
   const prefix = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const initialTypeId = defaultTripRequestTypeId(requestTypes);
@@ -119,7 +121,7 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
   }
 
   function leaveWizard() {
-    router.push("/trips");
+    startLeaving(() => router.push("/trips"));
   }
 
   function requestAbandon() {
@@ -226,13 +228,14 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
     const focus = wizardErrorNavigation(result.error, result.field, selectedType?.typeCode, result.failedLocation);
     const index = passengerIndexFromField(result.field ?? "");
     if (index !== null) setActivePassengerIndex(index);
-    setFormErrorState({ ...result, error: result.error as TripActionState["error"] });
+    setFormErrorState({ ...result, error: result.error as TripActionState["error"], values: readValues() });
     setStepNotice(tripMessages[result.error as keyof typeof tripMessages] ?? "ثبت انجام نشد. دوباره تلاش کنید.");
     setStep(focus.step);
   }
 
   return (
     <>
+    <PageNavigationPending href="/trips" pending={leaving} />
     <PageHeader
       eyebrow="مدیریت سفر"
       title="ثبت درخواست سفر"
@@ -247,10 +250,23 @@ export function CreateTripRequestForm({ requestTypes, people, locations }: Creat
         </ActionButton>
       }
     />
-    <div className={`${styles.createShell} ${styles.createFormShell}`}>
+    <div className={styles.createShell}>
       <TripCreateProgress currentIndex={step - 1} />
       <form
         ref={formRef}
+        onInputCapture={() => {
+          if (!stepNotice && !formErrorState.error) return;
+          requestAnimationFrame(() => {
+            const values = readValues();
+            const gaps = step === 1 ? requestStepGaps(values, selectedType?.typeCode) : passengerStepGaps(values, selectedType?.typeCode);
+            const conflict = step === 2 ? createPassengerConflict(values, selectedType?.typeCode) : null;
+            if ((values.purpose?.length ?? 0) > 500 || conflict) return;
+            if (formErrorState.error && !errorFocus.fields.some(name => values[name]?.trim() && values[name] !== formErrorState.values?.[name])) return;
+            if (formErrorState.error === "SAME_ORIGIN_DESTINATION" && shareOrigin && shareDestination && hasMatchingTripEndpoints(Number(values.commonOriginLocationId), Number(values.commonDestinationLocationId))) return;
+            setFormErrorState({});
+            setStepNotice(gaps.length ? gapNotice(gaps) : null);
+          });
+        }}
         noValidate
         hidden={step > 2}
         aria-label="ثبت درخواست سفر"

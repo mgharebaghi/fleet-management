@@ -46,7 +46,6 @@ import {
 } from "./location-assist";
 import styles from "./location-create-dialog.module.css";
 
-const MAP_LOADING_MESSAGE = "در حال بارگذاری نقشه…";
 const MAP_UNAVAILABLE_MESSAGE =
   "سرویس نقشه موقتاً در دسترس نیست؛ می‌توانید اطلاعات مکان را دستی ثبت کنید.";
 const SEARCH_UNAVAILABLE_MESSAGE = "جستجوی نقشه فعلاً در دسترس نیست.";
@@ -247,6 +246,10 @@ export function LocationCreateDialog({
   }
 
   function change(field: keyof LocationValues, value: string) {
+    const duplicateName = actionState.error === "LOCATION_NAME_ADDRESS_DUPLICATE" || actionState.error === "LOCATION_INACTIVE_DUPLICATE";
+    if ((actionState.field === field || (duplicateName && (field === "locationName" || field === "address"))) && (field !== "locationName" || value.trim())) {
+      setActionState(current => ({ ...current, error: undefined, field: undefined, similarLocations: undefined }));
+    }
     setAssist((current) => ({
       ...current,
       nameEdited: field === "locationName" ? true : current.nameEdited,
@@ -444,7 +447,6 @@ export function LocationCreateDialog({
                 marker ? [{ id: "selected", coordinate: marker }] : []
               }
               focus={focus}
-              loadingMessage={MAP_LOADING_MESSAGE}
               unavailableMessage={MAP_UNAVAILABLE_MESSAGE}
               onViewCenterChange={(coordinate) => {
                 viewCenterRef.current = coordinate;

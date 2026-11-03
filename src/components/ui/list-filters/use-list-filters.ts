@@ -8,16 +8,20 @@ import {
   scheduleListFilterNavigation,
   synchronizeListFilterDraft,
   type ListFilterValues,
+  hasListFilterCriteria,
+  buildClearListFiltersHref,
 } from "./list-filter-navigation";
 
 type UseListFiltersOptions<TValues extends ListFilterValues> = {
   /** Filter values derived from the URL the listing was rendered for. */
   values: TValues;
+  defaults: TValues;
   /** The free-text filter whose navigation is debounced while typing. */
   searchName: keyof TValues & string;
 };
 
 type ListFiltersController<TValues extends ListFilterValues> = {
+  clear: { visible: boolean; href: string; onNavigate: () => void };
   values: TValues;
   /** A filter navigation is in flight; the listing still shows its previous results. */
   isPending: boolean;
@@ -32,6 +36,7 @@ type ListFiltersController<TValues extends ListFilterValues> = {
  */
 export function useListFilters<TValues extends ListFilterValues>({
   values,
+  defaults,
   searchName,
 }: UseListFiltersOptions<TValues>): ListFiltersController<TValues> {
   const router = useRouter();
@@ -48,6 +53,7 @@ export function useListFilters<TValues extends ListFilterValues>({
     navigatedSearches: [] as readonly string[],
   });
   const cancelPendingSearch = useRef<(() => void) | null>(null);
+  const clearing = useRef(false);
 
   const arrivedNavigation = draftState.navigatedSearches.indexOf(
     values[searchName],
@@ -79,6 +85,10 @@ export function useListFilters<TValues extends ListFilterValues>({
   const sourceSearch = values[searchName];
 
   useEffect(() => {
+    if (clearing.current) {
+      if (hasListFilterCriteria(values, defaults)) return;
+      clearing.current = false;
+    }
     if (search === sourceSearch) {
       return;
     }
@@ -105,18 +115,30 @@ export function useListFilters<TValues extends ListFilterValues>({
         cancelPendingSearch.current = null;
       }
     };
-  }, [currentQuery, pathname, router, search, searchName, sourceSearch]);
+  }, [currentQuery, pathname, router, search, searchName, sourceSearch, values, defaults]);
 
   return {
+    clear: {
+      visible: hasListFilterCriteria(values, defaults),
+      href: buildClearListFiltersHref(pathname, new URLSearchParams(currentQuery), defaults),
+      onNavigate() {
+        cancelPendingSearch.current?.();
+        cancelPendingSearch.current = null;
+        clearing.current = true;
+        setDraftState(current => ({ ...current, draft: defaults, navigatedSearches: [...current.navigatedSearches, defaults[searchName]] }));
+      },
+    },
     values: draft,
     isPending,
     changeSearch(value: string) {
+      clearing.current = false;
       setDraftState((current) => ({
         ...current,
         draft: { ...current.draft, [searchName]: value },
       }));
     },
     applyFilter(name, value) {
+      clearing.current = false;
       cancelPendingSearch.current?.();
       cancelPendingSearch.current = null;
       setDraftState((current) => ({

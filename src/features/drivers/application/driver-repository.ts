@@ -1,6 +1,8 @@
+import type { VehicleDispatchReadiness } from "../../fleet/application/availability/vehicle-dispatch-readiness";
 import type { Assignment, DriverDetails, DriverSummary, License, NewAssignment, NewLicense, PersonReference, UpdatedAssignment, UpdatedLicense, VehicleReference } from "./driver-records";
 
 export interface DriverSession {
+  readonly vehicleReadiness: VehicleDispatchReadiness;
   person(id: number): Promise<PersonReference | null>;
   driverForPerson(id: number): Promise<boolean>;
   driver(id: number): Promise<DriverSummary | null>;
@@ -24,7 +26,7 @@ export interface DriverSession {
 }
 export interface DriverRepository {
   // All reference checks and writes in the callback share one atomic operation.
-  atomic<T>(work: (session: DriverSession) => Promise<T>): Promise<T>;
+  atomic<T>(work: (session: DriverSession) => Promise<T>, options?: { vehicleIds: readonly number[]; assignmentId?: number }): Promise<T>;
   list(search: string, page: number): Promise<{ drivers: DriverSummary[]; totalCount: number }>;
   details(id: number): Promise<DriverDetails | null>;
   availablePeople(): Promise<PersonReference[]>;

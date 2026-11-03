@@ -56,6 +56,14 @@
   }
 }
 
+.value,
+.placeholder {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .value {
   font-variant-numeric: tabular-nums;
   unicode-bidi: isolate;
@@ -73,6 +81,7 @@
 
 .clearButton {
   flex: 0 0 auto;
+  white-space: nowrap;
   padding: var(--space-2);
   border: 0;
   background: none;

@@ -86,6 +86,8 @@ type FormSectionProps = {
   description?: string;
   /** A compact note, such as the required-field key, aligned with the title. */
   aside?: ReactNode;
+  /** A section-level action; stacks below the heading on small screens. */
+  action?: ReactNode;
   children: ReactNode;
 };
 
@@ -95,12 +97,13 @@ export function FormSection({
   titleId,
   description,
   aside,
+  action,
   children,
 }: FormSectionProps) {
   return (
     <section className={styles.section}>
-      {(title || description || aside) && (
-        <header className={styles.sectionHeader}>
+      {(title || description || aside || action) && (
+        <header className={[styles.sectionHeader, action && styles.sectionHeaderWithAction].filter(Boolean).join(" ")}>
           <div>
             {title && (
               <h2 className={styles.sectionTitle} id={titleId}>
@@ -110,6 +113,7 @@ export function FormSection({
             {description && <p className={styles.sectionDescription}>{description}</p>}
           </div>
           {aside}
+          {action && <div className={styles.sectionAction}>{action}</div>}
         </header>
       )}
       <div className={styles.sectionBody}>{children}</div>
@@ -118,14 +122,15 @@ export function FormSection({
 }
 
 type FormActionsProps = {
+  layout?: "row" | "stacked";
   /** Separates the actions from the fields above them on page-level forms. */
   separated?: boolean;
   children: ReactNode;
 };
 
-export function FormActions({ separated = false, children }: FormActionsProps) {
+export function FormActions({ separated = false, layout = "row", children }: FormActionsProps) {
   return (
-    <div className={separated ? styles.separatedActions : styles.actions}>
+    <div className={[separated ? styles.separatedActions : styles.actions, layout === "stacked" && styles.stackedActions].filter(Boolean).join(" ")}>
       {children}
     </div>
   );

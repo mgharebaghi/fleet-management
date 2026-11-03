@@ -4,6 +4,8 @@ import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useEffect, useId, useInsertionEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FieldLabel } from "../form-field/form-field";
+import { ActionButton } from "../action-button/action-button";
+import { useFormValueNotification } from "../../../shared/presentation/use-form-value-notification";
 import styles from "./searchable-select.module.css";
 import {
   filterSearchableOptions,
@@ -27,6 +29,9 @@ type SearchableSelectProps = {
   invalid?: boolean;
   describedBy?: string;
   onValueChange?: (value: string) => void;
+  onCreateOption?: (value: string) => void;
+  createOptionLabel?: string;
+  customValueMaxLength?: number;
 };
 
 /**
@@ -48,6 +53,9 @@ export function SearchableSelect({
   invalid = false,
   describedBy,
   onValueChange,
+  onCreateOption,
+  createOptionLabel = "انتخاب مقدار دلخواه",
+  customValueMaxLength,
 }: SearchableSelectProps) {
   const fieldId = useId();
   const panelId = `${fieldId}-panel`;
@@ -64,9 +72,12 @@ export function SearchableSelect({
   const panelRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const hiddenInputRef = useRef<HTMLInputElement>(null);
+  useFormValueNotification(hiddenInputRef, selectedValue);
 
   const selectedOption = options.find((option) => option.value === selectedValue) ?? null;
   const filteredOptions = filterSearchableOptions(options, query, normalizeQuery);
+  const customValue = query.trim();
+  const canCreate = !!onCreateOption && !!customValue && !options.some(option => normalizeQuery(option.label.trim()) === normalizeQuery(customValue));
 
   // Kept in sync via an insertion effect - the one effect timing that commits
   // before React applies this render's DOM mutations - so the native "reset"
@@ -164,13 +175,21 @@ export function SearchableSelect({
   }
 
   function selectOption(option: SearchableSelectOption) {
-    if (option.disabled) {
+    if (disabled || option.disabled) {
       return;
     }
     setSelectedValue(option.value);
     onValueChange?.(option.value);
     setIsOpen(false);
     triggerRef.current?.focus();
+  }
+
+  function createOption() {
+    if (!canCreate || disabled) return;
+    onCreateOption?.(customValue);
+    setSelectedValue(customValue);
+    onValueChange?.(customValue);
+    closePanel();
   }
 
   function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
@@ -185,6 +204,8 @@ export function SearchableSelect({
       const option = filteredOptions[activeIndex];
       if (option) {
         selectOption(option);
+      } else if (canCreate) {
+        createOption();
       }
     }
   }
@@ -196,7 +217,7 @@ export function SearchableSelect({
       <FieldLabel htmlFor={fieldId} required={required}>{label}</FieldLabel>
 
       {/* The Application only ever sees the selected option's value. */}
-      <input ref={hiddenInputRef} type="hidden" name={name} value={selectedValue} readOnly />
+      <input ref={hiddenInputRef} type="hidden" name={name} value={selectedValue} data-required={required} readOnly />
 
       <button
         className={styles.trigger}
@@ -241,6 +262,7 @@ export function SearchableSelect({
             value={query}
             placeholder={searchPlaceholder}
             autoComplete="off"
+            maxLength={onCreateOption ? customValueMaxLength : undefined}
             onChange={(event) => {
               setQuery(event.target.value);
               setActiveIndex(0);
@@ -267,6 +289,7 @@ export function SearchableSelect({
               </li>
             ))}
           </ul>
+          {canCreate && <ActionButton variant="secondary" size="sm" disabled={disabled} onClick={createOption}>{createOptionLabel}: «{customValue}»</ActionButton>}
         </div>
       )}
     </div>

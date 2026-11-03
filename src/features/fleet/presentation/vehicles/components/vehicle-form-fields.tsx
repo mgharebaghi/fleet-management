@@ -37,6 +37,7 @@ export function FieldError({ id, message }: { id: string; message?: string }) {
 }
 
 type TextFieldProps = {
+  readOnly?: boolean;
   name: VehicleFieldName;
   label: string;
   span: FieldSpan;
@@ -58,6 +59,7 @@ export function VehicleTextField({
   placeholder,
   direction = "ltr",
   type = "text",
+  readOnly = false,
 }: TextFieldProps) {
   const errorId = `${name}-error`;
 
@@ -74,6 +76,7 @@ export function VehicleTextField({
         inputMode={inputMode}
         placeholder={placeholder}
         defaultValue={defaultValue}
+        readOnly={readOnly}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? errorId : undefined}
       />

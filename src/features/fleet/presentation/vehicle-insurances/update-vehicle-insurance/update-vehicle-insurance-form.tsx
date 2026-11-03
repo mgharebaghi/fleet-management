@@ -1,8 +1,9 @@
 "use client";
+import { useFleetFormState } from "../../use-fleet-form-state";
 
 import { InsuranceFormFields } from "../components/insurance-form-fields";
 
-import { useActionState, useMemo } from "react";
+import { useMemo } from "react";
 import type { ConfirmDialogIdentityLine } from "../../../../../components/ui/confirm-dialog/confirm-dialog";
 import { ConfirmedSubmitButton } from "../../../../../components/ui/confirmed-submit/confirmed-submit-button";
 
@@ -53,7 +54,7 @@ export function UpdateVehicleInsuranceForm({
   insurance: VehicleInsuranceSummary;
   vehicles: InsuranceVehicle[];
 }) {
-  const [state, formAction, pending] = useActionState(updateVehicleInsuranceAction, {});
+  const [state, formAction, pending, stateInput] = useFleetFormState(updateVehicleInsuranceAction, {});
   const errors: Partial<Record<keyof InsuranceFormValues, string>> = {};
   if (state.error?.type === "VALIDATION_ERROR") {
     for (const field of Object.keys(state.error.fieldErrors) as (keyof InsuranceFormValues)[]) {
@@ -68,7 +69,7 @@ export function UpdateVehicleInsuranceForm({
   const vehicleOptions = useMemo(() => buildVehicleOptions(vehicles), [vehicles]);
 
   return (
-    <form id="update-vehicle-insurance-form" action={formAction} noValidate aria-busy={pending}>
+    <form id="update-vehicle-insurance-form" action={formAction} onInputCapture={stateInput} noValidate aria-busy={pending}>
       <input type="hidden" name="vehicleInsuranceId" value={insurance.vehicleInsuranceId} />
 
       {(state.error || state.formError) && <InlineNotice tone="danger" role="alert">
@@ -89,7 +90,7 @@ export function UpdateVehicleInsuranceForm({
         </FormField>
       </FormGrid>
       </FormSection>
-      {pending && <LoadingIndicator label="در حال ذخیره تغییرات…" />}
+      {pending && <LoadingIndicator />}
       <FormActions separated>
         <ConfirmedSubmitButton
           formId="update-vehicle-insurance-form"

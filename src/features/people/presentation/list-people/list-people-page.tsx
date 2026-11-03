@@ -1,4 +1,5 @@
 import { ActionLink } from "../../../../components/ui/action-link/action-link";
+import { reportServerFailure } from "../../../../infrastructure/observability/report-server-failure";
 import { DataTable } from "../../../../components/ui/data-table/data-table";
 import { PageHeader } from "../../../../components/ui/page-header/page-header";
 import { PageShell } from "../../../../components/ui/page-shell/page-shell";
@@ -219,7 +220,8 @@ export async function ListPeoplePage({ searchParams }: ListPeoplePageProps) {
 
   try {
     result = await makeListPeople().execute(input);
-  } catch {
+  } catch (error) {
+    reportServerFailure("people.list", error);
     return (
       <PageShell>
         <PageHeader
@@ -234,7 +236,7 @@ export async function ListPeoplePage({ searchParams }: ListPeoplePageProps) {
 
   const totalPages = Math.ceil(result.totalCount / DEFAULT_PAGE_SIZE);
   const hasCriteria =
-    (search !== undefined && search !== "") || status !== undefined;
+    Boolean(search?.trim() || (status !== undefined && status !== "active"));
 
   return (
     <PageShell>
@@ -248,7 +250,6 @@ export async function ListPeoplePage({ searchParams }: ListPeoplePageProps) {
       <ListPeopleFilters
         initialSearch={search ?? ""}
         initialStatus={status ?? "active"}
-        hasCriteria={hasCriteria}
       />
 
       {result.people.length > 0 ? (
@@ -261,8 +262,10 @@ export async function ListPeoplePage({ searchParams }: ListPeoplePageProps) {
           <PeopleTable people={result.people} />
           <PersonCards people={result.people} />
         </>
+      ) : result.totalCount > 0 ? (
+        <ResultState title="این صفحه خالی است" description="شماره صفحه از تعداد نتیجه‌ها بیشتر است؛ به صفحه اول بازگردید." action={<ActionLink href={buildPageHref(search, status, 1)}>صفحه اول</ActionLink>} />
       ) : (
-        <EmptyState hasCriteria={hasCriteria || result.totalCount > 0} />
+        <EmptyState hasCriteria={hasCriteria} />
       )}
 
       <Pagination

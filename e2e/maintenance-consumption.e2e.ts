@@ -1,0 +1,123 @@
+import { randomUUID } from "node:crypto";
+import { expect, test } from "@playwright/test";
+import { connectToE2EDatabase, type E2EDatabaseAdapter } from "./support/e2e-database";
+import { selectSearchableOption } from "./support/searchable-select";
+import { captureResponsiveThemes } from "./support/visual-evidence";
+
+test.describe.serial("Repair consumption", () => {
+  const token = `E2E-CONS-${randomUUID().slice(0, 8)}`;
+  let adapter: E2EDatabaseAdapter, vehicleId: number, partA: number, partB: number, orderId: number;
+  test.beforeAll(async () => {
+    test.setTimeout(90000); adapter = await connectToE2EDatabase();
+    const fixture = await adapter.underlyingDriver().request().input("token", token).query<{ vehicle: number; partA: number; partB: number }>(`
+      DECLARE @brand int,@model int,@status int,@vehicle int,@unit int,@partA int,@partB int,@warehouse int;
+      INSERT fleet.VehicleBrand (BrandName) VALUES (@token); SET @brand=SCOPE_IDENTITY();
+      INSERT fleet.VehicleModel (BrandId,ModelName) VALUES (@brand,@token); SET @model=SCOPE_IDENTITY();
+      INSERT fleet.VehicleStatus (StatusName) VALUES (@token); SET @status=SCOPE_IDENTITY();
+      INSERT fleet.Vehicle (VehicleCode,PlateNoLeftSide,ModelId,VehicleStatusId,CurrentOdometer) VALUES (@token,N'12',@model,@status,100); SET @vehicle=SCOPE_IDENTITY();
+      INSERT inventory.Unit (UnitName) VALUES (@token); SET @unit=SCOPE_IDENTITY();
+      INSERT inventory.Part (PartCode,PartName,UnitId) VALUES (@token+N'-a',@token+N' قطعه اول',@unit); SET @partA=SCOPE_IDENTITY();
+      INSERT inventory.Part (PartCode,PartName,UnitId) VALUES (@token+N'-b',@token+N' قطعه دوم',@unit); SET @partB=SCOPE_IDENTITY();
+      INSERT inventory.Warehouse (WarehouseCode,WarehouseName) VALUES (@token,@token); SET @warehouse=SCOPE_IDENTITY();
+      INSERT inventory.StockTransaction (WarehouseId,PartId,TransactionType,Quantity) VALUES (@warehouse,@partA,N'Opening',10);
+      SELECT @vehicle vehicle,@partA partA,@partB partB;
+    `); ({ vehicle: vehicleId, partA, partB } = fixture.recordset[0]);
+  });
+  test.afterAll(async () => {
+    test.setTimeout(120000);
+    try { if (adapter) {
+      const result = await adapter.underlyingDriver().request().input("token", token).query<{ remaining: number }>(`
+        DELETE item FROM maintenance.WorkOrderPart item JOIN maintenance.WorkOrder o ON o.WorkOrderId=item.WorkOrderId JOIN fleet.Vehicle v ON v.VehicleId=o.VehicleId WHERE v.VehicleCode=@token;
+        DELETE task FROM maintenance.WorkOrderTask task JOIN maintenance.WorkOrder o ON o.WorkOrderId=task.WorkOrderId JOIN fleet.Vehicle v ON v.VehicleId=o.VehicleId WHERE v.VehicleCode=@token;
+        DELETE o FROM maintenance.WorkOrder o JOIN fleet.Vehicle v ON v.VehicleId=o.VehicleId WHERE v.VehicleCode=@token;
+        DELETE movement FROM inventory.StockTransaction movement JOIN inventory.Part p ON p.PartId=movement.PartId WHERE p.PartCode IN (@token+N'-a',@token+N'-b');
+        DELETE inventory.Part WHERE PartCode IN (@token+N'-a',@token+N'-b'); DELETE inventory.Warehouse WHERE WarehouseCode=@token; DELETE inventory.Unit WHERE UnitName=@token;
+        DELETE fleet.Vehicle WHERE VehicleCode=@token; DELETE fleet.VehicleModel WHERE ModelName=@token; DELETE fleet.VehicleBrand WHERE BrandName=@token; DELETE fleet.VehicleStatus WHERE StatusName=@token;
+        DELETE maintenance.MaintenanceType WHERE TypeCode=@token;
+        SELECT COUNT(*) remaining FROM fleet.Vehicle WHERE VehicleCode=@token;
+      `); expect(result.recordset[0].remaining).toBe(0);
+    } } finally { await adapter?.dispose(); }
+  });
+  test("records exact consumption, preserves inventory and cancellation history, then completes an unknown closed-file price", async ({ page }) => {
+    test.setTimeout(360000);
+    await page.goto("/maintenance/catalogs/create");
+    await page.getByLabel("کد نوع تعمیر و سرویس", { exact: true }).fill(token);
+    await page.getByLabel("عنوان نوع تعمیر و سرویس", { exact: true }).fill(token);
+    await page.getByRole("button", { name: "ثبت نوع تعمیر و سرویس", exact: true }).click();
+    await expect(page).toHaveURL(/\/maintenance\/catalogs\/\d+$/);
+    const typeId = Number(new URL(page.url()).pathname.split("/").at(-1));
+    const fixture = await adapter.underlyingDriver().request().input("token", token).input("vehicle", vehicleId).input("type", typeId).query<{ id: number }>(`
+      INSERT maintenance.WorkOrder (WorkOrderNo,VehicleId,MaintenanceTypeId,WorkLocationType,Diagnosis,Status) VALUES (@token,@vehicle,@type,N'OnSite',@token,N'Open');
+      DECLARE @order int=SCOPE_IDENTITY();
+      INSERT maintenance.WorkOrderTask (WorkOrderId,TaskTitle,Status,LaborCost) VALUES (@order,@token+N' کار مرتبط',N'Open',0);
+      SELECT @order id;
+    `); orderId = fixture.recordset[0].id;
+    const panel = page.locator("[data-loading-panel]");
+    async function create() { await panel.getByRole("button", { name: "ثبت قطعهٔ مصرف‌شده", exact: true }).click(); return page.getByRole("dialog", { name: "ثبت قطعهٔ مصرف‌شده", exact: true }); }
+    await page.goto(`/maintenance/work-orders/${orderId}/parts`);
+    await expect(page.getByRole("link", { name: "قطعات مصرف‌شده", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(panel.getByText("ثبت مصرف، موجودی انبار را تغییر نمی‌دهد؛ خروج انبار را جداگانه ثبت کنید.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "لغو پروندهٔ تعمیر", exact: true })).toHaveCount(0);
+    let dialog = await create();
+    await dialog.getByRole("button", { name: "ثبت مصرف", exact: true }).click();
+    await expect(dialog.getByLabel("قطعه", { exact: true })).toHaveAttribute("data-invalid", "true");
+    await selectSearchableOption(page, "قطعه", `${token} قطعه اول`, `${token} قطعه اول — کد ${token}-a`);
+    await selectSearchableOption(page, "کار مرتبط", token, `${token} کار مرتبط — ثبت‌شده`);
+    await dialog.getByLabel("مقدار مصرف", { exact: true }).fill("0");
+    await dialog.getByLabel("قیمت هر واحد (تومان)", { exact: true }).fill("۲٫۰۳");
+    await dialog.getByLabel("توضیحات", { exact: true }).fill("مصرف آزمایشی اول");
+    await dialog.getByRole("button", { name: "ثبت مصرف", exact: true }).click();
+    await expect(dialog.getByLabel("مقدار مصرف", { exact: true })).toHaveAttribute("aria-invalid", "true");
+    await expect(dialog.getByLabel("قطعه", { exact: true })).toContainText(`${token} قطعه اول`);
+    await expect(dialog.getByLabel("قیمت هر واحد (تومان)", { exact: true })).toHaveValue("2.03");
+    await dialog.getByLabel("مقدار مصرف", { exact: true }).fill("۱٫۰۱");
+    await expect(dialog.getByLabel("مقدار مصرف", { exact: true })).toHaveAttribute("aria-invalid", "false");
+    await captureResponsiveThemes(page, "consumed-part-form", { modal: true });
+    await dialog.getByRole("button", { name: "ثبت مصرف", exact: true }).click(); await expect(dialog).toBeHidden();
+    const first = page.getByRole("row").filter({ hasText: `${token} قطعه اول` });
+    await expect(first).toContainText("2.0503"); await expect(first).toContainText(`کد قطعه: ${token}-a`);
+    dialog = await create(); await selectSearchableOption(page, "قطعه", `${token} قطعه دوم`, `${token} قطعه دوم — کد ${token}-b`);
+    await dialog.getByLabel("مقدار مصرف", { exact: true }).fill("10");
+    await dialog.getByRole("button", { name: "ثبت مصرف", exact: true }).click(); await expect(dialog).toBeHidden();
+    await expect(panel.getByText(/قیمت.*ردیف نامشخص است/)).toBeVisible();
+    await adapter.underlyingDriver().request().input("id", partA).query("UPDATE inventory.Part SET IsActive=0 WHERE PartId=@id");
+    await page.reload(); await page.getByRole("button", { name: `ویرایش مصرف ${token} قطعه اول`, exact: true }).click();
+    dialog = page.getByRole("dialog", { name: "ویرایش قطعهٔ مصرف‌شده", exact: true });
+    await expect(dialog.getByLabel("قطعه", { exact: true })).toContainText("غیرفعال");
+    await dialog.getByLabel("مقدار مصرف", { exact: true }).fill("۱۲۳۴٫۵۶");
+    await expect(dialog.getByLabel("مقدار مصرف", { exact: true })).toHaveValue("1,234.56");
+    await dialog.getByRole("button", { name: "ذخیره تغییرات", exact: true }).click(); await expect(dialog).toBeHidden(); await expect(first).toContainText("2,506.1568");
+    dialog = await create(); await selectSearchableOption(page, "قطعه", `${token} قطعه دوم`, `${token} قطعه دوم — کد ${token}-b`);
+    await dialog.getByLabel("مقدار مصرف", { exact: true }).fill("1"); await dialog.getByLabel("قیمت هر واحد (تومان)", { exact: true }).fill("0");
+    await dialog.getByLabel("توضیحات", { exact: true }).fill("ردیف قابل حذف");
+    await dialog.getByRole("button", { name: "ثبت مصرف", exact: true }).click(); await expect(dialog).toBeHidden();
+    await page.getByRole("row").filter({ hasText: "ردیف قابل حذف" }).getByRole("button", { name: `حذف مصرف ${token} قطعه دوم`, exact: true }).click();
+    const deletion = page.getByRole("dialog", { name: "حذف قطعهٔ مصرف‌شده", exact: true });
+    await deletion.getByRole("button", { name: "تأیید حذف", exact: true }).click(); await expect(deletion).toBeHidden();
+    await expect(page.getByRole("row").filter({ hasText: "ردیف قابل حذف" })).toHaveCount(0);
+    await captureResponsiveThemes(page, "consumed-parts-open");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByRole("listitem").filter({ hasText: `${token} قطعه اول` })).toContainText("2,506.1568");
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.getByRole("link", { name: "اطلاعات و عیب‌یابی", exact: true }).click();
+    await page.getByRole("complementary", { name: "خلاصهٔ پرونده" }).getByRole("button", { name: "لغو پروندهٔ تعمیر", exact: true }).click();
+    const cancellation = page.getByRole("dialog", { name: "لغو پروندهٔ تعمیر", exact: true });
+    await cancellation.getByRole("button", { name: "تأیید لغو پرونده", exact: true }).click(); await expect(cancellation).toBeHidden();
+    await page.getByRole("link", { name: "قطعات مصرف‌شده", exact: true }).click();
+    await expect(panel.getByRole("button", { name: "ثبت قطعهٔ مصرف‌شده", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: `ویرایش مصرف ${token} قطعه اول امکان‌پذیر نیست`, exact: true })).toBeDisabled();
+    await expect(panel.getByRole("button", { name: /^حذف مصرف/ })).toHaveCount(0);
+    await page.getByRole("button", { name: `تکمیل قیمت ${token} قطعه دوم`, exact: true }).click();
+    dialog = page.getByRole("dialog", { name: "تکمیل قیمت قطعه", exact: true });
+    await dialog.getByRole("button", { name: "ثبت قیمت", exact: true }).click(); await expect(dialog.getByRole("alert").first()).toBeVisible();
+    await dialog.getByLabel("قیمت هر واحد (تومان)", { exact: true }).fill("0");
+    await dialog.getByRole("button", { name: "ثبت قیمت", exact: true }).click(); await expect(dialog).toBeHidden();
+    await expect(panel.getByText("قیمت همهٔ قطعات ثبت شده", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: `ویرایش مصرف ${token} قطعه دوم امکان‌پذیر نیست`, exact: true })).toBeDisabled();
+    const result = await adapter.underlyingDriver().request().input("order", orderId).input("a", partA).input("b", partB).query<{ part: number; quantity: string; price: string; total: string }>("SELECT PartId part,CONVERT(varchar(40),Quantity) quantity,CONVERT(varchar(40),UnitPrice) price,CONVERT(varchar(80),TotalPrice) total FROM maintenance.WorkOrderPart WHERE WorkOrderId=@order ORDER BY WorkOrderPartId");
+    expect(result.recordset).toEqual([{ part: partA, quantity: "1234.56", price: "2.03", total: "2506.1568" }, { part: partB, quantity: "10.00", price: "0.00", total: "0.0000" }]);
+    const stock = await adapter.underlyingDriver().request().input("a", partA).input("vehicle", vehicleId).query<{ movements: number; balance: string; odometer: string }>("SELECT COUNT(*) movements,CONVERT(varchar(40),SUM(Quantity)) balance,(SELECT CONVERT(varchar(40),CurrentOdometer) FROM fleet.Vehicle WHERE VehicleId=@vehicle) odometer FROM inventory.StockTransaction WHERE PartId=@a");
+    expect(stock.recordset[0]).toEqual({ movements: 1, balance: "10.00", odometer: "100.00" });
+    await page.getByRole("heading", { level: 1 }).scrollIntoViewIfNeeded(); await captureResponsiveThemes(page, "consumed-parts-closed");
+  });
+});

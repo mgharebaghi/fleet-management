@@ -1,8 +1,9 @@
 "use client";
+import { useFleetFormState } from "../../use-fleet-form-state";
 
 import { InsuranceFormFields } from "../components/insurance-form-fields";
 
-import { useActionState, useMemo } from "react";
+import { useMemo } from "react";
 import { ActionButton } from "../../../../../components/ui/action-button/action-button";
 
 import { FormActions, FormSection } from "../../../../../components/ui/form-field/form-field";
@@ -17,7 +18,7 @@ import type { InsuranceFormValues } from "../components/insurance-form-data";
 import { buildVehicleOptions } from "../../vehicles/components/vehicle-picker-options";
 
 export function CreateVehicleInsuranceForm({ vehicles }: { vehicles: InsuranceVehicle[] }) {
-  const [state, formAction, pending] = useActionState(createVehicleInsuranceAction, {});
+  const [state, formAction, pending, stateInput] = useFleetFormState(createVehicleInsuranceAction, {});
   const errors: Partial<Record<keyof InsuranceFormValues, string>> = {};
   if (state.error?.type === "VALIDATION_ERROR") {
     for (const field of Object.keys(state.error.fieldErrors) as (keyof InsuranceFormValues)[]) {
@@ -31,7 +32,7 @@ export function CreateVehicleInsuranceForm({ vehicles }: { vehicles: InsuranceVe
   const vehicleOptions = useMemo(() => buildVehicleOptions(vehicles), [vehicles]);
 
   return (
-    <form action={formAction} noValidate aria-busy={pending}>
+    <form action={formAction} onInputCapture={stateInput} noValidate aria-busy={pending}>
       {(state.error || state.formError) && <InlineNotice tone="danger" role="alert">
         {state.formError ? "ثبت بیمه انجام نشد. اطلاعات را بررسی کنید و دوباره تلاش کنید." : "اطلاعات مشخص‌شده را اصلاح کنید."}
       </InlineNotice>}
@@ -40,7 +41,7 @@ export function CreateVehicleInsuranceForm({ vehicles }: { vehicles: InsuranceVe
         <InsuranceFormFields vehicleOptions={vehicleOptions} valueOf={valueOf} errors={errors} pending={pending} />
       </FormGrid>
       </FormSection>
-      {pending && <LoadingIndicator label="در حال ثبت بیمه…" />}
+      {pending && <LoadingIndicator />}
       <FormActions separated>
         <ActionButton type="submit" disabled={pending} pending={pending}>{pending ? "در حال ثبت…" : "ثبت بیمه خودرو"}</ActionButton>
       </FormActions>

@@ -110,7 +110,7 @@ function OperationalStatus({ name }: { name: string }) {
 
 function VehiclesTable({ vehicles }: { vehicles: VehicleSummary[] }) {
   return (
-    <DataTable caption="فهرست خودروها" minWidth={940}>
+    <DataTable caption="فهرست خودروها">
       <thead>
         <tr>
           <th scope="col">کد خودرو</th>
@@ -351,7 +351,6 @@ export async function ListVehiclesPage({
         initialStatus={statusId === null ? "" : String(statusId)}
         initialActive={active}
         statuses={statuses}
-        hasCriteria={hasCriteria}
       />
 
       {result.vehicles.length > 0 ? (

@@ -24,7 +24,6 @@ function renderFilters({
   search = "",
   status = "",
   active = "active",
-  hasCriteria = false,
 } = {}) {
   return renderToStaticMarkup(
     <ListVehiclesFilters
@@ -32,7 +31,6 @@ function renderFilters({
       initialStatus={status}
       initialActive={active}
       statuses={statuses}
-      hasCriteria={hasCriteria}
     />,
   );
 }
@@ -60,7 +58,6 @@ describe("ListVehiclesFilters", () => {
       search: "V-1",
       status: "2",
       active: "all",
-      hasCriteria: true,
     });
 
     expect(markup).toContain('value="V-1"');
@@ -80,6 +77,6 @@ describe("ListVehiclesFilters", () => {
 
   it("hides the clear affordance while no criteria are applied", () => {
     expect(renderFilters()).not.toContain("پاک کردن");
-    expect(renderFilters({ hasCriteria: true })).toContain("پاک کردن");
+    expect(renderFilters({ search: "Ali" })).toContain("پاک کردن");
   });
 });

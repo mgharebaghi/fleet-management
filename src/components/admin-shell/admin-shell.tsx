@@ -28,7 +28,6 @@ export function AdminShell({
         <div className={styles.brandSlot}>
           <BrandMark />
         </div>
-        <p className={styles.sidebarTitle}>مدیریت عملیات</p>
         <AdminSidebarNav
           pendingTripRequestsCount={pendingTripRequestsCount}
           tripBadge={tripBadge}

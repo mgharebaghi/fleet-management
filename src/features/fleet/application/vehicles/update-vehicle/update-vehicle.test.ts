@@ -1,3 +1,4 @@
+import { VehicleMeterHistoryError } from "../../meter-readings/direct-meter-edit";
 import { describe, expect, it, vi } from "vitest";
 
 import type { VehicleIdentifier } from "../ports/vehicle-identifier-reader";
@@ -92,4 +93,9 @@ describe("UpdateVehicle", () => {
 
     expect(result).toEqual({ success: false, error: { type: "NOT_FOUND" } });
   });
+  it("returns a clear failure when history appeared after the edit form loaded", async () => {
+    const { writer, useCase } = setup(); writer.update.mockRejectedValueOnce(new VehicleMeterHistoryError());
+    expect(await useCase.execute({ ...valid(), vehicleId: 7 })).toEqual({ success: false, error: { type: "METER_HISTORY_LOCKED" } });
+  });
+
 });
