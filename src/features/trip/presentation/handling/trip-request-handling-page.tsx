@@ -1,5 +1,5 @@
 "use client";
-import { dataTableClassName } from "@/components/ui/data-table/data-table";
+import { dataTableClassName } from "../../../../components/ui/data-table/data-table";
 
 import { RecordDetailsButton } from "../../../../components/ui/record-details-button/record-details-button";
 
