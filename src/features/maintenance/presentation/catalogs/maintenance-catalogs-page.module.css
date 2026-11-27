@@ -1,0 +1,7 @@
+.slot {
+  width: calc((100% - var(--space-6)) / 2);
+}
+
+@media (max-width: 900px) {
+  .slot { width: 100%; }
+}

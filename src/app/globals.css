@@ -48,6 +48,7 @@
   --app-heading: #17233c;
   --app-text-muted: #697791;
   --app-label: #697791;
+  --app-scrollbar-thumb: #718098;
   --app-border: #e3e9f1;
   --app-border-subtle: #e3e9f1;
   --app-control-border: #e3e9f1;
@@ -103,6 +104,7 @@
   --app-heading: #ecf3fa;
   --app-text-muted: #9eafc3;
   --app-label: #9eafc3;
+  --app-scrollbar-thumb: #7b8da5;
   --app-border: #2d4055;
   --app-border-subtle: #2d4055;
   --app-control-border: #2d4055;
@@ -164,6 +166,39 @@ body {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
+}
+
+/* Keep the track invisible, and honor native high-contrast scrollbars. */
+@media (forced-colors: none) {
+  @supports selector(::-webkit-scrollbar) {
+    :where(*)::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    :where(*)::-webkit-scrollbar-thumb {
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--app-scrollbar-thumb) 65%, transparent) padding-box;
+    }
+
+    :where(*)::-webkit-scrollbar-thumb:hover,
+    :where(*)::-webkit-scrollbar-thumb:active {
+      background-color: var(--app-scrollbar-thumb);
+    }
+
+    :where(*)::-webkit-scrollbar-track,
+    :where(*)::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+  }
+
+  @supports not selector(::-webkit-scrollbar) {
+    :where(*) {
+      scrollbar-width: thin;
+      scrollbar-color: var(--app-scrollbar-thumb) transparent;
+    }
+  }
 }
 
 button,

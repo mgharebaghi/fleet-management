@@ -188,7 +188,7 @@ npm run prisma:generate    # generate Prisma Client
 
 npm run test:unit          # unit tests, no database required
 npm run test:integration   # integration tests, requires TEST_DATABASE_*
-npm run test:maintenance-contract # read-only maintenance/inventory contract check in both test DBs
+npm run test:maintenance-contract # read-only maintenance/inventory contract check (Integration DB by default)
 npm run test:e2e           # Playwright E2E, requires E2E_DATABASE_*
 ```
 
@@ -366,10 +366,12 @@ The general validation notice clears when no field errors remain. Each feature
 owns its field-to-error mapping; Application/server validation still runs on every
 submission. Clearing feedback does not certify uniqueness or persist a change.
 
-Before the first business slice, run `npm run test:maintenance-contract`. This
-read-only check verifies the dedicated Integration and E2E database identities
-and compares their maintenance/inventory metadata with the reviewed SQL Server
-contract. It does not run a browser, write rows or provision tables. Required
+Run `npm run test:maintenance-contract` for the Integration database. Set
+`MAINTENANCE_CONTRACT_DB=E2E_DATABASE` to run the same check against the E2E
+database (in PowerShell, set `$env:MAINTENANCE_CONTRACT_DB = 'E2E_DATABASE'`
+before running the command). Each CI job checks only its own database. The check
+compares maintenance/inventory metadata with the reviewed SQL Server contract.
+It does not run a browser, write rows or provision tables. Required
 test-account access and `VIEW DEFINITION` must be available; an unavailable or
 different contract fails instead of falling back to Development. Both test
 connections and the full maintenance/inventory contract now pass after the

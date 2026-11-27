@@ -21,7 +21,6 @@
   overflow-y: auto;
   background: var(--app-sidebar);
   color: #fff;
-  scrollbar-width: thin;
 }
 
 .brandSlot {

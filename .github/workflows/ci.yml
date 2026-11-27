@@ -102,6 +102,7 @@ jobs:
       - name: Integration tests
         run: npm run test:integration
         env:
+          MAINTENANCE_CONTRACT_DB: TEST_DATABASE
           TEST_DATABASE_SERVER: ${{ secrets.TEST_DATABASE_SERVER }}
           TEST_DATABASE_PORT: ${{ secrets.TEST_DATABASE_PORT }}
           TEST_DATABASE_NAME: ${{ secrets.TEST_DATABASE_NAME }}
@@ -140,7 +141,10 @@ jobs:
       # detects CI and drives the runner's pre-installed Google Chrome via
       # Playwright's `channel: "chrome"` instead, which needs no download.
       - name: E2E tests
-        run: npm run test:e2e -- --retries=0
+        run: |
+          # Validate only this job's test database before the browser build.
+          MAINTENANCE_CONTRACT_DB=E2E_DATABASE npm run test:maintenance-contract
+          npm run test:e2e -- --retries=0
         env:
           E2E_DATABASE_SERVER: ${{ secrets.E2E_DATABASE_SERVER }}
           E2E_DATABASE_PORT: ${{ secrets.E2E_DATABASE_PORT }}

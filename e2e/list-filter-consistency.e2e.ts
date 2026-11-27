@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-const paths = ["/people", "/drivers", "/fleet/vehicles", "/fleet/vehicle-insurances", "/trips/requests", "/inventory/parts", "/inventory/warehouses", "/inventory/stock", "/inventory/movements", "/maintenance/requests", "/maintenance/catalogs", "/maintenance/workshops", "/maintenance/technicians"];
+const paths = ["/people", "/drivers", "/fleet/vehicles", "/fleet/vehicle-insurances", "/trips/requests", "/inventory/parts", "/inventory/warehouses", "/inventory/stock", "/inventory/movements", "/maintenance/requests", "/maintenance/catalogs/types", "/maintenance/workshops", "/maintenance/technicians"];
 for (const path of paths) {
   test(`uses shared search and clearing at ${path}`, async ({ page }) => {
     test.setTimeout(90000);
