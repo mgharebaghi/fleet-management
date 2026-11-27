@@ -186,7 +186,9 @@ jobs:
         run: |
           # Validate only this job's test database before the browser build.
           MAINTENANCE_CONTRACT_DB=E2E_DATABASE npm run test:maintenance-contract
-          if [[ "$TEST_SCOPE" == "inventory-maintenance" ]]; then
+          if [[ "$TEST_SCOPE" == "vehicle-meter" ]]; then
+            npm run test:e2e -- --retries=0 e2e/vehicle-meter-readings.e2e.ts
+          elif [[ "$TEST_SCOPE" == "inventory-maintenance" ]]; then
             npm run test:e2e -- --retries=0 \
               'e2e/(inventory-|maintenance-|service-plans\.|admin-nav-accordion\.|form-feedback\.|list-clear-filters\.|list-filter-consistency\.|page-navigation\.|route-loading\.|vehicle-meter-readings\.|vehicles\.|trips\.|trip-vehicle-capacity\.|drivers\.)'
           else

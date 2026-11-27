@@ -12,9 +12,23 @@ const documentationPath = /^(?:README\.md|docs\/.+\.md)$/;
 const unitTestPath = /^src\/(?:features|components)\/.+\.test\.tsx?$/;
 const integrationTestPath = /\.integration\.test\.tsx?$/;
 const stylesheet = "src/app/globals.css";
+const meterSpec = "e2e/vehicle-meter-readings.e2e.ts";
+const selectionPaths = new Set([
+  ".github/workflows/ci.yml",
+  "scripts/select-test-plan.mjs",
+  "scripts/select-test-plan.node-test.mjs",
+]);
 
-export function selectTestPlan(paths) {
+export function selectTestPlan(paths, { registryOnly = false } = {}) {
   if (paths.length === 0) return FULL;
+
+  // Target the meter spec only when its test changes without app changes.
+  // A Dockerfile edit is allowed here only when it retains the base image tag
+  // and changes nothing but the registry. Routing changes alone still run full.
+  if (paths.includes(meterSpec) && paths.every(path =>
+    path === meterSpec || documentationPath.test(path) ||
+    (registryOnly && (path === "Dockerfile" || selectionPaths.has(path)))
+  )) return { integration: "skip", e2e: "vehicle-meter" };
 
   let hasScopedChange = false;
   let hasGlobalStyles = false;
@@ -49,13 +63,26 @@ export function changedPullRequestPaths(base, head, cwd) {
     .filter(Boolean);
 }
 
+export function isBaseImageRegistryOnly(before, after) {
+  const from = /^FROM node:(\S+) AS base$/m;
+  return from.test(before) &&
+    before.replace(from, "FROM public.ecr.aws/docker/library/node:$1 AS base") === after;
+}
+
+function hasRegistryOnlyDockerChange(base, head) {
+  const git = (...args) => execFileSync("git", args, { encoding: "utf8" });
+  const ancestor = git("merge-base", base, head).trim();
+  return isBaseImageRegistryOnly(git("show", ancestor + ":Dockerfile"), git("show", head + ":Dockerfile"));
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   let plan = FULL;
   if (process.env.GITHUB_EVENT_NAME === "pull_request") {
     try {
-      plan = selectTestPlan(
-        changedPullRequestPaths(process.env.PR_BASE_SHA, process.env.PR_HEAD_SHA),
-      );
+      const { PR_BASE_SHA: base, PR_HEAD_SHA: head } = process.env;
+      const paths = changedPullRequestPaths(base, head);
+      const registryOnly = paths.includes("Dockerfile") && hasRegistryOnlyDockerChange(base, head);
+      plan = selectTestPlan(paths, { registryOnly });
     } catch {
       console.warn("Could not determine the complete PR diff; running the full suites.");
     }

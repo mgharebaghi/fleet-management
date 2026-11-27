@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { changedPullRequestPaths, selectTestPlan } from "./select-test-plan.mjs";
+import { changedPullRequestPaths, isBaseImageRegistryOnly, selectTestPlan } from "./select-test-plan.mjs";
 
 const full = { integration: "full", e2e: "full" };
 const skipped = { integration: "skip", e2e: "skip" };
@@ -29,6 +29,27 @@ test("scopes inventory and maintenance together without losing a changed route",
   assert.deepEqual(selectTestPlan([stock]), scoped);
   assert.deepEqual(selectTestPlan([maintenance, "docs/maintenance.md"]), scoped);
   assert.deepEqual(selectTestPlan([maintenance, stock]), scoped);
+});
+
+test("scopes the meter spec and a registry-only hotfix, not application or unrelated CI edits", () => {
+  const spec = "e2e/vehicle-meter-readings.e2e.ts";
+  const workflow = ".github/workflows/ci.yml";
+  const focused = { integration: "skip", e2e: "vehicle-meter" };
+  const files = [spec, "Dockerfile", workflow, "scripts/select-test-plan.mjs", "scripts/select-test-plan.node-test.mjs"];
+  assert.deepEqual(selectTestPlan([spec]), focused);
+  assert.deepEqual(selectTestPlan(files, { registryOnly: true }), focused);
+  assert.deepEqual(selectTestPlan(files), full);
+  assert.deepEqual(selectTestPlan([spec, workflow]), full);
+  assert.deepEqual(selectTestPlan([...files, stock], { registryOnly: true }), full);
+  assert.deepEqual(selectTestPlan([...files, "e2e/support/e2e-database.ts"], { registryOnly: true }), full);
+});
+
+test("compares the complete Dockerfile when recognizing a registry-only change", () => {
+  const original = "FROM node:24-bookworm-slim AS base\nRUN npm ci\n";
+  const mirror = original.replace("FROM node:", "FROM public.ecr.aws/docker/library/node:");
+  assert.equal(isBaseImageRegistryOnly(original, mirror), true);
+  assert.equal(isBaseImageRegistryOnly(original, mirror.replace("24-", "22-")), false);
+  assert.equal(isBaseImageRegistryOnly(original, mirror + "RUN npm run build\n"), false);
 });
 
 test("runs the full browser suite for global CSS mixed with feature changes", () => {

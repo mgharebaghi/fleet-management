@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { connectToE2EDatabase } from "./support/e2e-database";
 import { captureResponsiveThemes } from "./support/visual-evidence";
@@ -6,12 +6,19 @@ test("records exact vehicle meter history through the shared two-panel workspace
   test.setTimeout(240000);
   const token = `E2E-METER-${randomUUID().slice(0, 8)}`, adapter = await connectToE2EDatabase();
   try {
-    const fixture = await adapter.underlyingDriver().request().input("token", token).query<{ id: number }>(`
+    // A fixed plate can collide with another vehicle in the shared E2E database.
+    const plate = String(randomInt(0, 10_000_000)).padStart(7, "0");
+    const fixture = await adapter.underlyingDriver().request()
+      .input("token", token)
+      .input("plateLeft", plate.slice(0, 2))
+      .input("plateRight", plate.slice(2, 5))
+      .input("plateIran", plate.slice(5))
+      .query<{ id: number }>(`
       DECLARE @brand int,@model int,@status int;
       INSERT fleet.VehicleBrand (BrandName) VALUES (@token); SET @brand=SCOPE_IDENTITY();
       INSERT fleet.VehicleModel (BrandId,ModelName) VALUES (@brand,@token); SET @model=SCOPE_IDENTITY();
       INSERT fleet.VehicleStatus (StatusName) VALUES (@token); SET @status=SCOPE_IDENTITY();
-      INSERT fleet.Vehicle (VehicleCode,PlateNoLeftSide,PlateNoCenterChar,PlateNoRightSide,PlateNoIranNo,ModelId,VehicleStatusId,CurrentOdometer,CurrentEngineHour) VALUES (@token,N'12',N'الف',N'345',N'67',@model,@status,100.01,2.01);
+      INSERT fleet.Vehicle (VehicleCode,PlateNoLeftSide,PlateNoCenterChar,PlateNoRightSide,PlateNoIranNo,ModelId,VehicleStatusId,CurrentOdometer,CurrentEngineHour) VALUES (@token,@plateLeft,N'الف',@plateRight,@plateIran,@model,@status,100.01,2.01);
       SELECT CONVERT(int,SCOPE_IDENTITY()) id;
     `);
     const id = fixture.recordset[0].id;
