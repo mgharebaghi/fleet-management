@@ -174,6 +174,27 @@ For a verification run without retries, use
 `npm run test:e2e -- --retries=0`. Synthetic responsive, light/dark and voucher
 print screenshots are written under ignored `test-results/` directories.
 
+### GitHub Actions
+
+Every PR keeps the `quality` job: lint, TypeScript, unit tests, Prisma
+validation, and the production build. The job summary lists the chosen
+Integration and Playwright scopes. Selection uses all changed paths from the
+PR merge base, not just the latest commit.
+
+- Changes limited to Markdown documentation, feature/component unit tests, or
+  `src/app/globals.css` do not run SQL integration or browser tests.
+- Inventory and Maintenance changes run both connected modules plus relevant
+  vehicle dispatch and shared UI flows. If global CSS is also changed, the
+  browser suite runs in full.
+- Shared code, Prisma, dependencies, CI, other application modules, and
+  unrecognized paths retain the full suites. A diff that cannot be determined
+  also selects the full suites.
+
+For a full run on the default branch, use **Actions → CI → Run workflow**.
+Pushing to `main` still runs only `quality`; it does not start SQL- or
+browser-backed jobs alongside Coolify. Keep the scope checks in
+`scripts/select-test-plan.mjs` and its tests in sync when adding test surfaces.
+
 ## Commands
 
 ```bash
