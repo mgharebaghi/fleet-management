@@ -56,11 +56,9 @@ test.describe.serial("Create Person", () => {
     const cardNo = uniqueSuffix.slice(0, 8);
     createdNationalCodes.add(nationalCode);
 
+    const submission = Promise.withResolvers<void>();
     await page.route("**/people/create", async (route) => {
-      if (route.request().method() === "POST") {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-      }
-
+      if (route.request().method() === "POST") await submission.promise;
       await route.continue();
     });
 
@@ -88,9 +86,14 @@ test.describe.serial("Create Person", () => {
       page.getByRole("button", { name: "تاریخ استخدام (شمسی)" }),
     ).toContainText("۱۴۰۳/۰۱/۰۱");
 
-    await page.getByRole("button", { name: "ثبت شخص", exact: true }).click();
-
-    await expect(page.getByText("در حال ثبت اطلاعات…")).toBeVisible();
+    try {
+      await page.getByRole("button", { name: "ثبت شخص", exact: true }).click();
+      await expect(
+        page.getByRole("button", { name: "در حال ثبت…", exact: true }),
+      ).toBeDisabled();
+    } finally {
+      submission.resolve();
+    }
     await expect(page).toHaveURL(/\/people$/, { timeout: 10_000 });
 
     const persistedPeople = await e2eDatabaseAdapter
