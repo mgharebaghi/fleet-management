@@ -34,8 +34,9 @@ jobs:
           node-version: "24"
           cache: "npm"
 
+      # Keep this Node-native test outside Vitest's discovery.
       - name: Test the CI selector
-        run: node --test scripts/select-test-plan.test.mjs
+        run: node --test scripts/select-test-plan.node-test.mjs
 
       - name: Select test suites
         id: plan
