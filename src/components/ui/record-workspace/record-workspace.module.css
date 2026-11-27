@@ -16,7 +16,6 @@
   min-width: 0;
   max-height: calc(100dvh - var(--admin-topbar-height) - 24px);
   overflow-y: auto;
-  scrollbar-width: thin;
 }
 
 .nextPanel {

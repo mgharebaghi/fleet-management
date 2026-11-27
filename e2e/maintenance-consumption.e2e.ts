@@ -86,15 +86,30 @@ test.describe.serial("Repair consumption", () => {
     await expect(dialog.getByLabel("قطعه", { exact: true })).toContainText("غیرفعال");
     await dialog.getByLabel("مقدار مصرف", { exact: true }).fill("۱۲۳۴٫۵۶");
     await expect(dialog.getByLabel("مقدار مصرف", { exact: true })).toHaveValue("1,234.56");
-    await dialog.getByRole("button", { name: "ذخیره تغییرات", exact: true }).click(); await expect(dialog).toBeHidden(); await expect(first).toContainText("2,506.1568");
+    await dialog.getByRole("button", { name: "ذخیره تغییرات", exact: true }).click();
+    // The write and the refreshed listing each round-trip to remote SQL Server.
+    await expect(dialog).toBeHidden({ timeout: 30_000 });
+    await expect(first).toContainText("2,506.1568");
     dialog = await create(); await selectSearchableOption(page, "قطعه", `${token} قطعه دوم`, `${token} قطعه دوم — کد ${token}-b`);
     await dialog.getByLabel("مقدار مصرف", { exact: true }).fill("1"); await dialog.getByLabel("قیمت هر واحد (تومان)", { exact: true }).fill("0");
     await dialog.getByLabel("توضیحات", { exact: true }).fill("ردیف قابل حذف");
     await dialog.getByRole("button", { name: "ثبت مصرف", exact: true }).click(); await expect(dialog).toBeHidden();
-    await page.getByRole("row").filter({ hasText: "ردیف قابل حذف" }).getByRole("button", { name: `حذف مصرف ${token} قطعه دوم`, exact: true }).click();
+    const secondPartRows = panel.getByRole("row").filter({ hasText: `${token} قطعه دوم` });
+    const deletable = secondPartRows.filter({
+      has: page.getByRole("cell").filter({ has: page.getByText(/^1(?:\.0+)?$/) }),
+    });
+    await expect(secondPartRows).toHaveCount(2);
+    await expect(deletable).toHaveCount(1);
+    await deletable.getByRole("button", { name: `جزئیات ${token} قطعه دوم`, exact: true }).click();
+    const details = page.getByRole("dialog", { name: `جزئیات ${token} قطعه دوم`, exact: true });
+    await expect(details.getByText("ردیف قابل حذف", { exact: true })).toBeVisible();
+    await details.getByRole("button", { name: "بستن", exact: true }).click();
+
+    await deletable.getByRole("button", { name: `حذف مصرف ${token} قطعه دوم`, exact: true }).click();
     const deletion = page.getByRole("dialog", { name: "حذف قطعهٔ مصرف‌شده", exact: true });
     await deletion.getByRole("button", { name: "تأیید حذف", exact: true }).click(); await expect(deletion).toBeHidden();
-    await expect(page.getByRole("row").filter({ hasText: "ردیف قابل حذف" })).toHaveCount(0);
+    await expect(deletable).toHaveCount(0);
+    await expect(secondPartRows).toHaveCount(1);
     await captureResponsiveThemes(page, "consumed-parts-open");
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.getByRole("listitem").filter({ hasText: `${token} قطعه اول` })).toContainText("2,506.1568");

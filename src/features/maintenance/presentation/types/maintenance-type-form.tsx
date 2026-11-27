@@ -18,6 +18,6 @@ export function MaintenanceTypeForm({ record }: { record?: MaintenanceType }) {
       <MaintenanceTextField className={styles.full} name="description" label="توضیحات" value={values.description} onChange={description => setValues(current => ({ ...current, description }))} state={state} disabled={pending} rows={3} />
       {record && <FormField className={styles.full}><label><input type="checkbox" name="isActive" checked={values.isActive} onChange={event => setValues(current => ({ ...current, isActive: event.target.checked }))} disabled={pending} /> نوع تعمیر و سرویس فعال است</label></FormField>}
     </FormGrid></FormSection>
-    <MaintenanceFormFeedback state={state} /><MaintenanceFormActions formId="maintenance-type-form" editing={!!record} name={values.name} cancelHref={record ? `/maintenance/catalogs/${record.id}` : "/maintenance/catalogs"} createLabel="ثبت نوع تعمیر و سرویس" pending={pending} />
+    <MaintenanceFormFeedback state={state} /><MaintenanceFormActions formId="maintenance-type-form" editing={!!record} name={values.name} cancelHref={record ? `/maintenance/catalogs/${record.id}` : "/maintenance/catalogs/types"} createLabel="ثبت نوع تعمیر و سرویس" pending={pending} />
   </form>;
 }

@@ -80,7 +80,10 @@ for (const target of adminRoutes) {
       await sidebar.getByRole("button", { name: "قطعات و انبار", exact: true }).click();
     }
     navigationArmed = true;
-    await sidebar.getByRole("link", { name: target.linkName }).click();
+    await sidebar
+      .getByRole("link", { name: target.linkName, exact: true })
+      .and(sidebar.locator(`a[href="${target.path}"]`))
+      .click();
 
     await gate.reached;
     await expect(page.getByRole("status")).toContainText("در حال بارگذاری", {

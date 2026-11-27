@@ -5,29 +5,15 @@ const listings = [
   { path: "/fleet/vehicles", searchLabel: "جستجوی خودرو" },
 ] as const;
 
-/**
- * Holds every Server Component request carrying one search value until the test
- * releases it. Holding all of them — not only the first — keeps the listing from
- * committing that value through a navigation the controller reschedules once an
- * earlier one lands, which is what makes the assertions below deterministic.
- */
-function createSearchRequestGate(searchValue: string) {
-  let markReached!: () => void;
-  const reached = new Promise<void>((resolve) => {
-    markReached = resolve;
-  });
-  let release!: () => void;
-  const released = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-
+function createSearchRequestGate() {
+  const reached = Promise.withResolvers<void>();
+  const released = Promise.withResolvers<void>();
   return {
-    searchValue,
-    reached,
-    release,
+    reached: reached.promise,
+    release: released.resolve,
     async hold(route: Route) {
-      markReached();
-      await released;
+      reached.resolve();
+      await released.promise;
       await route.continue();
     },
   };
@@ -52,25 +38,16 @@ for (const listing of listings) {
 
     const firstPart = "E2E-RACE-ALP";
     const completedSearch = `${firstPart}HA`;
-    const firstNavigation = createSearchRequestGate(firstPart);
-    const secondNavigation = createSearchRequestGate(completedSearch);
-    const gates = [firstNavigation, secondNavigation];
+    const firstNavigation = createSearchRequestGate();
 
+    await page.clock.install();
     await page.route(`**${listing.path}?**`, async (route) => {
       const request = route.request();
-      if (request.headers().rsc !== "1") {
+      if (request.headers().rsc === "1" && currentSearchParam(request.url()) === firstPart) {
+        await firstNavigation.hold(route);
+      } else {
         await route.continue();
-        return;
       }
-
-      const search = currentSearchParam(request.url());
-      const gate = gates.find((candidate) => candidate.searchValue === search);
-      if (!gate) {
-        await route.continue();
-        return;
-      }
-
-      await gate.hold(route);
     });
 
     await page.goto(listing.path);
@@ -80,30 +57,31 @@ for (const listing of listings) {
     await expect(searchInput).toHaveValue("");
     const originalInput = await searchInput.elementHandle();
 
-    await searchInput.fill(firstPart);
-    await firstNavigation.reached;
+    try {
+      await searchInput.fill(firstPart);
+      await firstNavigation.reached;
 
-    // The user resumes typing while the first debounced Server Component
-    // request is still in flight, so a second navigation is now in flight too.
-    await searchInput.fill(completedSearch);
-    await secondNavigation.reached;
+      // Pause the browser clock before the second edit. The older response can
+      // commit while the newer draft is typed but its debounce cannot fire yet.
+      const browserTime = await page.evaluate(() => Date.now());
+      await page.clock.pauseAt(browserTime + 500);
+      await searchInput.fill(completedSearch);
+      firstNavigation.release();
 
-    firstNavigation.release();
-
-    // Only the older navigation may commit: the newer one is still held, so the
-    // committed search value is exactly the earlier draft, never a prefix of it.
-    await expect
-      .poll(() => currentSearchParam(page.url()), { timeout: 10_000 })
-      .toBe(firstPart);
-    await expect(searchInput).toHaveValue(completedSearch);
-    expect(
-      await searchInput.evaluate(
-        (current, original) => current === original,
-        originalInput,
-      ),
-    ).toBe(true);
-
-    secondNavigation.release();
+      await expect
+        .poll(() => currentSearchParam(page.url()), { timeout: 10_000 })
+        .toBe(firstPart);
+      await expect(searchInput).toHaveValue(completedSearch);
+      expect(
+        await searchInput.evaluate(
+          (current, original) => current === original,
+          originalInput,
+        ),
+      ).toBe(true);
+    } finally {
+      firstNavigation.release();
+      await page.clock.resume();
+    }
 
     await expect
       .poll(() => currentSearchParam(page.url()), { timeout: 10_000 })

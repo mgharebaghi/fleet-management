@@ -10,7 +10,7 @@ import {
 import { InlineNotice } from "../inline-notice/inline-notice";
 import styles from "./catalog-list-dialog.module.css";
 
-export type CatalogEntryView = { id: number; name: string; isActive?: boolean; detail?: string | null };
+export type CatalogEntryView = { id: number; name: string; isActive?: boolean; detail?: string | null; deleteDisabledReason?: string };
 
 export type CatalogListDialogProps = {
   open: boolean;
@@ -63,7 +63,8 @@ export function CatalogListDialog({
                     )}
                     {onDeleteEntry && (
                       <IconActionButton
-                        label={`حذف ${entry.name}`}
+                        label={entry.deleteDisabledReason ?? `حذف ${entry.name}`}
+                        disabled={Boolean(entry.deleteDisabledReason)}
                         icon={<DeleteIcon />}
                         tone="danger"
                         onClick={() => onDeleteEntry(entry)}

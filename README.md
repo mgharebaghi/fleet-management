@@ -174,6 +174,27 @@ For a verification run without retries, use
 `npm run test:e2e -- --retries=0`. Synthetic responsive, light/dark and voucher
 print screenshots are written under ignored `test-results/` directories.
 
+### GitHub Actions
+
+Every PR keeps the `quality` job: lint, TypeScript, unit tests, Prisma
+validation, and the production build. The job summary lists the chosen
+Integration and Playwright scopes. Selection uses all changed paths from the
+PR merge base, not just the latest commit.
+
+- Changes limited to Markdown documentation, feature/component unit tests, or
+  `src/app/globals.css` do not run SQL integration or browser tests.
+- Inventory and Maintenance changes run both connected modules plus relevant
+  vehicle dispatch and shared UI flows. If global CSS is also changed, the
+  browser suite runs in full.
+- Shared code, Prisma, dependencies, CI, other application modules, and
+  unrecognized paths retain the full suites. A diff that cannot be determined
+  also selects the full suites.
+
+For a full run on the default branch, use **Actions → CI → Run workflow**.
+Pushing to `main` still runs only `quality`; it does not start SQL- or
+browser-backed jobs alongside Coolify. Keep the scope checks in
+`scripts/select-test-plan.mjs` and its tests in sync when adding test surfaces.
+
 ## Commands
 
 ```bash
@@ -188,7 +209,7 @@ npm run prisma:generate    # generate Prisma Client
 
 npm run test:unit          # unit tests, no database required
 npm run test:integration   # integration tests, requires TEST_DATABASE_*
-npm run test:maintenance-contract # read-only maintenance/inventory contract check in both test DBs
+npm run test:maintenance-contract # read-only maintenance/inventory contract check (Integration DB by default)
 npm run test:e2e           # Playwright E2E, requires E2E_DATABASE_*
 ```
 
@@ -366,10 +387,12 @@ The general validation notice clears when no field errors remain. Each feature
 owns its field-to-error mapping; Application/server validation still runs on every
 submission. Clearing feedback does not certify uniqueness or persist a change.
 
-Before the first business slice, run `npm run test:maintenance-contract`. This
-read-only check verifies the dedicated Integration and E2E database identities
-and compares their maintenance/inventory metadata with the reviewed SQL Server
-contract. It does not run a browser, write rows or provision tables. Required
+Run `npm run test:maintenance-contract` for the Integration database. Set
+`MAINTENANCE_CONTRACT_DB=E2E_DATABASE` to run the same check against the E2E
+database (in PowerShell, set `$env:MAINTENANCE_CONTRACT_DB = 'E2E_DATABASE'`
+before running the command). Each CI job checks only its own database. The check
+compares maintenance/inventory metadata with the reviewed SQL Server contract.
+It does not run a browser, write rows or provision tables. Required
 test-account access and `VIEW DEFINITION` must be available; an unavailable or
 different contract fails instead of falling back to Development. Both test
 connections and the full maintenance/inventory contract now pass after the

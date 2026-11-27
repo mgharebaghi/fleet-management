@@ -13,6 +13,7 @@ it("refreshes list and record views only after successful deletion", async () =>
   mocks.deleteType.mockResolvedValue({ success: true, value: 1 });
   expect(await deleteMaintenanceTypeAction(1, {}, new FormData())).toEqual({ saved: true });
   expect(mocks.revalidate).toHaveBeenCalledWith("/maintenance/catalogs");
+  expect(mocks.revalidate).toHaveBeenCalledWith("/maintenance/catalogs/types");
   expect(mocks.revalidate).toHaveBeenCalledWith("/maintenance/catalogs/1");
 });
 it("does not leak persistence failures", async () => {

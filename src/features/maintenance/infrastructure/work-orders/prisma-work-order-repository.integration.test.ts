@@ -65,7 +65,7 @@ describe.sequential("work-order preparation SQL Server contract", () => {
     const id = success(await manage.create({ ...input(), origin: "Request", sourceId: source }));
     expect(await manage.get(id)).toMatchObject({ origin: "Request", requestId: source, planId: null });
     expect(await requests.remove(source)).toEqual({ success: false, error: { type: "REQUEST_IN_USE" } });
-    expect(await requests.changeStatus(source, "Completed")).toEqual({ success: false, error: { type: "ORDERS_UNRESOLVED" } });
+    expect(await requests.changeStatus(source, "Completed")).toEqual({ success: false, error: { type: "REQUEST_IN_USE" } });
     const planOrder = success(await manage.create({ ...input(), origin: "Plan", sourceId: ids.plan }));
     expect(await manage.get(planOrder)).toMatchObject({ origin: "Plan", planId: ids.plan, requestId: null });
     expect((await client.maintenancePlan.findUniqueOrThrow({ where: { MaintenancePlanId: ids.plan } })).LastServiceOdometer?.toFixed(2)).toBe("10.01");
@@ -94,6 +94,6 @@ describe.sequential("work-order preparation SQL Server contract", () => {
     const [order, closed] = await Promise.all([manage.create({ ...input(), origin: "Request", sourceId: source }), requests.changeStatus(source, "Completed")]);
     expect(Number(order.success) + Number(closed.success)).toBe(1);
     if (!order.success) expect(order.error.type).toBe("SOURCE_UNAVAILABLE");
-    if (!closed.success) expect(closed.error.type).toBe("ORDERS_UNRESOLVED");
+    if (!closed.success) expect(closed.error.type).toBe("REQUEST_IN_USE");
   }, 90000);
 });

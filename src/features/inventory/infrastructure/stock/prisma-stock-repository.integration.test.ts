@@ -76,14 +76,13 @@ describe.sequential("stock SQL Server ledger", () => {
   }, 90000);
 
   it("reports unknown/invalid legacy movements and blocks dependent writes", async () => {
-    const id = await part();
+    const id = await part(), second = await part(), third = await part();
+    await client.stockTransaction.createMany({ data: [id, second, third].map(PartId => ({ PartId, WarehouseId: warehouseIds[0], TransactionType: "Opening", Quantity: 1 })) });
     await client.stockTransaction.create({ data: { PartId: id, WarehouseId: warehouseIds[0], TransactionType: "ExternalUnknown", Quantity: 1 } });
     expect((await balance(id)).rows[0]).toMatchObject({ balance: null, totalBalance: null });
     expect(await manage.append(input(id, "Receipt", "1"))).toEqual({ success: false, error: { type: "INVALID_LEDGER" } });
-    const second = await part();
     await client.stockTransaction.create({ data: { PartId: second, WarehouseId: warehouseIds[0], TransactionType: "Receipt", Quantity: 0 } });
     expect((await balance(second)).rows[0].balance).toBeNull();
-    const third = await part();
     await client.stockTransaction.create({ data: { PartId: third, WarehouseId: warehouseIds[0], TransactionType: "receipt", Quantity: 1 } });
     expect((await balance(third)).rows[0].balance).toBeNull();
   }, 60000);
@@ -94,7 +93,24 @@ describe.sequential("stock SQL Server ledger", () => {
     expect(await client.stockTransaction.count({ where: { PartId: id } })).toBe(0);
     await client.part.update({ where: { PartId: id }, data: { IsActive: false } });
     expect(await manage.append(input(id, "Receipt", "1"))).toEqual({ success: false, error: { type: "REFERENCE_UNAVAILABLE" } });
-    expect((await balance(id)).rows[0]).toMatchObject({ balance: "0.00", partActive: false });
+    expect(await balance(id)).toEqual({ rows: [], totalCount: 0 });
+  }, 60000);
+
+  it("lists only warehouse pairs with inbound history and keeps their zero balance", async () => {
+    const id = await part();
+    expect(await manage.balances({ ...search, partId: id })).toEqual({ rows: [], totalCount: 0 });
+    expect(await balance(id)).toEqual({ rows: [], totalCount: 0 });
+
+    await client.stockTransaction.createMany({ data: ["Receipt", "Issue"].map(TransactionType => ({
+      PartId: id, WarehouseId: warehouseIds[0], TransactionType, Quantity: 2,
+    })) });
+    const allWarehouses = await manage.balances({ ...search, partId: id });
+    expect(allWarehouses.totalCount).toBe(1);
+    expect(allWarehouses.rows).toHaveLength(1);
+    expect(allWarehouses.rows[0]).toMatchObject({
+      warehouseId: warehouseIds[0], warehouseName: `${token}-a`, balance: "0.00", totalBalance: "0.00",
+    });
+    expect(await balance(id, warehouseIds[1])).toEqual({ rows: [], totalCount: 0 });
   }, 60000);
 
   it("aggregates the full ledger independently of movement pagination and dates", async () => {

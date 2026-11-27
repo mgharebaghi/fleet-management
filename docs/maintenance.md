@@ -557,8 +557,10 @@ task-owned process cleanup. No commit, push or database mutation is implicit.
 
 ## Stage 0 contract gate and current evidence
 
-Run `npm run test:maintenance-contract`. This is a read-only Vitest check of
-**both** configured test databases, not an E2E browser run. It uses the existing
+Run `npm run test:maintenance-contract` for the Integration database, or set
+`MAINTENANCE_CONTRACT_DB=E2E_DATABASE` before running it to check the E2E
+database. CI checks each database in its own job; neither contract check needs
+a browser. The command uses the existing
 `loadTestDatabaseConfig` guards, checks live `DB_NAME()` before contract reads,
 requires metadata visibility and closes successful connections. It never
 provisions schemas, seeds rows or falls back to Development.
@@ -772,8 +774,8 @@ were introduced.
 ## Implemented stage 3: stock ledger and balances
 
 - `/inventory/stock` shows balances per warehouse, exact part-wide totals and
-  minimum/reorder/maximum warnings. Parts without history show zero; selecting
-  a warehouse also includes its parts with no movements. Thresholds belong to
+  minimum/reorder/maximum warnings. Balances list only part/warehouse pairs with
+  a valid inbound movement, including pairs whose balance later reaches zero. Thresholds belong to
   the part, so filtering a warehouse never changes the global total/warning.
   A zero balance in the displayed warehouse takes visual precedence: one red
   unavailable badge replaces threshold badges for that row, even when another

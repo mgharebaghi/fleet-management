@@ -5,12 +5,13 @@ name: CI
 #
 # `integration` and `e2e` need a reachable, isolated remote SQL Server
 # test database, so they run on the self-hosted Linux runner.
-# To avoid competing with Coolify deployment resources after a merge,
-# these two heavy jobs run only for pull requests, not for pushes to main.
+# Heavy jobs run when selected for an internal PR, or on demand from the
+# default branch. Pushes to main never start the self-hosted jobs.
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,13 +19,31 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    outputs:
+      integration: ${{ steps.plan.outputs.integration }}
+      e2e: ${{ steps.plan.outputs.e2e }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The selector compares the PR base and head from their merge base.
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: "npm"
+
+      # Keep this Node-native test outside Vitest's discovery.
+      - name: Test the CI selector
+        run: node --test scripts/select-test-plan.node-test.mjs
+
+      - name: Select test suites
+        id: plan
+        run: node scripts/select-test-plan.mjs
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
       - name: Install dependencies
         run: npm ci
@@ -71,14 +90,16 @@ jobs:
 
   # Runs Prisma repository tests against the isolated
   # FleetManagementDB_IntegrationTest database on the self-hosted runner.
-  # This job runs only for pull requests from this repository, so merging to
-  # main does not make the runner compete with Coolify's automatic deployment.
+  # Preserve the internal-PR restriction for the runner and its secrets.
   integration:
     needs: quality
     concurrency:
       group: ${{ github.repository }}-integration-database
       cancel-in-progress: false
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      needs.quality.outputs.integration != 'skip' &&
+      ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+       (github.event_name == 'workflow_dispatch' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)))
     runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v4
@@ -100,8 +121,28 @@ jobs:
       # Each *.integration.test.ts file loads TEST_DATABASE_* itself and
       # refuses to run against anything but FleetManagementDB_IntegrationTest.
       - name: Integration tests
-        run: npm run test:integration
+        run: |
+          if [[ "$TEST_SCOPE" == "inventory-maintenance" ]]; then
+            # Include vehicle dispatch consumers of maintenance work-order state.
+            files="$(git ls-files -- \
+              ':(glob)src/features/inventory/**/*.integration.test.ts' \
+              ':(glob)src/features/maintenance/**/*.integration.test.ts' \
+              ':(glob)src/features/trip/**/*.integration.test.ts' \
+              ':(glob)src/features/drivers/**/*.integration.test.ts' \
+              ':(glob)src/features/fleet/infrastructure/meter-readings/**/*.integration.test.ts')"
+            if [[ -z "$files" ]]; then
+              echo "::error::No integration test files matched the selected scope."
+              exit 1
+            fi
+            mapfile -t tests <<< "$files"
+            npx --no-install vitest run --no-file-parallelism --testTimeout=45000 \
+              src/test-support/database/maintenance-inventory-contract.integration.test.ts "${tests[@]}"
+          else
+            npm run test:integration
+          fi
         env:
+          TEST_SCOPE: ${{ needs.quality.outputs.integration }}
+          MAINTENANCE_CONTRACT_DB: TEST_DATABASE
           TEST_DATABASE_SERVER: ${{ secrets.TEST_DATABASE_SERVER }}
           TEST_DATABASE_PORT: ${{ secrets.TEST_DATABASE_PORT }}
           TEST_DATABASE_NAME: ${{ secrets.TEST_DATABASE_NAME }}
@@ -111,14 +152,16 @@ jobs:
           TEST_DATABASE_TRUST_SERVER_CERTIFICATE: ${{ secrets.TEST_DATABASE_TRUST_SERVER_CERTIFICATE }}
 
   # Runs Playwright against the isolated FleetManagementDB_E2ETest database
-  # on the self-hosted runner. Like integration, this runs only for pull
-  # requests so the runner is idle while Coolify deploys a merge to main.
+  # on the self-hosted runner and never on a push to main.
   e2e:
     needs: quality
     concurrency:
       group: ${{ github.repository }}-e2e-database
       cancel-in-progress: false
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      needs.quality.outputs.e2e != 'skip' &&
+      ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+       (github.event_name == 'workflow_dispatch' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)))
     runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v4
@@ -140,8 +183,17 @@ jobs:
       # detects CI and drives the runner's pre-installed Google Chrome via
       # Playwright's `channel: "chrome"` instead, which needs no download.
       - name: E2E tests
-        run: npm run test:e2e -- --retries=0
+        run: |
+          # Validate only this job's test database before the browser build.
+          MAINTENANCE_CONTRACT_DB=E2E_DATABASE npm run test:maintenance-contract
+          if [[ "$TEST_SCOPE" == "inventory-maintenance" ]]; then
+            npm run test:e2e -- --retries=0 \
+              'e2e/(inventory-|maintenance-|service-plans\.|admin-nav-accordion\.|form-feedback\.|list-clear-filters\.|list-filter-consistency\.|page-navigation\.|route-loading\.|vehicle-meter-readings\.|vehicles\.|trips\.|trip-vehicle-capacity\.|drivers\.)'
+          else
+            npm run test:e2e -- --retries=0
+          fi
         env:
+          TEST_SCOPE: ${{ needs.quality.outputs.e2e }}
           E2E_DATABASE_SERVER: ${{ secrets.E2E_DATABASE_SERVER }}
           E2E_DATABASE_PORT: ${{ secrets.E2E_DATABASE_PORT }}
           E2E_DATABASE_NAME: ${{ secrets.E2E_DATABASE_NAME }}

@@ -64,10 +64,17 @@ export class PrismaStockRepository implements StockRepository {
     return { rows, totalCount: count.count };
   }
   async balances(criteria: StockSearch) {
-    const cte = Prisma.sql`WITH pairs AS (SELECT WarehouseId,PartId,SUM(${signed}) balance,SUM(${invalid}) invalid FROM inventory.StockTransaction GROUP BY WarehouseId,PartId),
-      totals AS (SELECT PartId,SUM(balance) balance,SUM(invalid) invalid,MIN(balance) smallest FROM pairs GROUP BY PartId), selected AS (
-        ${criteria.warehouseId ? Prisma.sql`SELECT p.PartId,w.WarehouseId,COALESCE(x.balance,0) balance,COALESCE(x.invalid,0) invalid FROM inventory.Part p CROSS JOIN inventory.Warehouse w LEFT JOIN pairs x ON x.PartId=p.PartId AND x.WarehouseId=w.WarehouseId WHERE w.WarehouseId=${criteria.warehouseId}` : Prisma.sql`SELECT p.PartId,x.WarehouseId,COALESCE(x.balance,0) balance,COALESCE(x.invalid,0) invalid FROM inventory.Part p LEFT JOIN pairs x ON x.PartId=p.PartId`})`;
-    const from = Prisma.sql`FROM selected x JOIN inventory.Part p ON p.PartId=x.PartId JOIN inventory.Unit u ON u.UnitId=p.UnitId LEFT JOIN inventory.Warehouse w ON w.WarehouseId=x.WarehouseId LEFT JOIN totals t ON t.PartId=p.PartId WHERE 1=1 ${textFilter(criteria.search)} ${criteria.partId ? Prisma.sql`AND p.PartId=${criteria.partId}` : Prisma.empty}`;
+    // A warehouse row exists only after a valid incoming movement, even if its balance later reaches zero.
+    const cte = Prisma.sql`WITH pairs AS (
+      SELECT WarehouseId,PartId,SUM(${signed}) balance,SUM(${invalid}) invalid,
+        MAX(CASE WHEN (${invalid})=0 AND TransactionType COLLATE Latin1_General_100_BIN2 IN (N'Opening',N'Receipt',N'Return',N'AdjustmentIn') THEN 1 ELSE 0 END) hasInbound
+      FROM inventory.StockTransaction GROUP BY WarehouseId,PartId
+    ), totals AS (SELECT PartId,SUM(balance) balance,SUM(invalid) invalid,MIN(balance) smallest FROM pairs GROUP BY PartId)`;
+    const from = Prisma.sql`FROM pairs x JOIN inventory.Part p ON p.PartId=x.PartId JOIN inventory.Unit u ON u.UnitId=p.UnitId
+      JOIN inventory.Warehouse w ON w.WarehouseId=x.WarehouseId JOIN totals t ON t.PartId=p.PartId
+      WHERE x.hasInbound=1 ${textFilter(criteria.search)}
+      ${criteria.warehouseId ? Prisma.sql`AND x.WarehouseId=${criteria.warehouseId}` : Prisma.empty}
+      ${criteria.partId ? Prisma.sql`AND p.PartId=${criteria.partId}` : Prisma.empty}`;
     const [rows, [count]] = await Promise.all([
       this.client.$queryRaw<StockBalance[]>(Prisma.sql`${cte} SELECT x.WarehouseId warehouseId,w.WarehouseCode warehouseCode,w.WarehouseName warehouseName,w.IsActive warehouseActive,p.PartId partId,p.PartCode partCode,p.PartName partName,p.IsActive partActive,u.UnitName unitName,
         CASE WHEN x.invalid>0 OR x.balance<0 THEN NULL ELSE CONVERT(varchar(80),x.balance) END balance,
